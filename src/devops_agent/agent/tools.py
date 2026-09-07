@@ -186,6 +186,16 @@ def lister_fichiers(motif: str = "**/*.yaml") -> str:
     return "\n".join(trouves) if trouves else f"aucun fichier pour « {motif} »"
 
 
+def rafraichir_apercu() -> str:
+    """Reprend un instantané du cluster, en ignorant le cache.
+
+    À appeler quand l'agent soupçonne que l'état a changé depuis l'aperçu
+    initial — par exemple après avoir constaté un redémarrage.
+    """
+    from devops_agent.agent import overview
+    return overview.rafraichir()
+
+
 # ── Déclarations pour le modèle ──────────────────────────────────
 # Les descriptions comptent autant que le code : c'est sur elles que le
 # modèle décide quel outil appeler.
@@ -252,6 +262,20 @@ DEFINITIONS = [
         },
     },
     {
+        "name": "rafraichir_apercu",
+        "description": (
+            "Reprend un instantané de l'état du cluster (nœuds, pods en anomalie, "
+            "pression sur les ressources). L'aperçu initial est déjà fourni dans la "
+            "question : n'appeler cet outil que si tu soupçonnes un changement depuis, "
+            "ou si l'aperçu date de plus d'une minute."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {},
+            "additionalProperties": False,
+        },
+    },
+    {
         "name": "lister_fichiers",
         "description": (
             "Liste les fichiers du dépôt d'infrastructure selon un motif glob. "
@@ -277,6 +301,7 @@ IMPLEMENTATIONS = {
     "kubectl": kubectl,
     "lire_fichier": lire_fichier,
     "lister_fichiers": lister_fichiers,
+    "rafraichir_apercu": rafraichir_apercu,
 }
 
 

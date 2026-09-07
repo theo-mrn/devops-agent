@@ -23,6 +23,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import devops_agent.core.config as config
+from devops_agent.agent import overview
 from devops_agent.agent import tools as outils
 
 TOURS_MAX = 12  # au-delà, l'agent boucle probablement pour rien
@@ -82,8 +83,13 @@ class Agent:
 
     # ── Boucle ───────────────────────────────────────────────────
 
-    def demander(self, question: str) -> str:
-        """Pose une question et laisse l'agent enchaîner ses outils."""
+    def demander(self, question: str, avec_apercu: bool = True) -> str:
+        """Pose une question et laisse l'agent enchaîner ses outils.
+
+        `avec_apercu` injecte l'état du cluster dans la première question.
+        Sans lui, l'agent gaspille trois ou quatre tours à découvrir ce
+        qui existe avant d'attaquer le problème posé.
+        """
         if config.PROVIDER != "anthropic":
             raise RuntimeError(
                 "La boucle d'agent exige un modèle capable d'orchestrer plusieurs "
@@ -94,8 +100,22 @@ class Agent:
         import anthropic
 
         client = anthropic.Anthropic(timeout=float(config.TIMEOUT_LLM))
-        self.messages = [{"role": "user", "content": question}]
 
+        contenu = question
+        if avec_apercu:
+            etat = overview.apercu()
+            # Un cluster injoignable ne doit pas bloquer l'agent : il lui
+            # reste la documentation et les fichiers.
+            if not etat.startswith("["):
+                contenu = (
+                    f"ÉTAT ACTUEL DU CLUSTER\n\n{etat}\n\n"
+                    f"---\n\nQUESTION : {question}"
+                )
+                self._log(f"\033[2m  aperçu injecté ({len(etat)} caractères)\033[0m")
+            else:
+                self._log(f"\033[33m  {etat}\033[0m")
+
+        self.messages = [{"role": "user", "content": contenu}]
         self._log(f"\n\033[1m QUESTION \033[0m {question}\n")
         debut = time.time()
 
