@@ -104,12 +104,6 @@ def chercher_hybride(question: str, k: int = TOP_K):
     return [(c, s) for c, s, _ in hybride.chercher(question, k=k)]
 
 
-def hors_domaine(question: str) -> bool:
-    """Relais vers le garde-fou du reranker."""
-    import reranker
-    return reranker.hors_domaine(question)
-
-
 def chercher_rerank(question: str, k: int = TOP_K):
     """Hybride puis reranking par cross-encoder — mode par défaut.
 
@@ -125,17 +119,6 @@ def chercher_rerank(question: str, k: int = TOP_K):
 def repondre(question: str) -> None:
     debut = time.time()
     resultats = chercher_rerank(question)
-
-    # Garde-fou : sous le seuil de pertinence du reranker, aucun chunk ne
-    # traite du sujet. Répondre reviendrait à extrapoler.
-    import reranker
-    if resultats and resultats[0][1] < reranker.SEUIL_PERTINENCE:
-        print(f"\n\033[1m QUESTION \033[0m {question}\n")
-        print(f"\033[2mmeilleur score {resultats[0][1]:.3f} < seuil "
-              f"{reranker.SEUIL_PERTINENCE} — hors domaine du corpus\033[0m\n")
-        print("Le contexte fourni ne contient pas cette information.")
-        print("\033[2m" + "─" * 70 + "\033[0m")
-        return
     t_recherche = time.time() - debut
 
     print(f"\n\033[1m QUESTION \033[0m {question}\n")

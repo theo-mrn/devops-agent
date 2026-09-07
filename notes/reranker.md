@@ -59,7 +59,7 @@ Le reranker retient les 5 meilleurs sur 20 et leur donne des scores élevés
 - `absent_ansible` → un playbook Ansible complet inventé à partir de chunks
   Kubernetes.
 
-## 5. Le garde-fou par seuil — enfin possible
+## 5. ❌ Le garde-fou par seuil — tenté puis ABANDONNÉ
 
 Contrairement au RRF et au cosinus, **les scores du cross-encoder discriminent** :
 

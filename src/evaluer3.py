@@ -181,17 +181,6 @@ def main() -> None:
             # Ollama peut se figer sur une longue série de requêtes : un
             # timeout explicite et une reprise évitent de bloquer toute
             # l'évaluation sur un cas.
-            # Garde-fou hors-domaine : court-circuite la génération, comme
-            # le fait le pipeline réel.
-            import reranker
-            if trouves and trouves[0][1] < reranker.SEUIL_PERTINENCE:
-                texte = "Le contexte fourni ne contient pas cette information."
-                res["verif"] = verifier(cas, texte)
-                res["reponse"] = texte
-                res["hors_domaine"] = True
-                resultats.append(res)
-                continue
-
             texte = None
             for tentative in range(3):
                 try:

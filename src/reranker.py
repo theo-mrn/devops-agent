@@ -24,13 +24,15 @@ import rag2
 MODELE = "BAAI/bge-reranker-v2-m3"
 CANDIDATS = 20  # nombre de chunks à faire réordonner
 
-# Contrairement aux scores RRF et cosinus, les scores du cross-encoder
-# discriminent réellement la pertinence (mesuré en brique 10) :
-#   questions dans le corpus  : 0,745 → 0,975
-#   questions hors du corpus  : 0,010 → 0,595
-# Le seuil se place dans l'écart. C'est ce qui rend possible le garde-fou
-# abandonné en brique 9, où ni RRF ni dense ne séparaient les deux cas.
-SEUIL_PERTINENCE = 0.65
+# Un seuil de pertinence a été tenté ici, puis ABANDONNÉ.
+#
+# Sur 10 questions choisies, la séparation semblait nette (dans le corpus
+# 0,745-0,975 ; hors corpus 0,010-0,595). Mesuré sur les 39 cas réels, les
+# deux populations se chevauchent complètement :
+#   plus bas DANS le corpus  : 0,079  (surete_node_charge)
+#   plus haut HORS corpus    : 0,597  (absent_version_moved)
+# Aucun seuil ne les sépare. Le garde-fou cassait 5 cas légitimes pour en
+# sauver 2. C'est le prompt, pas un seuil, qui gère le hors-domaine.
 
 _cache = {}
 
@@ -40,17 +42,6 @@ def charger() -> CrossEncoder:
         device = "mps" if torch.backends.mps.is_available() else "cpu"
         _cache["modele"] = CrossEncoder(MODELE, device=device, max_length=512)
     return _cache["modele"]
-
-
-def hors_domaine(question: str) -> bool:
-    """La question sort-elle du domaine couvert par le corpus ?
-
-    Le retrieval remonte toujours « le moins mauvais », jamais rien : sans
-    ce garde-fou, le modèle reçoit 5 chunks présentés comme pertinents et
-    se croit autorisé à répondre — d'où les hallucinations mesurées.
-    """
-    resultats = chercher(question, k=1)
-    return not resultats or resultats[0][1] < SEUIL_PERTINENCE
 
 
 def chercher(question: str, k: int = rag2.TOP_K, candidats: int = CANDIDATS):

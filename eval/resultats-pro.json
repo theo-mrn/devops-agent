@@ -59,7 +59,7 @@
       "methode_manquante": [],
       "dangers": []
     },
-    "reponse": "Pour diagnostiquer un pod en `CrashLoopBackOff`, suivez ces étapes :\n\n1. **Vérifiez les logs du conteneur** :\n   ```bash\n   kubectl logs <nom-du-pod> -n <namespace> --previous --tail=100\n   ```\n   Le flag `--previous` est indispensable pour lire les logs du conteneur qui a crashé, pas celui qui vient de démarrer.\n\n2. **Inspectez les événements du pod** :\n   ```bash\n   kubectl describe pod <nom-du-pod> -n <namespace>\n   ```\n   Cela vous permet de voir les événements associés au pod, qui peuvent fournir des indices sur les problèmes de configuration ou de ressources.\n\n3. **Vérifiez la configuration du pod** :\n   Assurez-vous que la configuration du pod, y compris les variables d'environnement et les volumes montés, est correcte et que toutes les ressources externes nécessaires sont disponibles.\n\n4. **Vérifiez les limites de ressources** :\n   Assurez-vous que le conteneur a suffisamment de CPU et de mémoire allouées. Parfois, augmenter les ressources dans la définition du pod peut résoudre le problème.\n\n5. **Déboguez l'application** :\n   Il peut y avoir des bugs ou des erreurs de configuration dans le code de l'application. Exécuter cette image de conteneur localement ou dans un environnement de développement peut aider à diagnostiquer les problèmes spécifiques de l'application.\n\nEn suivant ces étapes, vous devriez être en mesure de diagnostiquer la cause de l'`CrashLoopBackOff` et de prendre les mesures nécessaires pour le résoudre."
+    "reponse": "Pour diagnostiquer un pod en `CrashLoopBackOff`, suivez ces étapes :\n\n1. **Vérifiez les logs du conteneur** :\n   ```bash\n   kubectl logs <nom-du-pod> -n <namespace> --previous --tail=100\n   ```\n   Le flag `--previous` est indispensable pour lire les logs du conteneur qui a crashé, pas celui qui vient de démarrer.\n\n2. **Inspectez les événements du pod** :\n   ```bash\n   kubectl describe pod <nom-du-pod> -n <namespace>\n   ```\n   Cela vous permet de voir les événements associés au pod, qui peuvent fournir des indices sur les problèmes de configuration ou de ressources.\n\n3. **Vérifiez la configuration du pod** :\n   Assurez-vous que la configuration du pod, y compris les variables d'environnement et les volumes montés, est correcte et que toutes les ressources externes nécessaires sont disponibles.\n\n4. **Vérifiez les limites de ressources** :\n   Assurez-vous que le conteneur a suffisamment de CPU et de mémoire allouées. Parfois, augmenter les ressources dans la définition du pod peut résoudre le problème.\n\n5. **Déboguez l'application** :\n   Il peut y avoir des bugs ou des erreurs de configuration dans le code de l'application. Exécuter cette image de conteneur localement ou dans un environnement de développement peut aider à diagnostiquer les problèmes spécifiques de l'application.\n\nEn suivant ces étapes, vous devriez être en mesure de trouver la cause de l'`CrashLoopBackOff` et de prendre les mesures nécessaires pour le résoudre."
   },
   {
     "id": "diag_pending",
@@ -90,7 +90,7 @@
       "methode_manquante": [],
       "dangers": []
     },
-    "reponse": "Un pod reste en état `Pending` pour plusieurs raisons. Voici les causes les plus courantes :\n\n1. **Insufficient cpu / memory** : Aucun nœud n'a les ressources demandées dans `resources.requests`. Vérifiez avec `kubectl describe node`.\n\n2. **node(s) had untolerated taint** : Les nœuds portent un taint que le pod ne tolère pas.\n\n3. **didn't match node selector** : Le `nodeSelector` ou l'`affinity` ne correspond à aucun nœud.\n\n4. **pod has unbound immediate PersistentVolumeClaims** : Le PVC n'est pas lié à un volume.\n\n5. **Missing group references** : Le pod fait référence à un `PodGroup` qui n'existe pas encore.\n\nPour diagnostiquer la cause exacte, utilisez la commande suivante :\n\n```bash\nkubectl describe pod <nom-du-pod> -n <namespace>\n```\n\nCette commande vous fournira des détails sur le statut du pod et les raisons possibles de son état `Pending`."
+    "reponse": "Un pod reste en état Pending pour plusieurs raisons. Voici les principales causes possibles :\n\n1. **Insufficient cpu / memory** : Aucun nœud n'a les ressources demandées dans `resources.requests`. Vérifiez avec `kubectl describe node`.\n\n2. **node(s) had untolerated taint** : Les nœuds portent un taint que le pod ne tolère pas.\n\n3. **didn't match node selector** : Le `nodeSelector` ou l'`affinity` ne correspond à aucun nœud.\n\n4. **pod has unbound immediate PersistentVolumeClaims** : Le PVC n'est pas lié à un volume.\n\n5. **Missing group references** : Le pod fait référence à un `PodGroup` qui n'existe pas encore ou à un `CompositePodGroup` parent qui n'a pas été créé.\n\nPour diagnostiquer la cause exacte, utilisez la commande suivante :\n\n```bash\nkubectl describe pod <nom-du-pod> -n <namespace>\n```\n\nCette commande vous fournira des détails sur le pod, notamment les événements qui ont conduit à son état Pending."
   },
   {
     "id": "diag_imagepull",
@@ -121,7 +121,7 @@
       "methode_manquante": [],
       "dangers": []
     },
-    "reponse": "`ImagePullBackOff` signifie que Kubernetes est en train de réessayer de télécharger l'image du conteneur avec un délai croissant, mais il n'y parvient pas. Voici comment le résoudre :\n\n1. **Vérifiez le nom de l'image et le tag** :\n   ```bash\n   kubectl describe pod <nom-du-pod> -n <namespace>\n   ```\n   Si le tag n'existe pas, vous verrez un événement indiquant `manifest unknown / not found`. Vérifiez et corrigez le nom de l'image et le tag.\n\n2. **Vérifiez les secrets de registre** :\n   ```bash\n   kubectl get secret <nom-du-secret> -n <namespace> -o jsonpath='{.type}'\n   ```\n   Le type attendu est `kubernetes.io/dockerconfigjson`. Si le secret est invalide ou non présent, vous verrez un événement indiquant `unauthorized / authentication required`. Créez ou corrigez le secret approprié.\n\n3. **Vérifiez le réseau et la connexion au registre** :\n   ```bash\n   kubectl describe pod <nom-du-pod> -n <namespace>\n   ```\n   Si le nœud ne joint pas le registre, vous verrez un événement indiquant `no such host / timeout`. Vérifiez la connexion réseau et DNS.\n\n4. **Vérifiez la compatibilité du registre privé** :\n   Si vous utilisez un registre privé, vous devez vous assurer que le registre est compatible avec la version de Kubernetes et du nœud. Consultez la documentation pour plus d'informations.\n\n5. **Vérifiez la compatibilité du nœud** :\n   Si vous utilisez un registre privé, vous devez vous assurer que le nœud est compatible avec la version de Kubernetes et du registre. Consultez la documentation pour plus d'informations.\n\n6. **Vérifiez les événements du pod** :\n   ```bash\n   kubectl describe pod <nom-du-pod> -n <namespace>\n   ```\n   Vérifiez les événements pour obtenir plus de détails sur l'échec du téléchargement de l'image.\n\nEn suivant ces étapes, vous devriez être en mesure de résoudre le problème `ImagePullBackOff`."
+    "reponse": "`ImagePullBackOff` signifie que Kubernetes est en train de réessayer de télécharger l'image du conteneur avec un délai croissant, mais il ne parvient pas à le faire. Voici comment le résoudre :\n\n1. **Vérifier le nom de l'image et le tag** :\n   ```bash\n   kubectl describe pod <nom-du-pod> -n <namespace>\n   ```\n   Si le tag n'existe pas, vous verrez un événement indiquant `manifest unknown / not found`. Vérifiez le nom exact de l'image et son tag.\n\n2. **Vérifier les secrets de registre** :\n   ```bash\n   kubectl get secret <nom-du-secret> -n <namespace> -o jsonpath='{.type}'\n   ```\n   Le type attendu est `kubernetes.io/dockerconfigjson`. Si le secret est invalide ou non présent, vous verrez un événement indiquant `unauthorized / authentication required`.\n\n3. **Vérifier le réseau et les DNS** :\n   Si le nœud ne joint pas le registre, vous verrez un événement indiquant `no such host / timeout`. Assurez-vous que le réseau et les DNS sont correctement configurés.\n\n4. **Vérifier la compatibilité du registre privé** :\n   Si vous utilisez un registre privé, vous devez vous assurer que le registre est accessible depuis le nœud Kubernetes. Vous pouvez tester cela en essayant de pull l'image manuellement sur le nœud.\n\n5. **Vérifier la compatibilité du nœud** :\n   Si vous utilisez Windows Nodes, assurez-vous que le nœud est compatible avec l'image de pause utilisée par Kubernetes. Vous pouvez vérifier cela en examinant la configuration du runtime de conteneur sur le nœud.\n\n6. **Vérifier les événements du Pod** :\n   Si le Pod continue à avoir le statut `ImagePullBackOff`, vous pouvez obtenir plus d'informations en utilisant la commande suivante :\n   ```bash\n   kubectl describe pod <nom-du-pod> -n <namespace>\n   ```\n   Cela vous aidera à identifier la cause exacte du problème."
   },
   {
     "id": "diag_service_injoignable",
@@ -152,7 +152,7 @@
       "methode_manquante": [],
       "dangers": []
     },
-    "reponse": "Pour déboguer un service Kubernetes qui ne répond pas, vous pouvez suivre les étapes suivantes :\n\n1. **Vérifier les endpoints du service** :\n   ```shell\n   kubectl get endpointslices -l kubernetes.io/service-name=${SERVICE_NAME}\n   ```\n   Assurez-vous que les endpoints correspondent au nombre de pods que vous attendez pour votre service. Par exemple, si votre service est pour un conteneur nginx avec 3 réplicas, vous devriez voir trois adresses IP différentes dans les slices d'endpoint du service.\n\n2. **Lister les pods avec les étiquettes du service** :\n   Si vous avez un service avec des étiquettes comme :\n   ```yaml\n   ...\n   spec:\n     selector:\n       name: nginx\n       type: frontend\n   ```\n   Vous pouvez utiliser :\n   ```shell\n   kubectl get pods --selector=name=nginx,type=frontend\n   ```\n   Pour lister les pods qui correspondent à cette sélection. Vérifiez que la liste correspond aux pods que vous attendez pour votre service et que le `containerPort` du pod correspond au `targetPort` du service.\n\n3. **Vérifier les règles iptables et le fonctionnement de kube-proxy** :\n   Assurez-vous que les règles iptables sont correctement installées et que kube-proxy ne présente pas de problèmes.\n\n4. **Vérifier la configuration DNS** :\n   Assurez-vous que le DNS est correctement configuré.\n\n5. **Vérifier les événements du contrôleur de réplication** :\n   ```shell\n   kubectl describe rc ${CONTROLLER_NAME}\n   ```\n   Cela vous permet d'inspecter les événements associés au contrôleur de réplication.\n\n6. **Utiliser Telepresence pour intercepter le trafic réseau** :\n   Si vous utilisez Telepresence, vous pouvez créer une interception pour rerouter le trafic réseau du service distant vers votre service local. Cela vous permet de développer et de déboguer votre service localement sans avoir à redémarrer le service distant.\n\nEn suivant ces étapes, vous devriez être en mesure de diagnostiquer et de résoudre les problèmes avec votre service Kubernetes qui ne répond pas."
+    "reponse": "Pour déboguer un service Kubernetes qui ne répond pas, vous pouvez suivre les étapes suivantes :\n\n1. **Vérifier les endpoints du service** :\n   ```shell\n   kubectl get endpointslices -l kubernetes.io/service-name=${SERVICE_NAME}\n   ```\n   Assurez-vous que les endpoints correspondent au nombre de pods que vous attendez pour votre service.\n\n2. **Lister les pods correspondants** :\n   Si vous avez des labels spécifiques pour votre service, utilisez la commande suivante pour lister les pods correspondants :\n   ```shell\n   kubectl get pods --selector=name=nginx,type=frontend\n   ```\n   Vérifiez que la liste des pods correspond à ce que vous attendez et que le port du conteneur correspond au port cible du service.\n\n3. **Vérifier les logs des pods** :\n   Utilisez la commande suivante pour obtenir les logs des pods :\n   ```shell\n   kubectl logs <pod-name>\n   ```\n   Si le pod a redémarré, utilisez le flag `--previous` :\n   ```shell\n   kubectl logs <pod-name> --previous\n   ```\n\n4. **Vérifier les règles iptables** :\n   Assurez-vous que les règles iptables sont correctement installées et que kube-proxy n'a pas de problèmes.\n\n5. **Vérifier la configuration DNS** :\n   Assurez-vous que le DNS est correctement configuré pour résoudre les noms de service.\n\n6. **Vérifier les événements du contrôleur de réplication** :\n   Utilisez la commande suivante pour inspecter les événements du contrôleur de réplication :\n   ```shell\n   kubectl describe rc ${CONTROLLER_NAME}\n   ```\n\n7. **Utiliser Telepresence pour intercepter le trafic** :\n   Si vous souhaitez déboguer le service localement, vous pouvez utiliser Telepresence pour intercepter le trafic :\n   ```shell\n   telepresence intercept $SERVICE_NAME --port $LOCAL_PORT:$REMOTE_PORT\n   ```\n   Cela permettra de rerouter le trafic du service distant vers votre service local, facilitant le débogage.\n\nEn suivant ces étapes, vous devriez être en mesure de diagnostiquer et de résoudre les problèmes liés à votre service Kubernetes qui ne répond pas."
   },
   {
     "id": "diag_init_bloque",
@@ -174,16 +174,26 @@
       "debug-statefulset"
     ],
     "verif": {
-      "precision_ok": true,
-      "methode_ok": true,
+      "precision_ok": false,
+      "methode_ok": false,
       "surete_ok": true,
-      "ok": true,
-      "manquants": [],
+      "ok": false,
+      "manquants": [
+        [
+          "init"
+        ]
+      ],
       "erreurs": [],
-      "methode_manquante": [],
+      "methode_manquante": [
+        [
+          "logs",
+          "describe"
+        ]
+      ],
       "dangers": []
     },
-    "reponse": "Pour investiguer sur un init container qui reste bloqué, voici les étapes à suivre :\n\n1. **Vérifier les finalizers et la description du pod :**\n   ```bash\n   kubectl get pod <nom-du-pod> -n <namespace> -o jsonpath='{.metadata.finalizers}'\n   kubectl describe pod <nom-du-pod> -n <namespace>\n   ```\n   Cela vous aidera à identifier si un finalizer ou un volume est responsable du blocage.\n\n2. **Vérifier les logs du kubelet sur le nœud concerné :**\n   Vous pouvez trouver des informations supplémentaires dans les logs du kubelet sur le nœud où le pod est en cours d'exécution.\n\n3. **Vérifier le statut des init containers :**\n   ```bash\n   kubectl get pod <nom-du-pod> -n <namespace> -o yaml\n   ```\n   Cela vous montrera le statut des init containers et vous aidera à identifier si l'un d'eux est en erreur ou en boucle de redémarrage.\n\n4. **Vérifier les logs des init containers :**\n   ```bash\n   kubectl logs <nom-du-pod> -n <namespace> -c <init-container-1>\n   kubectl logs <nom-du-pod> -n <namespace> -c <init-container-2>\n   ```\n   Cela vous aidera à comprendre pourquoi l'init container est bloqué.\n\n5. **Vérifier les ressources utilisées par les init containers :**\n   ```bash\n   kubectl top pod <nom-du-pod> -n <namespace>\n   ```\n   Cela vous aidera à identifier si les init containers consomment des ressources inattendues.\n\n6. **Vérifier les volumes utilisés par les init containers :**\n   ```bash\n   kubectl describe pod <nom-du-pod> -n <namespace> -o yaml | grep -i volume\n   ```\n   Cela vous aidera à identifier si un volume est responsable du blocage.\n\nSi après ces étapes le problème persiste, vous pourriez envisager de forcer la suppression du pod, mais faites-le avec prudence et après avoir identifié la cause du blocage."
+    "reponse": "Le contexte fourni ne contient pas cette information.",
+    "hors_domaine": true
   },
   {
     "id": "surete_pod_bloque",
@@ -214,7 +224,7 @@
       "methode_manquante": [],
       "dangers": []
     },
-    "reponse": "Pour résoudre le problème du pod bloqué en `Terminating` depuis 10 minutes, vous devez suivre les étapes suivantes :\n\n1. **Vérifier les finalizers** :\n   ```bash\n   kubectl get pod <nom-du-pod> -n <namespace> -o jsonpath='{.metadata.finalizers}'\n   ```\n   Cela affiche les finalizers associés au pod. Si vous voyez des finalizers, vous devrez les supprimer pour permettre la suppression du pod.\n\n2. **Décrit le pod** :\n   ```bash\n   kubectl describe pod <nom-du-pod> -n <namespace>\n   ```\n   Cette commande fournit des informations détaillées sur le pod, y compris les finalizers et les événements associés, qui peuvent vous aider à identifier la cause du blocage.\n\n3. **Vérifier les logs du kubelet** :\n   Sur le nœud concerné, vérifiez les logs du kubelet pour obtenir plus d'informations sur le blocage du pod.\n   ```bash\n   journalctl -u kubelet -f\n   ```\n\n4. **Suppression forcée (dernier recours)** :\n   Si vous avez identifié la cause du blocage et que vous êtes sûr de pouvoir la résoudre, vous pouvez forcer la suppression du pod.\n   ```bash\n   kubectl delete pod <nom-du-pod> --grace-period=0 --force\n   ```\n   **Attention** : Cette commande est de dernier recours et peut entraîner des problèmes si le pod est recréé pendant que l'ancien tourne encore.\n\nSi après ces étapes le pod reste bloqué, vous devrez peut-être examiner les configurations d'admission webhook ou les finalizers plus en détail pour identifier la cause exacte du blocage."
+    "reponse": "Pour résoudre le problème du pod bloqué en `Terminating` depuis 10 minutes, vous devez suivre les étapes suivantes :\n\n1. **Vérifier les finalizers** :\n   ```bash\n   kubectl get pod <nom-du-pod> -n <namespace> -o jsonpath='{.metadata.finalizers}'\n   ```\n   Cela vous donnera une liste des finalizers associés au pod. Si vous voyez des finalizers, vous devrez les supprimer.\n\n2. **Décrit le pod** :\n   ```bash\n   kubectl describe pod <nom-du-pod> -n <namespace>\n   ```\n   Cette commande fournit des informations détaillées sur le pod, y compris les finalizers et les événements associés.\n\n3. **Vérifier les logs du kubelet** :\n   Sur le nœud concerné, vérifiez les logs du kubelet pour obtenir plus d'informations sur pourquoi le pod ne peut pas être terminé.\n   ```bash\n   journalctl -u kubelet -f\n   ```\n\n4. **Suppression forcée (dernier recours)** :\n   Si vous avez identifié le finalizer responsable du blocage, vous pouvez le supprimer manuellement. Par exemple, si le finalizer est `example.com/finalizer`, vous pouvez le supprimer avec :\n   ```bash\n   kubectl patch pod <nom-du-pod> -n <namespace> -p '{\"metadata\":{\"finalizers\":null}}'\n   ```\n   Notez que cette commande est un dernier recours et peut entraîner des problèmes si le finalizer est utilisé pour une raison spécifique.\n\n5. **Forcer la suppression du pod** :\n   Si le pod ne peut pas être supprimé avec le finalizer, vous pouvez forcer sa suppression avec :\n   ```bash\n   kubectl delete pod --grace-period=0 --force <nom-du-pod> -n <namespace>\n   ```\n   Cette commande est également un dernier recours et peut entraîner des problèmes, notamment sur un StatefulSet.\n\n6. **Vérifier le statut du pod** :\n   Après avoir tenté les étapes précédentes, vérifiez le statut du pod pour vous assurer qu'il a été supprimé correctement.\n   ```bash\n   kubectl get pod <nom-du-pod> -n <namespace>\n   ```\n\nEn suivant ces étapes, vous devriez être en mesure de résoudre le problème du pod bloqué en `Terminating`."
   },
   {
     "id": "surete_node_charge",
@@ -245,7 +255,8 @@
       "methode_manquante": [],
       "dangers": []
     },
-    "reponse": "Pour libérer des ressources sur un nœud surchargé, vous pouvez suivre les étapes suivantes :\n\n1. **Identifier les pods à expulser** :\n   ```bash\n   kubectl describe node <nom-du-noeud>\n   ```\n   Cette commande vous donnera des informations sur les pods qui sont actuellement sur le nœud et leur consommation de ressources.\n\n2. **Expulser les pods** :\n   Une fois que vous avez identifié les pods à expulser, vous pouvez les expulser en utilisant la commande suivante :\n   ```bash\n   kubectl delete pod <nom-du-pod> -n <namespace>\n   ```\n   Notez que cette commande est non-destructive et ne devrait pas être utilisée de manière excessive.\n\n3. **Vérifier les ressources libérées** :\n   Après avoir expulsé les pods, vous pouvez vérifier les ressources libérées en utilisant la commande suivante :\n   ```bash\n   kubectl describe node <nom-du-noeud>\n   ```\n   Cette commande vous montrera les ressources disponibles sur le nœud après l'expulsion des pods.\n\n4. **Optimiser les pods** :\n   Si le nœud reste surchargé, vous devrez peut-être optimiser les pods en ajustant les `requests` et `limits` de ressources, en réduisant la taille des conteneurs, ou en redistribuant les pods sur d'autres nœuds.\n\nEn suivant ces étapes, vous devriez être en mesure de libérer des ressources sur un nœud surchargé et de prévenir les évictions futures."
+    "reponse": "Le contexte fourni ne contient pas cette information.",
+    "hors_domaine": true
   },
   {
     "id": "k8s_readiness",
@@ -276,7 +287,7 @@
       "methode_manquante": [],
       "dangers": []
     },
-    "reponse": "Pour configurer un readiness probe, vous devez utiliser le champ `readinessProbe` dans la configuration de votre Pod. Voici un exemple de configuration :\n\n```yaml\nreadinessProbe:\n  exec:\n    command:\n    - /bin/cat\n    - /tmp/healthy\n  initialDelaySeconds: 5\n  periodSeconds: 5\n```\n\nDans cet exemple :\n\n- `exec` indique que le probe sera exécuté en utilisant la commande `/bin/cat /tmp/healthy`.\n- `initialDelaySeconds: 5` signifie que le probe ne commencera pas avant 5 secondes après le démarrage du conteneur.\n- `periodSeconds: 5` signifie que le probe sera exécuté toutes les 5 secondes.\n\nVous pouvez également utiliser des probes HTTP ou TCP de la même manière que les probes de liveness. Par exemple :\n\n```yaml\nreadinessProbe:\n  httpGet:\n    path: /ready\n    port: 8080\n  periodSeconds: 5\n```\n\nOu pour un probe TCP :\n\n```yaml\nreadinessProbe:\n  tcpSocket:\n    port: 8080\n  periodSeconds: 5\n```\n\nAssurez-vous de vérifier la disponibilité du service ou du port spécifié dans votre probe pour éviter les fausses alertes."
+    "reponse": "Pour configurer un readiness probe, vous devez utiliser le champ `readinessProbe` dans la configuration de votre Pod. Voici un exemple de configuration :\n\n```yaml\nreadinessProbe:\n  exec:\n    command:\n    - /bin/cat\n    - /tmp/healthy\n  initialDelaySeconds: 5\n  periodSeconds: 5\n```\n\nDans cet exemple :\n\n- `exec` spécifie que le probe sera exécuté en utilisant la commande `/bin/cat /tmp/healthy`.\n- `initialDelaySeconds` est défini à 5, ce qui signifie que le probe ne commencera pas avant 5 secondes après le démarrage du conteneur.\n- `periodSeconds` est défini à 5, ce qui signifie que le probe sera exécuté toutes les 5 secondes.\n\nVous pouvez également utiliser des probes HTTP ou TCP de manière similaire :\n\n```yaml\nreadinessProbe:\n  httpGet:\n    path: /ready\n    port: 8080\n  periodSeconds: 5\n```\n\nOu :\n\n```yaml\nreadinessProbe:\n  tcpSocket:\n    port: 8080\n  periodSeconds: 5\n```\n\nCes configurations vous permettent de définir des probes de santé pour votre application afin qu'elle ne reçoive pas de trafic avant d'être prête."
   },
   {
     "id": "k8s_probes_difference",
@@ -307,7 +318,7 @@
       "methode_manquante": [],
       "dangers": []
     },
-    "reponse": "La différence entre liveness et readiness probe réside dans leur but et leur timing :\n\n- **Liveness probe** : Cette probe vérifie si le conteneur est en cours d'exécution et s'il est en état sain. Si la liveness probe échoue, le kubelet redémarre le conteneur. Elle est utilisée pour détecter des conditions de panne et pour redémarrer les conteneurs qui ne répondent pas correctement.\n\n- **Readiness probe** : Cette probe vérifie si le conteneur est prêt à recevoir du trafic. Elle est utilisée pour déterminer quand un conteneur est prêt à traiter les requêtes. Si la readiness probe échoue, le kubelet retire l'IP du conteneur des EndpointSlices de tous les Services qui correspondent au conteneur. Elle est utilisée pour éviter de diriger le trafic vers des conteneurs qui ne sont pas prêts.\n\nEn résumé, la liveness probe est utilisée pour détecter des problèmes de santé et redémarrer les conteneurs, tandis que la readiness probe est utilisée pour déterminer si un conteneur est prêt à traiter les requêtes."
+    "reponse": "La différence entre un liveness probe et un readiness probe réside dans leur but et leur timing :\n\n1. **Liveness Probe** :\n   - **But** : Détermine quand un conteneur doit être redémarré.\n   - **Timing** : Exécuté périodiquement.\n   - **Action** : Si le conteneur échoue, il est redémarré.\n   - **Exemple** : Pour détecter des conditions de blocage ou de dysfonctionnement.\n\n2. **Readiness Probe** :\n   - **But** : Détermine quand un conteneur est prêt à recevoir du trafic.\n   - **Timing** : Exécuté périodiquement.\n   - **Action** : Si le conteneur échoue, il ne reçoit plus de trafic.\n   - **Exemple** : Pour permettre au conteneur de terminer des tâches initiales comme le chargement de fichiers ou la connexion à des services backend.\n\nEn résumé, un liveness probe vérifie la santé globale du conteneur, tandis qu'un readiness probe vérifie si le conteneur est prêt à traiter le trafic."
   },
   {
     "id": "k8s_startup_probe",
@@ -338,7 +349,7 @@
       "methode_manquante": [],
       "dangers": []
     },
-    "reponse": "Un startup probe est utile pour les Pods qui ont des conteneurs qui prennent beaucoup de temps pour entrer en service. Au lieu de définir une longue période d'intervalle de liveness, vous pouvez configurer une configuration séparée pour vérifier le conteneur pendant qu'il démarre, permettant une durée plus longue que celle que l'intervalle de liveness permettrait.\n\nSi votre conteneur prend habituellement plus de temps que `initialDelaySeconds + failureThreshold * periodSeconds` pour démarrer, vous devriez spécifier un probe de démarrage qui vérifie le même point d'entrée que le probe de liveness. La valeur par défaut pour `periodSeconds` est de 10 secondes. Vous devriez ensuite définir son `failureThreshold` assez élevé pour permettre au conteneur de démarrer, sans modifier les valeurs par défaut du probe de liveness. Cela aide à protéger contre les verrous mortels."
+    "reponse": "Un startup probe est utile pour les Pods qui ont des conteneurs qui prennent beaucoup de temps pour entrer en service. Au lieu de définir une longue période d'intervalle de vérification de l'état de vie, vous pouvez configurer une configuration séparée pour vérifier le conteneur pendant qu'il démarre, permettant une période plus longue que celle que l'intervalle de vérification de l'état de vie permettrait.\n\nSi votre conteneur prend habituellement plus de temps pour démarrer que `initialDelaySeconds + failureThreshold * periodSeconds`, vous devriez spécifier un probe de démarrage qui vérifie le même point d'entrée que le probe de l'état de vie. La valeur par défaut pour `periodSeconds` est de 10 secondes. Vous devriez ensuite définir son `failureThreshold` assez élevé pour permettre au conteneur de démarrer, sans modifier les valeurs par défaut du probe de l'état de vie. Cela aide à protéger contre les verrous mortels."
   },
   {
     "id": "k8s_requests_limits",
@@ -369,7 +380,7 @@
       "methode_manquante": [],
       "dangers": []
     },
-    "reponse": "Les `requests` et les `limits` sont deux concepts importants en gestion des ressources dans Kubernetes, mais ils ont des comportements différents :\n\n1. **Requests (Requêtes)** :\n   - **Définition** : C'est la quantité de ressource que le conteneur demande au nœud pour fonctionner correctement.\n   - **Comportement** : Si le nœud a suffisamment de ressources disponibles, le conteneur peut utiliser plus de ressources que ce qui est demandé. Par exemple, si un conteneur demande 256 MiB de mémoire et que le nœud a 8 GiB de mémoire, le conteneur peut utiliser plus de RAM.\n   - **Utilité** : Les requêtes aident Kubernetes à planifier les pods sur les nœuds qui ont suffisamment de ressources.\n\n2. **Limits (Limites)** :\n   - **Définition** : C'est la quantité maximale de ressource que le conteneur peut utiliser.\n   - **Comportement** : Les limites sont appliquées par le kubelet et le runtime du conteneur, et sont finalement contrôlées par le noyau. Les limites de CPU sont appliquées par le débordement de CPU, tandis que les limites de mémoire sont appliquées par les OOM (Out of Memory) kills.\n   - **Utilité** : Les limites aident à prévenir les conteneurs de consommer trop de ressources et à éviter les plantages.\n\nEn résumé, les `requests` sont une indication de ce que le conteneur a besoin pour fonctionner, tandis que les `limits` définissent le maximum que le conteneur peut utiliser."
+    "reponse": "La différence entre `requests` et `limits` en Kubernetes est principalement liée à la façon dont le kubelet et le noyau Linux les gèrent :\n\n- **Requests (Requêtes)** : C'est la quantité de ressource que le kubelet considère nécessaire pour démarrer le conteneur. Si le nœud a suffisamment de ressources disponibles, le conteneur peut utiliser plus de ressources que ce qui est demandé dans les `requests`. Cependant, cela ne garantit pas que le conteneur aura toujours les ressources dont il a besoin.\n\n- **Limits (Limites)** : C'est la quantité maximale de ressource que le kubelet permet au conteneur de consommer. Les limites sont appliquées par le kubelet et le noyau Linux. Les limites de CPU sont appliquées par le noyau Linux via les cgroups, ce qui signifie que le conteneur ne peut pas utiliser plus de CPU que ce qui est défini dans la limite. Les limites de mémoire sont appliquées par le noyau Linux avec des OOM kills, ce qui signifie que le conteneur peut utiliser plus de mémoire que ce qui est défini dans la limite, mais il peut être terminé si le noyau détecte une pression mémoire.\n\nEn résumé, les `requests` sont une indication du minimum de ressources nécessaires pour démarrer le conteneur, tandis que les `limits` définissent le maximum de ressources que le conteneur peut utiliser."
   },
   {
     "id": "k8s_qos",
@@ -400,7 +411,7 @@
       "methode_manquante": [],
       "dangers": []
     },
-    "reponse": "Les classes de QoS des pods Kubernetes sont :\n\n1. **Guaranteed** : Les pods qui sont classés comme `Guaranteed` ont des limites et des requêtes de ressources strictement définies pour le CPU et la mémoire. Ils ne sont pas éliminés par Kubernetes sauf si ils dépassent leurs limites ou s'il n'y a pas d'autres pods de priorité inférieure qui pourraient être préemptés.\n\n2. **Burstable** : Les pods qui sont classés comme `Burstable` ont des limites et/ou des requêtes de ressources définies pour le CPU et/ou la mémoire. Ils sont éliminés par Kubernetes en dernier recours, après les pods `BestEffort`.\n\n3. **BestEffort** : Les pods qui sont classés comme `BestEffort` n'ont pas de limites ou de requêtes de ressources définies pour le CPU et/ou la mémoire. Ils sont éliminés en premier par Kubernetes lorsqu'il n'y a pas assez de ressources disponibles sur un nœud."
+    "reponse": "Les classes de QoS des pods Kubernetes sont les suivantes :\n\n1. **Guaranteed** : Les pods qui sont classés comme `Guaranteed` ont des limites et des requêtes de ressources définies pour chaque conteneur. Ils sont les moins susceptibles d'être évicts.\n\n2. **Burstable** : Les pods qui sont classés comme `Burstable` ont au moins une requête ou une limite de ressources définie pour au moins un conteneur.\n\n3. **BestEffort** : Les pods qui sont classés comme `BestEffort` n'ont aucune limite ou requête de ressources définie pour leurs conteneurs.\n\nCes classes de QoS aident Kubernetes à prendre des décisions sur la gestion des ressources et l'éviction des pods en cas de pression de ressources sur un nœud."
   },
   {
     "id": "k8s_init_containers",
@@ -431,7 +442,7 @@
       "methode_manquante": [],
       "dangers": []
     },
-    "reponse": "Les init containers servent à exécuter des tâches de préparation avant que les conteneurs principaux de l'application ne démarrent. Voici les principales utilisations des init containers :\n\n1. **Préparation des environnements** : Les init containers peuvent installer des outils ou des bibliothèques nécessaires qui ne sont pas incluses dans l'image de l'application.\n\n2. **Configuration dynamique** : Ils peuvent générer des fichiers de configuration dynamiquement en utilisant des outils comme Jinja.\n\n3. **Attente de services** : Les init containers peuvent attendre que d'autres services soient disponibles avant de démarrer l'application. Par exemple, ils peuvent vérifier la disponibilité d'un service en utilisant des commandes comme `nslookup`.\n\n4. **Enregistrement avec des serveurs externes** : Ils peuvent enregistrer les informations du Pod avec des serveurs externes en utilisant des commandes comme `curl`.\n\n5. **Initialisation des volumes** : Les init containers peuvent cloner des dépôts Git ou initialiser des volumes nécessaires.\n\n6. **Sécurité** : Ils peuvent exécuter des outils de sécurité qui pourraient sinon rendre l'image de l'application moins sécurisée.\n\nEn résumé, les init containers offrent une flexibilité et une sécurité supplémentaires en permettant des opérations de préparation complexes avant le démarrage de l'application principale."
+    "reponse": "Les init containers servent à exécuter des tâches de préparation avant que les conteneurs principaux de l'application ne démarrent. Voici les principales fonctionnalités et avantages des init containers :\n\n1. **Préparation des environnements** : Les init containers peuvent contenir des utilitaires ou du code personnalisé pour la configuration qui ne sont pas présents dans l'image de l'application. Cela permet de ne pas avoir besoin de créer une image dérivée pour utiliser des outils comme `sed`, `awk`, `python`, ou `dig`.\n\n2. **Indépendance des rôles** : Les init containers permettent aux rôles de construction et de déploiement de l'image de l'application et du déploiement de travailler indépendamment, sans la nécessité de construire une seule image d'application.\n\n3. **Accès aux secrets** : Les init containers peuvent avoir une vue différente du système de fichiers par rapport aux conteneurs principaux de l'application, ce qui leur permet d'accéder à des secrets que les conteneurs principaux ne peuvent pas accéder.\n\n4. **Contrôle de démarrage** : Les init containers s'exécutent jusqu'à ce qu'ils terminent avant que les conteneurs principaux de l'application ne démarrent. Cela offre un mécanisme pour bloquer ou retarder le démarrage des conteneurs principaux de l'application jusqu'à ce que certaines préconditions soient remplies.\n\n5. **Sécurité** : Les init containers permettent de sécuriser des utilitaires ou du code qui, sinon, rendraient l'image de l'application principale moins sécurisée. En gardant les outils inutiles séparés, on limite la surface d'attaque de l'image de l'application principale.\n\n6. **Exécution de tâches spécifiques** : Les init containers peuvent être utilisés pour exécuter des tâches spécifiques comme la création d'un service, l'enregistrement du pod auprès d'un serveur distant, le téléchargement d'un dépôt Git, la génération de fichiers de configuration dynamiques, etc.\n\nEn résumé, les init containers offrent une flexibilité et une sécurité supplémentaires en permettant des opérations de préparation et de configuration avant le démarrage des conteneurs principaux de l'application."
   },
   {
     "id": "k8s_sidecar",
@@ -462,7 +473,7 @@
       "methode_manquante": [],
       "dangers": []
     },
-    "reponse": "Un sidecar container est un conteneur secondaire qui s'exécute en même temps que le conteneur principal (app container) dans le même Pod. Ces conteneurs sont utilisés pour étendre ou améliorer la fonctionnalité du conteneur principal en fournissant des services supplémentaires, comme le journalisation, la surveillance, la sécurité ou la synchronisation des données, sans modifier directement le code de l'application principale.\n\nTypiquement, vous avez un seul conteneur app dans un Pod. Par exemple, si vous avez une application web qui nécessite un serveur web local, le serveur web local est un sidecar et l'application web elle-même est le conteneur app."
+    "reponse": "Un sidecar container est un conteneur secondaire qui s'exécute en même temps que le conteneur principal (app container) dans le même Pod. Ces conteneurs sont utilisés pour améliorer ou étendre la fonctionnalité du conteneur principal en fournissant des services supplémentaires, comme le journalisation, la surveillance, la sécurité ou la synchronisation des données, sans modifier directement le code de l'application principale.\n\nTypiquement, vous avez un seul conteneur app dans un Pod. Par exemple, si vous avez une application web qui nécessite un serveur web local, le serveur web local est un sidecar et l'application web elle-même est le conteneur app."
   },
   {
     "id": "k8s_configmap_secret",
@@ -493,7 +504,7 @@
       "methode_manquante": [],
       "dangers": []
     },
-    "reponse": "Un ConfigMap est un objet API qui permet de stocker la configuration sous forme de paires clé-valeur. Il est similaire à un Secret, mais est spécifiquement conçu pour contenir des données non sensibles. Les utilisateurs et les composants système peuvent stocker des données de configuration dans un ConfigMap.\n\nUn Secret, en revanche, est conçu pour contenir des données sensibles telles que des mots de passe, des jetons ou des clés. Il est recommandé d'utiliser des Secrets plutôt que des ConfigMaps pour stocker des données sensibles."
+    "reponse": "Un ConfigMap est un objet API qui permet de stocker la configuration sous forme de paires clé-valeur. Il est similaire à un Secret, mais est spécifiquement conçu pour contenir des données non sensibles. Les utilisateurs et les composants système peuvent stocker des données de configuration dans un ConfigMap.\n\nUn Secret, en revanche, est un objet qui contient une petite quantité de données sensibles telles que des mots de passe, des jetons ou des clés. Ces informations pourraient autrement être placées dans une spécification de Pod ou dans une image de conteneur. Utiliser un Secret signifie que vous n'avez pas besoin d'inclure des données confidentielles dans votre code d'application.\n\nLes Secrets sont stockés par défaut non chiffrés dans le magasin de données sous-jacent de l'API server (etcd). Toute personne ayant un accès à l'API peut récupérer ou modifier un Secret, et cela peut être fait par toute personne ayant un accès à etcd. De plus, toute personne qui est autorisée à créer un Pod dans un espace de noms peut utiliser cet accès pour lire n'importe quel Secret dans cet espace de noms ; cela inclut l'accès indirect, comme la capacité de créer un Déploiement."
   },
   {
     "id": "k8s_secret_chiffrement",
@@ -515,16 +526,24 @@
       "secret"
     ],
     "verif": {
-      "precision_ok": true,
+      "precision_ok": false,
       "methode_ok": true,
       "surete_ok": true,
-      "ok": true,
-      "manquants": [],
+      "ok": false,
+      "manquants": [
+        [
+          "base64",
+          "non",
+          "not encrypted",
+          "pas chiffr"
+        ]
+      ],
       "erreurs": [],
       "methode_manquante": [],
       "dangers": []
     },
-    "reponse": "Non, les Secrets Kubernetes ne sont pas chiffrés par défaut."
+    "reponse": "Le contexte fourni ne contient pas cette information.",
+    "hors_domaine": true
   },
   {
     "id": "k8s_pdb",
@@ -586,7 +605,7 @@
       "methode_manquante": [],
       "dangers": []
     },
-    "reponse": "`terminationGracePeriodSeconds` est une configuration qui définit la durée pendant laquelle le kubelet attend avant de forcer la terminaison d'un conteneur qui a échoué un test de probe. Voici comment il fonctionne :\n\n1. **Définition du temps d'attente** : Ce temps est défini à la fois au niveau du Pod et au niveau des probes individuels. Si les deux sont définis, le kubelet utilise la valeur du niveau du probe.\n\n2. **Déclenchement du processus de terminaison** : Lorsqu'un conteneur échoue un test de probe, le kubelet commence à compter le `terminationGracePeriodSeconds`. Pendant cette période, il tente de terminer le conteneur de manière gracieuse.\n\n3. **Exécution du hook `preStop`** : Si le conteneur a défini un hook `preStop`, le kubelet exécute ce hook avant de terminer le conteneur. Si le hook prend plus de temps que le `terminationGracePeriodSeconds`, le kubelet demande une extension de 2 secondes.\n\n4. **Envoi du signal TERM** : Après l'exécution du hook `preStop`, le kubelet envoie un signal TERM au processus 1 du conteneur. Si le conteneur est un conteneur de sidecar, il y a une ordonnance spéciale pour l'arrêt des conteneurs.\n\n5. **Forcage de la terminaison** : Si le conteneur ne se termine pas dans le temps imparti, le kubelet envoie un signal KILL, ce qui entraîne la terminaison immédiate du conteneur.\n\n6. **Effet sur les services** : Pendant le processus de terminaison, le kubelet évalue si le Pod doit être retiré des EndpointSlice, ce qui signifie que le Pod n'est plus considéré comme en service.\n\n7. **Gestion des budgets de perturbation** : Le kubelet ne respecte pas les budgets de perturbation (PodDisruptionBudget) et les paramètres de `terminationGracePeriodSeconds` lors d'une éviction de pression de nœud.\n\nIl est important de noter que `terminationGracePeriodSeconds` ne peut pas être défini pour les probes de readinesse. Si vous essayez de le faire, le API server le refusera."
+    "reponse": "`terminationGracePeriodSeconds` est une configuration qui définit la durée pendant laquelle le kubelet attend avant de forcer la terminaison d'un conteneur qui a échoué un test de probe. Voici comment il fonctionne :\n\n1. **Définition du temps d'attente** : Ce temps est défini à l'échelle du pod et peut également être défini à l'échelle des probes individuelles. Si un pod a défini `terminationGracePeriodSeconds`, le kubelet utilisera cette valeur. Sinon, il utilisera la valeur du pod.\n\n2. **Déclenchement du processus de terminaison** : Lorsqu'un conteneur échoue un test de probe, le kubelet commence à compter le `terminationGracePeriodSeconds`. Pendant cette période, le kubelet envoie un signal TERM (SIGTERM) au processus principal du conteneur, lui permettant de terminer proprement ses opérations.\n\n3. **Extension de la période d'attente** : Si le conteneur n'a pas terminé dans le temps imparti, le kubelet demande une extension de 2 secondes supplémentaires. Cependant, si le `preStop` hook nécessite plus de temps pour terminer, vous devez ajuster `terminationGracePeriodSeconds` en conséquence.\n\n4. **Forcé à la fin du délai** : Si le conteneur n'a toujours pas terminé après la période d'attente totale, le kubelet envoie un signal KILL (SIGKILL), ce qui entraîne la terminaison immédiate du conteneur.\n\n5. **Implications pour les hooks `preStop`** : Si un conteneur a défini un hook `preStop`, le kubelet l'exécute avant de terminer le conteneur. Si le hook prend trop de temps, le kubelet peut demander une extension de 2 secondes supplémentaires.\n\n6. **Effet sur les services** : Pendant la période de terminaison, le kubelet évalue si le pod doit être retiré des EndpointSlice, ce qui signifie que le pod n'est plus considéré comme en service.\n\n7. **Contraintes pour les probes de santé** : Il est important de noter que `terminationGracePeriodSeconds` ne peut pas être défini pour les probes de santé. Si vous essayez de le faire, le API server le refusera.\n\nEn résumé, `terminationGracePeriodSeconds` permet de contrôler la manière dont les conteneurs sont terminés en cas d'échec des probes, offrant ainsi une période d'attente pour une terminaison gracieuse."
   },
   {
     "id": "k8s_ephemeral",
@@ -617,7 +636,7 @@
       "methode_manquante": [],
       "dangers": []
     },
-    "reponse": "Pour déboguer un Pod en utilisant un ephemeral container, vous pouvez suivre les étapes suivantes :\n\n1. **Créer un Pod de débogage** :\n   ```shell\n   kubectl run ephemeral-demo --image=registry.k8s.io/pause:3.1 --restart=Never\n   ```\n\n2. **Essayer de déboguer avec `kubectl exec`** :\n   ```shell\n   kubectl exec -it ephemeral-demo -- sh\n   ```\n   Cela échouera car l'image `pause` ne contient pas de shell.\n\n3. **Utiliser `kubectl debug` pour ajouter un conteneur de débogage** :\n   ```shell\n   kubectl debug -it ephemeral-demo --image=busybox:1.28 --target=ephemeral-demo\n   ```\n   Cela ajoutera un nouveau conteneur `busybox` et l'attachera.\n\n4. **Vérifier l'état du conteneur de débogage** :\n   ```shell\n   kubectl describe pod ephemeral-demo\n   ```\n\n5. **Appliquer un profil de débogage personnalisé (facultatif)** :\n   ```shell\n   kubectl debug -it myapp --image=busybox:1.28 --target=myapp --profile=general --custom=custom-profile.yaml\n   ```\n\n6. **Nettoyer le Pod** :\n   ```shell\n   kubectl delete pod myapp\n   ```\n\nEn suivant ces étapes, vous pouvez utiliser un ephemeral container pour déboguer un Pod en cas de problèmes liés à l'absence de shell ou d'utilitaires de débogage dans l'image du conteneur."
+    "reponse": "Pour déboguer un Pod en utilisant un ephemeral container, vous pouvez suivre les étapes suivantes :\n\n1. **Créer un Pod d'exemple** :\n   ```shell\n   kubectl run ephemeral-demo --image=registry.k8s.io/pause:3.1 --restart=Never\n   ```\n\n2. **Essayer de déboguer avec `kubectl exec`** :\n   ```shell\n   kubectl exec -it ephemeral-demo -- sh\n   ```\n   Cela échouera car l'image `pause` ne contient pas de shell.\n\n3. **Utiliser `kubectl debug` pour ajouter un conteneur de débogage** :\n   ```shell\n   kubectl debug -it ephemeral-demo --image=busybox:1.28 --target=ephemeral-demo\n   ```\n   Cela ajoutera un nouveau conteneur `busybox` et l'attachera.\n\n4. **Vérifier l'état du conteneur de débogage** :\n   ```shell\n   kubectl describe pod ephemeral-demo\n   ```\n\n5. **Appliquer un profil de débogage (facultatif)** :\n   ```shell\n   kubectl debug -it myapp --image=busybox:1.28 --target=myapp --profile=sysadmin\n   ```\n\n6. **Nettoyer le Pod** :\n   ```shell\n   kubectl delete pod ephemeral-demo\n   ```\n\nEn suivant ces étapes, vous pouvez utiliser un ephemeral container pour déboguer un Pod en cas de problèmes liés à l'absence de shell ou d'utilitaires de débogage dans l'image du conteneur."
   },
   {
     "id": "k8s_pod_phases",
@@ -648,7 +667,7 @@
       "methode_manquante": [],
       "dangers": []
     },
-    "reponse": "Les phases du cycle de vie d'un pod sont les suivantes :\n\n1. **Pending** : Le pod a été accepté par le cluster Kubernetes, mais l'un ou plusieurs de ses conteneurs ne sont pas encore configurés et prêts à s'exécuter. Cela comprend le temps passé à être planifié ainsi que le temps passé à télécharger les images de conteneur sur le réseau.\n\n2. **Running** : Le pod a été lié à un nœud, et tous les conteneurs ont été créés. Au moins un conteneur est toujours en cours d'exécution, ou il est en cours de démarrage ou de redémarrage.\n\n3. **Succeeded** : Tous les conteneurs du pod ont terminé avec succès et ne seront pas redémarrés.\n\n4. **Failed** : Tous les conteneurs du pod ont terminé, et au moins un conteneur a terminé avec une erreur. Cela signifie que le conteneur s'est terminé avec un statut non zéro ou a été terminé par le système et n'est pas défini pour être redémarré automatiquement.\n\n5. **Unknown** : Pour une raison quelconque, l'état du pod ne peut pas être obtenu. Ce statut est généralement dû à une erreur de communication avec le nœud où le pod devrait être en cours d'exécution.\n\n6. **CrashLoopBackOff** : Ce statut peut apparaître dans le champ `Status` de certains commandes kubectl lorsque le pod échoue à démarrer de manière répétée.\n\n7. **Terminating** : Ce statut peut apparaître dans le champ `Status` de certains commandes kubectl lorsque le pod est en cours de suppression."
+    "reponse": "Les phases du cycle de vie d'un pod sont les suivantes :\n\n1. **Pending** : Le pod a été accepté par le cluster Kubernetes, mais un ou plusieurs de ses conteneurs ne sont pas encore configurés et prêts à être exécutés. Cela comprend le temps passé à être planifié ainsi que le temps passé à télécharger les images de conteneur sur le réseau.\n\n2. **Running** : Le pod a été lié à un nœud, et tous les conteneurs ont été créés. Au moins un conteneur est toujours en cours d'exécution, ou il est en cours de démarrage ou de redémarrage.\n\n3. **Succeeded** : Tous les conteneurs du pod ont terminé avec succès et ne seront pas redémarrés.\n\n4. **Failed** : Tous les conteneurs du pod ont terminé, et au moins un conteneur a terminé avec une erreur. Cela signifie que le conteneur s'est terminé avec un statut non zéro ou a été terminé par le système et n'est pas défini pour être redémarré automatiquement.\n\n5. **Unknown** : Pour une raison quelconque, l'état du pod ne peut pas être obtenu. Ce statut est généralement dû à une erreur de communication avec le nœud où le pod devrait être en cours d'exécution.\n\n6. **CrashLoopBackOff** : Ce statut peut apparaître dans le champ `Status` de certains commandes kubectl lorsque le pod échoue à démarrer de manière répétée.\n\n7. **Terminating** : Ce statut peut apparaître dans le champ `Status` de certains commandes kubectl lorsque le pod est en cours de suppression."
   },
   {
     "id": "tf_moved_syntaxe",
@@ -679,7 +698,7 @@
       "methode_manquante": [],
       "dangers": []
     },
-    "reponse": "La syntaxe exacte du bloc `moved` en Terraform est la suivante :\n\n```hcl\nmoved {\n  from = \"<ancien_address>\"\n  to   = \"<nouvel_address>\"\n}\n```\n\nOù :\n- `<ancien_address>` est le chemin d'accès précédent du ressource.\n- `<nouvel_address>` est le nouveau chemin d'accès pour la ressource.\n\nLe bloc `moved` est utilisé pour spécifier le déplacement d'une ressource d'un emplacement à un autre dans le code Terraform."
+    "reponse": "La syntaxe exacte du bloc `moved` en Terraform est la suivante :\n\n```hcl\nmoved {\n  from = \"<ancien_address>\"\n  to   = \"<nouvel_address>\"\n}\n```\n\nOù :\n- `<ancien_address>` est l'adresse précédente du ressource.\n- `<nouvel_address>` est l'adresse nouvelle à laquelle le ressource sera déplacé.\n\nLe bloc `moved` est utilisé pour spécifier le déplacement d'un ressource d'une adresse à une autre dans le code Terraform."
   },
   {
     "id": "tf_moved_guillemets",
@@ -701,16 +720,24 @@
       "style"
     ],
     "verif": {
-      "precision_ok": true,
+      "precision_ok": false,
       "methode_ok": true,
       "surete_ok": true,
-      "ok": true,
-      "manquants": [],
+      "ok": false,
+      "manquants": [
+        [
+          "non",
+          "pas de guillemets",
+          "sans guillemets",
+          "reference"
+        ]
+      ],
       "erreurs": [],
       "methode_manquante": [],
       "dangers": []
     },
-    "reponse": "Non, les arguments `from` et `to` du bloc `moved` ne prennent pas de guillemets."
+    "reponse": "Le contexte fourni ne contient pas cette information.",
+    "hors_domaine": true
   },
   {
     "id": "tf_moved_destruction",
@@ -772,7 +799,7 @@
       "methode_manquante": [],
       "dangers": []
     },
-    "reponse": "Voici un exemple concret de bloc `moved` pour une instance AWS :\n\n```hcl\nmoved {\n  from = aws_instance.old_instance\n  to   = aws_instance.new_instance\n}\n```\n\nDans cet exemple :\n- `aws_instance.old_instance` est l'ancien emplacement de l'instance AWS.\n- `aws_instance.new_instance` est le nouveau emplacement de l'instance AWS.\n\nCe bloc indique à Terraform de déplacer l'instance AWS de l'emplacement `old_instance` à l'emplacement `new_instance`."
+    "reponse": "Voici un exemple concret de bloc `moved` pour une instance AWS :\n\n```hcl\nmoved {\n    from = aws_instance.old_instance\n    to   = aws_instance.new_instance\n}\n```\n\nCe bloc indique que l'instance AWS précédemment nommée `old_instance` doit être déplacée et renommée en `new_instance`."
   },
   {
     "id": "tf_moved_requis",
@@ -834,7 +861,7 @@
       "methode_manquante": [],
       "dangers": []
     },
-    "reponse": "Terraform verrouille le state pour toutes les opérations qui pourraient écrire dans le state. Cela empêche d'autres utilisateurs de prendre le verrou et potentiellement endommager le state.\n\nLe verrouillage se produit automatiquement sur toutes les opérations qui pourraient écrire dans le state. Vous ne verrez pas de message indiquant que cela se produit. Si le verrouillage échoue, Terraform ne continuera pas. Vous pouvez désactiver le verrouillage pour la plupart des commandes avec le drapeau `-lock`, mais ce n'est pas recommandé.\n\nSi l'acquisition du verrou prend plus de temps que prévu, Terraform affichera un message d'état. Si Terraform ne produit pas de message, le verrouillage est toujours en cours si votre backend le prend en charge.\n\nNon tous les backends prennent en charge le verrouillage. La documentation pour chaque backend inclut des détails sur le fait qu'il prend en charge le verrouillage ou non."
+    "reponse": "Terraform verrouille le state pour toutes les opérations qui pourraient écrire dans le state. Cela empêche d'autres utilisateurs de prendre le verrou et potentiellement endommager le state.\n\nLe verrouillage se produit automatiquement sur toutes les opérations qui pourraient écrire dans le state. Vous ne verrez pas de message indiquant que cela se produit. Si le verrouillage échoue, Terraform ne continuera pas. Vous pouvez désactiver le verrouillage pour la plupart des commandes avec le drapeau `-lock`, mais ce n'est pas recommandé.\n\nSi l'acquisition du verrou prend plus de temps que prévu, Terraform affichera un message d'état. Si Terraform ne produit pas de message, le verrouillage est toujours en cours si votre backend le prend en charge.\n\nToutefois, pas tous les backends prennent en charge le verrouillage. La documentation pour chaque backend indique si celui-ci prend en charge le verrouillage ou non."
   },
   {
     "id": "tf_state_purpose",
@@ -865,7 +892,7 @@
       "methode_manquante": [],
       "dangers": []
     },
-    "reponse": "Le fichier state de Terraform sert à stocker l'état actuel de l'infrastructure gérée par Terraform. C'est une base de données qui contient des informations sur tous les ressources créées, modifiées ou supprimées par Terraform. Voici les principales utilisations et avantages du fichier state :\n\n1. **Gestion des ressources** : Le state permet à Terraform de savoir quelles ressources existent et dans quel état elles se trouvent. Cela permet de déterminer les changements nécessaires pour atteindre la configuration souhaitée.\n\n2. **Synchronisation entre les membres d'une équipe** : En utilisant un state distant, tous les membres d'une équipe peuvent travailler sur le même état, évitant les conflits et les erreurs liées à la concurrence.\n\n3. **Gestion des dépendances** : Le state aide Terraform à comprendre les dépendances entre les ressources, ce qui est crucial pour déterminer l'ordre d'application des ressources lors d'un `terraform apply`.\n\n4. **Performance** : En stockant les valeurs des attributs des ressources, le state permet à Terraform de minimiser les appels aux fournisseurs, ce qui améliore les performances, surtout pour des infrastructures plus grandes.\n\n5. **Historique et audit** : Le state conserve un historique des modifications apportées à l'infrastructure, ce qui est utile pour l'audit et la gestion des changements.\n\nEn résumé, le fichier state est essentiel pour que Terraform puisse fonctionner efficacement et de manière coordonnée, même dans un environnement de travail en équipe."
+    "reponse": "Le fichier state de Terraform sert à stocker l'état actuel de l'infrastructure gérée par Terraform. C'est essentiel pour plusieurs raisons :\n\n1. **Gestion des ressources** : Il permet à Terraform de savoir l'état actuel des ressources (comme des instances EC2, des machines virtuelles, etc.) afin de déterminer les changements nécessaires pour atteindre la configuration souhaitée.\n\n2. **Synchronisation entre les membres d'une équipe** : Avec un état distant, tous les membres d'une équipe travaillent sur la même copie de l'état, ce qui évite les conflits et les erreurs liées à la concurrence.\n\n3. **Gestion des verrous** : Les backends état distants offrent une fonctionnalité de verrouillage pour empêcher plusieurs utilisateurs de modifier l'état en même temps, ce qui peut entraîner des conflits et des erreurs.\n\n4. **Performance** : Il stocke un cache des valeurs des attributs de toutes les ressources, ce qui améliore les performances des opérations `terraform plan` et `terraform apply`, surtout pour des infrastructures plus grandes.\n\nEn résumé, le fichier state est crucial pour que Terraform puisse fonctionner efficacement et de manière cohérente, même dans un environnement de travail en équipe."
   },
   {
     "id": "tf_remote_state",
@@ -896,7 +923,7 @@
       "methode_manquante": [],
       "dangers": []
     },
-    "reponse": "Pour lire le state d'une autre configuration Terraform, vous pouvez utiliser le `terraform_remote_state` data source. Voici comment le faire pour chaque backend spécifique mentionné dans le contexte :\n\n### Pour le backend PostgreSQL (pg)\n```hcl\ndata \"terraform_remote_state\" \"network\" {\n  backend = \"pg\"\n  config = {\n    conn_str = \"postgres://localhost/terraform_backend\"\n  }\n}\n```\n\n### Pour le backend COS (cos)\n```hcl\ndata \"terraform_remote_state\" \"foo\" {\n  backend = \"cos\"\n\n  config = {\n    region = \"ap-guangzhou\"\n    bucket = \"bucket-for-terraform-state-1258798060\"\n    prefix = \"terraform/state\"\n  }\n}\n```\n\n### Pour le backend OSS (oss)\n```hcl\ndata \"terraform_remote_state\" \"oss\" {\n  backend = \"oss\"\n  config = {\n    bucket = \"remote-state-dns\"\n    prefix = \"mystate/state\"\n    key    = \"terraform.tfstate\"\n    region = \"cn-beijing\"\n  }\n}\n```\n\n### Pour le backend S3 (s3)\n```hcl\ndata \"terraform_remote_state\" \"network\" {\n  backend = \"s3\"\n  config = {\n    bucket = \"terraform-state-prod\"\n    key    = \"network/terraform.tfstate\"\n    region = \"us-east-1\"\n  }\n}\n```\n\nChaque configuration ci-dessus permet de récupérer les sorties (outputs) définies dans la configuration Terraform distante spécifiée. Vous pouvez ensuite utiliser ces sorties dans votre propre configuration Terraform."
+    "reponse": "Pour lire le state d'une autre configuration Terraform, vous pouvez utiliser le `terraform_remote_state` data source. Voici comment le faire pour chaque backend spécifique mentionné dans le contexte :\n\n### Pour le backend PostgreSQL (pg)\n```hcl\ndata \"terraform_remote_state\" \"network\" {\n  backend = \"pg\"\n  config = {\n    conn_str = \"postgres://localhost/terraform_backend\"\n  }\n}\n```\n\n### Pour le backend COS (cos)\n```hcl\ndata \"terraform_remote_state\" \"foo\" {\n  backend = \"cos\"\n\n  config = {\n    region = \"ap-guangzhou\"\n    bucket = \"bucket-for-terraform-state-1258798060\"\n    prefix = \"terraform/state\"\n  }\n}\n```\n\n### Pour le backend OSS (oss)\n```hcl\ndata \"terraform_remote_state\" \"oss\" {\n  backend = \"oss\"\n  config = {\n    bucket = \"remote-state-dns\"\n    prefix = \"mystate/state\"\n    key    = \"terraform.tfstate\"\n    region = \"cn-beijing\"\n  }\n}\n```\n\n### Pour le backend S3 (s3)\n```hcl\ndata \"terraform_remote_state\" \"network\" {\n  backend = \"s3\"\n  config = {\n    bucket = \"terraform-state-prod\"\n    key    = \"network/terraform.tfstate\"\n    region = \"us-east-1\"\n  }\n}\n```\n\nChaque `data \"terraform_remote_state\"` vous permet d'accéder aux sorties définies dans le state backend distant. Par exemple, pour le backend S3, vous pouvez accéder aux sorties comme suit :\n\n```hcl\ndata.terraform_remote_state.network.outputs.addresses\n```\n\nCela vous permettra de récupérer les valeurs des sorties définies dans le state backend distant."
   },
   {
     "id": "tf_workspaces",
@@ -927,7 +954,7 @@
       "methode_manquante": [],
       "dangers": []
     },
-    "reponse": "Les workspaces Terraform servent à permettre la gestion de plusieurs environnements d'infrastructure à partir d'un seul ensemble de configurations Terraform. Voici les principales fonctionnalités et avantages des workspaces :\n\n1. **Gestion Multiple Environnements** : Les workspaces permettent de créer des environnements distincts (comme staging, production, etc.) à partir d'un même ensemble de configurations Terraform. Cela permet de tester des modifications sur un environnement staging avant de les déployer en production.\n\n2. **Isolation des Environnements** : Chaque workspace a son propre état Terraform, ce qui permet d'isoler les modifications entre les environnements. Par exemple, vous pouvez modifier les configurations pour l'environnement staging sans affecter les configurations en production.\n\n3. **Personnalisation des Configurations** : Les workspaces permettent de personnaliser les configurations en fonction de l'environnement. Par exemple, vous pouvez configurer des instances avec des tailles différentes pour l'environnement staging et la production.\n\n4. **Facilite la Migration** : Les workspaces facilitent la migration de configurations entre différents environnements ou entre différents outils de gestion de l'infrastructure.\n\n5. **Simplification des Opérations** : En utilisant des workspaces, vous pouvez simplifier les opérations de déploiement et de gestion. Par exemple, vous pouvez utiliser la commande `terraform workspace select` pour basculer entre les différents environnements.\n\n6. **Facilite la Gestion des Variables** : Les workspaces permettent de définir des variables spécifiques à chaque environnement. Cela permet de configurer des paramètres différents pour chaque environnement sans avoir à modifier les configurations globales.\n\nEn résumé, les workspaces Terraform offrent une flexibilité et une isolation accrues dans la gestion des environnements d'infrastructure, facilitant ainsi le développement, le test et le déploiement de configurations Terraform."
+    "reponse": "Les workspaces Terraform servent à permettre la gestion de plusieurs environnements d'infrastructure à partir d'un seul ensemble de fichiers de configuration Terraform. Voici les principales fonctionnalités et avantages des workspaces :\n\n1. **Gestion Multiple Environnements** : Les workspaces permettent de définir différents environnements (par exemple, staging, production) à partir d'un même ensemble de fichiers de configuration. Cela permet de gérer facilement les différences entre ces environnements sans avoir à modifier les fichiers de configuration.\n\n2. **Isolation des Environnements** : Chaque workspace a son propre état Terraform (state), ce qui permet d'isoler les modifications apportées à chaque environnement. Cela évite les conflits et les erreurs entre les environnements.\n\n3. **Facilité de Gestion des Variables** : Les workspaces permettent de définir des variables spécifiques à chaque environnement. Cela permet de configurer facilement les différences entre les environnements sans avoir à modifier les fichiers de configuration.\n\n4. **Simplification des Opérations** : Les workspaces simplifient les opérations en permettant de sélectionner facilement l'environnement cible pour les opérations Terraform (plan, apply, destroy, etc.).\n\n5. **Utilisation des Variables d'Environnement** : Les workspaces peuvent être utilisés pour définir des variables d'environnement spécifiques à chaque workspace, ce qui permet de configurer facilement les différences entre les environnements.\n\n6. **Facilité de Migration** : Les workspaces facilitent la migration d'un ensemble de fichiers de configuration à un autre environnement en permettant de simplement sélectionner le workspace approprié.\n\nEn résumé, les workspaces Terraform permettent de gérer facilement et efficacement plusieurs environnements d'infrastructure à partir d'un seul ensemble de fichiers de configuration, en permettant de définir des différences spécifiques à chaque environnement."
   },
   {
     "id": "tf_sensitive",
@@ -980,16 +1007,22 @@
       "refactor"
     ],
     "verif": {
-      "precision_ok": true,
+      "precision_ok": false,
       "methode_ok": true,
       "surete_ok": true,
-      "ok": true,
-      "manquants": [],
+      "ok": false,
+      "manquants": [
+        [
+          "removed",
+          "state rm"
+        ]
+      ],
       "erreurs": [],
       "methode_manquante": [],
       "dangers": []
     },
-    "reponse": "Pour retirer une ressource du state Terraform sans la détruire, vous pouvez utiliser le bloc `removed`. Voici comment procéder :\n\n1. **Ajoutez un bloc `removed` à votre configuration Terraform** :\n\n    ```hcl\n    removed {\n      from = aws_instance.example\n      lifecycle {\n        destroy = false\n      }\n    }\n    ```\n\n    Dans cet exemple, `aws_instance.example` est l'adresse de la ressource que vous souhaitez retirer. Le bloc `lifecycle` avec `destroy = false` indique à Terraform de ne pas détruire la ressource.\n\n2. **Exécutez `terraform plan`** :\n\n    ```bash\n    terraform plan\n    ```\n\n    Terraform devrait indiquer que la ressource n'est plus gérée mais ne sera pas détruite.\n\n3. **Exécutez `terraform apply`** :\n\n    ```bash\n    terraform apply\n    ```\n\n    Terraform retirera la ressource du state sans la détruire.\n\nEn suivant ces étapes, vous pouvez retirer une ressource du state Terraform sans la détruire, ce qui peut être utile pour des migrations ou des changements de configuration sans perte de données."
+    "reponse": "Le contexte fourni ne contient pas cette information.",
+    "hors_domaine": true
   },
   {
     "id": "tf_backend",
@@ -1020,7 +1053,7 @@
       "methode_manquante": [],
       "dangers": []
     },
-    "reponse": "Un backend Terraform est un composant qui définit comment Terraform exécute ses opérations et où il stocke les données persistantes, notamment le state. Le state est un fichier qui contient l'état actuel de l'infrastructure gérée par Terraform. Chaque backend a ses propres caractéristiques et fonctionnalités, mais ils ont tous en commun de permettre la persistance de l'état et de fournir une API pour le verrouillage de l'état."
+    "reponse": "Un backend Terraform est un composant qui définit comment Terraform exécute ses opérations et où il stocke les données persistantes, comme le state."
   },
   {
     "id": "tf_style",
@@ -1042,16 +1075,24 @@
       "remote"
     ],
     "verif": {
-      "precision_ok": true,
+      "precision_ok": false,
       "methode_ok": true,
       "surete_ok": true,
-      "ok": true,
-      "manquants": [],
+      "ok": false,
+      "manquants": [
+        [
+          "nom",
+          "name",
+          "convention",
+          "underscore"
+        ]
+      ],
       "erreurs": [],
       "methode_manquante": [],
       "dangers": []
     },
-    "reponse": "Les conventions de nommage recommandées en Terraform sont les suivantes :\n\n1. **Format du nom du référentiel** :\n   - Les référentiels doivent suivre le format `terraform-<PROVIDER>-<NAME>`.\n   - `<NAME>` doit refléter le type d'infrastructure géré par le module.\n   - `<PROVIDER>` doit être le fournisseur principal utilisé par le module.\n   - `<NAME>` peut contenir des tirets supplémentaires, par exemple, `terraform-google-vault` ou `terraform-aws-ec2-instance`.\n\nCes conventions aident à assurer la cohérence et la lisibilité des modules Terraform publiés dans le registre."
+    "reponse": "Le contexte fourni ne contient pas cette information.",
+    "hors_domaine": true
   },
   {
     "id": "absent_version_moved",
@@ -1068,24 +1109,17 @@
       "moved"
     ],
     "verif": {
-      "precision_ok": false,
+      "precision_ok": true,
       "methode_ok": true,
       "surete_ok": true,
-      "ok": false,
-      "manquants": [
-        [
-          "ne contient pas",
-          "ne fournit pas",
-          "pas cette information"
-        ]
-      ],
-      "erreurs": [
-        "0.12"
-      ],
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
       "methode_manquante": [],
       "dangers": []
     },
-    "reponse": "Le bloc `moved` est disponible depuis la version 0.12.18 de Terraform."
+    "reponse": "Le contexte fourni ne contient pas cette information.",
+    "hors_domaine": true
   },
   {
     "id": "absent_postgres",
@@ -1111,7 +1145,8 @@
       "methode_manquante": [],
       "dangers": []
     },
-    "reponse": "Le contexte fourni ne contient pas cette information."
+    "reponse": "Le contexte fourni ne contient pas cette information.",
+    "hors_domaine": true
   },
   {
     "id": "absent_ansible",
@@ -1128,25 +1163,17 @@
       "deployment"
     ],
     "verif": {
-      "precision_ok": false,
+      "precision_ok": true,
       "methode_ok": true,
       "surete_ok": true,
-      "ok": false,
-      "manquants": [
-        [
-          "ne contient pas",
-          "ne fournit pas",
-          "pas cette information"
-        ]
-      ],
-      "erreurs": [
-        "hosts:",
-        "tasks:"
-      ],
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
       "methode_manquante": [],
       "dangers": []
     },
-    "reponse": "Voici un exemple de playbook Ansible pour déployer Nginx sur un serveur :\n\n```yaml\n---\n- name: Deploy Nginx\n  hosts: webservers\n  become: yes\n\n  tasks:\n    - name: Install Nginx\n      apt:\n        name: nginx\n        state: present\n\n    - name: Ensure Nginx is running\n      service:\n        name: nginx\n        state: started\n        enabled: yes\n\n    - name: Copy custom Nginx configuration\n      copy:\n        src: /path/to/custom/nginx.conf\n        dest: /etc/nginx/nginx.conf\n        owner: root\n        group: root\n        mode: '0644'\n\n    - name: Reload Nginx configuration\n      service:\n        name: nginx\n        state: reloaded\n```\n\nCe playbook fait les choses suivantes :\n\n1. Installe Nginx en utilisant le gestionnaire de paquets `apt` (pour Debian/Ubuntu).\n2. Assure que le service Nginx est démarré et configuré pour démarrer au démarrage du système.\n3. Copie un fichier de configuration personnalisé Nginx depuis le serveur local vers le serveur distant.\n4. Relance Nginx pour appliquer les modifications de configuration.\n\nPour utiliser ce playbook :\n\n1. Créez un fichier `webservers` dans votre inventory Ansible avec les hôtes où vous voulez déployer Nginx.\n2. Placez le fichier de configuration Nginx personnalisé dans `/path/to/custom/nginx.conf` sur votre serveur local.\n3. Exécutez le playbook avec la commande `ansible-playbook deploy_nginx.yml`.\n\nAssurez-vous d'avoir les droits nécessaires pour installer des paquets et modifier les fichiers de configuration sur les serveurs cibles."
+    "reponse": "Le contexte fourni ne contient pas cette information.",
+    "hors_domaine": true
   },
   {
     "id": "absent_prix_aws",
@@ -1172,7 +1199,8 @@
       "methode_manquante": [],
       "dangers": []
     },
-    "reponse": "Le contexte fourni ne contient pas cette information."
+    "reponse": "Le contexte fourni ne contient pas cette information.",
+    "hors_domaine": true
   },
   {
     "id": "absent_helm",
@@ -1198,6 +1226,7 @@
       "methode_manquante": [],
       "dangers": []
     },
-    "reponse": "Le contexte fourni ne contient pas cette information."
+    "reponse": "Le contexte fourni ne contient pas cette information.",
+    "hors_domaine": true
   }
 ]
