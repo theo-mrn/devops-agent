@@ -26,6 +26,11 @@ def main() -> int:
     p.add_argument("question", nargs="+")
     p.add_argument("--tours", type=int, default=12, help="limite de tours")
 
+    p = sous.add_parser("watch", help="surveille le cluster par événements")
+    p.add_argument("--diagnose", action="store_true",
+                   help="déclenche l'agent sur chaque anomalie (coûte de l'API)")
+    p.add_argument("--duree", type=int, help="arrêt automatique après N secondes")
+
     sous.add_parser("index", help="reconstruit l'index vectoriel")
     sous.add_parser("fetch", help="télécharge les sources documentaires")
     sous.add_parser("config", help="affiche la configuration active")
@@ -47,6 +52,26 @@ def main() -> int:
         from devops_agent.agent.loop import Agent
         agent = Agent(tours_max=args.tours)
         print(f"\n{agent.demander(' '.join(args.question))}\n")
+
+    elif args.commande == "watch":
+        from devops_agent.agent.watcher import Surveillance
+
+        rappel = None
+        if args.diagnose:
+            from devops_agent.agent.loop import Agent
+
+            def rappel(evenement):
+                print(f"\n\033[1m  DIAGNOSTIC AUTOMATIQUE \033[0m {evenement}\n")
+                agent = Agent()
+                question = (
+                    f"Le pod {evenement.namespace}/{evenement.pod} est en état "
+                    f"{evenement.etat} ({evenement.redemarrages} redémarrages). "
+                    "Diagnostique la cause et propose une correction."
+                )
+                print(agent.demander(question))
+                print()
+
+        Surveillance().suivre(sur_evenement=rappel, duree_max=args.duree)
 
     elif args.commande == "index":
         from devops_agent.ingestion import index
