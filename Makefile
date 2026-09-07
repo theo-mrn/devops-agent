@@ -9,7 +9,7 @@ help:  ## Affiche cette aide
 
 # ── Usage ────────────────────────────────────────────────────────
 
-ask:  ## Question libre : make ask Q="ta question"
+ask:  ## Question libre : make ask Q="ta question"  (RAG_PROVIDER=anthropic pour l API)
 	@uv run python src/rag2.py "$(Q)" 2>/dev/null
 
 rag:  ## Questions de démonstration

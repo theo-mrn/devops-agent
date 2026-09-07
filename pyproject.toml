@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Assistant DevOps local : RAG hybride sur documentation Kubernetes et Terraform"
 requires-python = ">=3.12"
 dependencies = [
+    "anthropic>=1.4.0",
     "ollama>=0.4",
     "pyyaml>=6.0.3",
     "rank-bm25>=0.2.2",

@@ -23,7 +23,6 @@ from pathlib import Path
 os.environ.setdefault("HF_HUB_OFFLINE", "1")
 os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 
-import ollama
 import torch
 from sentence_transformers import SentenceTransformer
 
@@ -31,6 +30,7 @@ from sentence_transformers import SentenceTransformer
 # importe rag2 pour la partie dense.
 
 import config
+import generateur
 
 # Les modèles et paramètres vivent dans config.py, surchargeables par
 # variables d'environnement. Ces alias gardent le code lisible.
@@ -173,21 +173,16 @@ def repondre(question: str) -> None:
     )
 
     debut = time.time()
-    rep = ollama.Client(timeout=config.TIMEOUT_LLM).chat(
-        model=MODELE_LLM,
-        messages=[
-            {"role": "system", "content": SYSTEM},
-            {"role": "user", "content": f"CONTEXTE :\n\n{contexte}\n\n---\n\nQUESTION : {question}"},
-        ],
-        options={"temperature": config.TEMPERATURE},
+    rep = generateur.generer(
+        SYSTEM, f"CONTEXTE :\n\n{contexte}\n\n---\n\nQUESTION : {question}"
     )
     t_gen = time.time() - debut
 
-    print(f"\n{rep['message']['content']}")
+    print(f"\n{rep.texte}")
     print(
         f"\n\033[2m→ recherche {t_recherche * 1000:.0f}ms · "
-        f"contexte {rep.get('prompt_eval_count', 0)} tokens · "
-        f"génération {t_gen:.1f}s\033[0m"
+        f"contexte {rep.tokens_entree} tokens · "
+        f"génération {t_gen:.1f}s · {generateur.modele_actif()}\033[0m"
     )
     print("\033[2m" + "─" * 70 + "\033[0m")
 

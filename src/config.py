@@ -18,11 +18,29 @@ Changer RAG_LLM ou RAG_RERANKER ne demande aucune ré-indexation.
 import os
 from pathlib import Path
 
+# ── Fournisseur de génération ────────────────────────────────────
+
+# « ollama » : modèle local, gratuit, hors ligne.
+# « anthropic » : API Claude, nécessite ANTHROPIC_API_KEY.
+#
+# Seule la génération change : le retrieval (embeddings, BM25, reranker)
+# reste local dans les deux cas. Avec une API, les chunks retenus partent
+# néanmoins dans le prompt à chaque requête.
+PROVIDER = os.environ.get("RAG_PROVIDER", "ollama")
+
 # ── Modèles ──────────────────────────────────────────────────────
 
-# Génération. Tout modèle Ollama fonctionne (`ollama list` pour la liste).
+# Génération locale. Tout modèle Ollama fonctionne (`ollama list`).
 # Qwen2.5-Coder est retenu pour sa maîtrise de YAML/HCL/Bash.
 LLM = os.environ.get("RAG_LLM", "qwen2.5-coder:7b-instruct-q4_K_M")
+
+# Génération par API. Claude Opus 5 par défaut ; claude-sonnet-5 coûte
+# 2,5x moins cher, claude-haiku-4-5 5x moins.
+LLM_API = os.environ.get("RAG_LLM_API", "claude-opus-5")
+
+# Plafond de sortie côté API. Les réponses du RAG font 100-600 tokens ;
+# 4096 laisse de la marge sans risque de troncature.
+MAX_TOKENS_API = int(os.environ.get("RAG_MAX_TOKENS", "4096"))
 
 # Embeddings. bge-m3 est multilingue (le corpus est en anglais, les
 # questions en français) et gère 8k de contexte.
@@ -83,8 +101,10 @@ def verifier_index(meta: dict | None) -> None:
 
 
 def resume() -> str:
+    modele = LLM_API if PROVIDER == "anthropic" else LLM
     return (
-        f"  LLM        {LLM}\n"
+        f"  fournisseur {PROVIDER}\n"
+        f"  LLM        {modele}\n"
         f"  embedding  {EMBEDDING}\n"
         f"  reranker   {RERANKER or '(désactivé)'}\n"
         f"  top-k      {TOP_K}  ·  candidats {CANDIDATS_RERANK}  ·  T° {TEMPERATURE}"

@@ -27,7 +27,6 @@ import unicodedata
 from collections import defaultdict
 from pathlib import Path
 
-import ollama
 import yaml
 
 import rag2
@@ -45,6 +44,7 @@ PARALLELISME = 3
 _verrou_gpu = threading.Lock()
 
 import config
+import generateur
 
 CAS = config.CAS_TEST
 SORTIE = Path("eval/resultats-pro.json")
@@ -203,16 +203,11 @@ def main() -> None:
             texte = None
             for tentative in range(3):
                 try:
-                    client = ollama.Client(timeout=config.TIMEOUT_LLM)
-                    rep = client.chat(
-                        model=rag2.MODELE_LLM,
-                        messages=[
-                            {"role": "system", "content": rag2.SYSTEM},
-                            {"role": "user", "content": f"CONTEXTE :\n\n{contexte}\n\n---\n\nQUESTION : {cas['question']}"},
-                        ],
-                        options={"temperature": config.TEMPERATURE},
+                    rep = generateur.generer(
+                        rag2.SYSTEM,
+                        f"CONTEXTE :\n\n{contexte}\n\n---\n\nQUESTION : {cas['question']}",
                     )
-                    texte = rep["message"]["content"]
+                    texte = rep.texte
                     break
                 except Exception as e:
                     print(f"  \033[33m⟳\033[0m {cas['id']} : {type(e).__name__}", flush=True)
