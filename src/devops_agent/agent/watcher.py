@@ -58,6 +58,16 @@ ETATS_ANORMAUX = {
 DUREE_PENDING_TOLEREE = int(os.environ.get("RAG_PENDING_TOLERE", "300"))  # 5 min
 
 
+def _interactif() -> bool:
+    """La sortie est-elle un terminal ?
+
+    Hors terminal — redirection vers un fichier, service systemd,
+    conteneur — la réécriture de ligne empile des lignes illisibles au
+    lieu de les remplacer.
+    """
+    return sys.stdout.isatty()
+
+
 def _gravite(etat: str) -> str | None:
     """Gravité d'un état, ou None s'il est normal.
 
@@ -101,8 +111,10 @@ class Surveillance:
         self.etats: dict[str, tuple[str, int]] = {}   # pod → (état, redémarrages)
         self.depuis: dict[str, float] = {}            # pod → début de l'état courant
         self.derniere_alerte: dict[str, float] = {}   # clé → date de la dernière alerte
-        self.vus = 0        # événements bruts reçus
-        self.retenus = 0    # événements jugés dignes d'intérêt
+        self.vus = 0          # objets pods reçus, état initial compris
+        self.retenus = 0      # anomalies jugées dignes d'un diagnostic
+        self.initial = 0      # objets reçus lors de l'inventaire de départ
+        self.inventaire = True  # vrai tant qu'on reçoit l'état initial
 
     # ── Filtrage ─────────────────────────────────────────────────
 
@@ -138,6 +150,13 @@ class Surveillance:
         identite = f"{ns}/{nom}"
         etat, redemarrages = overview._etat_pod(pod_json)
         precedent = self.etats.get(identite)
+
+        # `kubectl --watch` envoie d'abord l'état de tous les pods, puis
+        # les changements. Le premier passage est un inventaire, pas des
+        # événements : le distinguer évite de croire qu'il se passe
+        # quelque chose alors que le cluster est stable.
+        if precedent is None and self.inventaire:
+            self.initial += 1
 
         # Rien n'a changé : le cas le plus fréquent, et le moins cher.
         if precedent == (etat, redemarrages):
@@ -204,8 +223,8 @@ class Surveillance:
             return
 
         self._log(f"\033[1m SURVEILLANCE \033[0m {commande}")
-        self._log(f"\033[2m  seuil {SEUIL_REDEMARRAGES} redémarrages · "
-                  f"dédup {FENETRE_DEDUP // 60} min · Ctrl+C pour arrêter\033[0m\n")
+        self._log(f"\033[2m  seuil {SEUIL_REDEMARRAGES} redémarrages/jour · "
+                  f"dédup {FENETRE_DEDUP // 60} min · Ctrl+C pour arrêter\033[0m")
 
         processus = subprocess.Popen(
             ["kubectl", *commande.split(), "--watch", "-o", "json"],
@@ -231,7 +250,8 @@ class Surveillance:
             lignes.put(None)
 
         threading.Thread(target=lire, daemon=True).start()
-        dernier_signe = time.time()
+        dernier_signe = 0.0
+        inventaire_annonce = False
 
         try:
             while True:
@@ -241,14 +261,36 @@ class Surveillance:
                     # Rien reçu : c'est le cas normal sur un cluster sain.
                     if duree_max and time.time() - debut > duree_max:
                         break
-                    if time.time() - dernier_signe > 30:
-                        self._log(f"\033[2m  … {int(time.time() - debut)}s, "
-                                  f"{self.vus} événements, rien à signaler\033[0m")
+                    # Ligne d'attente réécrite sur place (retour chariot,
+                    # sans saut de ligne) : le journal des événements
+                    # défile proprement au-dessus.
+                    #
+                    # Hors terminal (redirection, service, conteneur), la
+                    # réécriture n'a pas de sens : chaque ligne s'empile.
+                    # On l'espace alors très largement.
+                    intervalle = 1 if _interactif() else 300
+                    if self.verbeux and time.time() - dernier_signe > intervalle:
+                        ecoule = int(time.time() - debut)
+                        h, m, s = ecoule // 3600, (ecoule % 3600) // 60, ecoule % 60
+                        duree = f"{h}h{m:02d}m" if h else f"{m}m{s:02d}s"
+                        if _interactif():
+                            print(
+                                f"\r\033[2m  en attente d'événement… ({duree})"
+                                f"\033[K\033[0m",
+                                end="", flush=True,
+                            )
+                        else:
+                            print(f"  en attente d'événement… ({duree})", flush=True)
                         dernier_signe = time.time()
                     continue
 
                 if ligne is None:      # le processus s'est terminé
                     break
+
+                # Une fois l'inventaire passé, on bascule en mode
+                # « changements » : ce qui arrive ensuite est réel.
+                if not inventaire_annonce and self.initial > 0:
+                    inventaire_annonce = True
                 # `kubectl --watch -o json` produit des objets JSON
                 # concaténés, pas un tableau : il faut les découper en
                 # suivant l'équilibre des accolades.
@@ -266,8 +308,12 @@ class Surveillance:
 
                 evenement = self.traiter(objet)
                 if evenement:
+                    if self.verbeux and _interactif():
+                        print("\r\033[K", end="")   # efface la ligne d'attente
                     couleur = "\033[31m" if evenement.gravite == "critique" else "\033[33m"
-                    self._log(f"  {couleur}⚠\033[0m {evenement}")
+                    horodatage = time.strftime("%H:%M:%S")
+                    self._log(f"  \033[2m{horodatage}\033[0m  "
+                              f"{couleur}{evenement}\033[0m")
                     if sur_evenement:
                         sur_evenement(evenement)
 
@@ -278,8 +324,11 @@ class Surveillance:
             pass
         finally:
             processus.terminate()
+            if self.verbeux and _interactif():
+                print("\r\033[K", end="")
+            changements = self.vus - self.initial
             self._log(
-                f"\n\033[2m  {self.vus} événements reçus · "
-                f"{self.retenus} retenus ({self.retenus / max(self.vus, 1) * 100:.1f}%)"
-                f"\033[0m"
+                f"\n\033[2m  {self.initial} pods inventoriés au démarrage · "
+                f"{changements} changement(s) ensuite · "
+                f"{self.retenus} anomalie(s) retenue(s)\033[0m"
             )
