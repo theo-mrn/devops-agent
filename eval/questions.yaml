@@ -1,0 +1,62 @@
+# Jeu d'évaluation. Chaque cas mesure DEUX choses séparément :
+#   - retrieval : le bon chunk est-il remonté ? (champ `chunk_attendu`)
+#   - génération : la réponse est-elle correcte ? (champs `doit_contenir` / `ne_doit_pas_contenir`)
+#
+# `type` classe le cas :
+#   factuel  — la réponse est dans le corpus
+#   absent   — la réponse N'EST PAS dans le corpus : le système doit refuser
+#   piege    — le corpus contient de quoi induire en erreur
+
+- id: syntaxe
+  type: factuel
+  question: "Quelle est la syntaxe exacte du bloc moved en Terraform ?"
+  chunk_attendu: ["Specification", "Complete configuration", "Example"]
+  doit_contenir: ["moved", "from", "to"]
+  ne_doit_pas_contenir: []
+
+- id: guillemets
+  type: piege
+  question: "Est-ce que les arguments from et to prennent des guillemets ?"
+  chunk_attendu: ["Configuration model", "Specification", "Example"]
+  doit_contenir: [["non", "pas de guillemets", "sans guillemets"]]
+  ne_doit_pas_contenir: ["oui, "]
+  note: "La baseline répondait faux : from = \"ancien_chemin\". Type attendu = reference."
+
+- id: exemple_concret
+  type: factuel
+  question: "Donne un exemple concret de bloc moved pour une instance AWS"
+  chunk_attendu: ["Example"]
+  doit_contenir: ["aws_instance"]
+  ne_doit_pas_contenir: []
+  note: "Teste si le chunk Example remonte — il ne le faisait pas en brique 4."
+
+- id: comportement_state
+  type: factuel
+  question: "Est-ce que Terraform détruit la ressource quand on utilise moved ?"
+  chunk_attendu: ["Specification"]
+  doit_contenir: [["non", "ne detruit pas", "ne détruit pas"]]
+  ne_doit_pas_contenir: []
+
+- id: version
+  type: absent
+  question: "Depuis quelle version de Terraform le bloc moved est-il disponible ?"
+  chunk_attendu: []
+  doit_contenir: [["ne contient pas", "ne fournit pas", "pas cette information"]]
+  ne_doit_pas_contenir: ["0.12", "0.13", "terraform 1."]
+  note: "HALLUCINATION de la baseline : inventait 0.12.13. Vraie réponse = 1.1, absente du corpus."
+
+- id: hors_sujet
+  type: absent
+  question: "Comment configurer un readiness probe dans Kubernetes ?"
+  chunk_attendu: []
+  doit_contenir: [["ne contient pas", "ne fournit pas", "pas cette information"]]
+  ne_doit_pas_contenir: ["httpGet", "initialDelaySeconds"]
+  note: "Contrôle négatif : rien à voir avec le corpus Terraform."
+
+- id: from_obligatoire
+  type: factuel
+  question: "Les arguments from et to sont-ils obligatoires dans un bloc moved ?"
+  chunk_attendu: ["Configuration model", "Specification"]
+  doit_contenir: [["required", "obligatoire"]]
+  ne_doit_pas_contenir: []
+  note: "Le corpus dit 'required' en anglais, le modèle répond en français."

@@ -5,6 +5,7 @@ description = "Assistant DevOps local : RAG hybride sur documentation Kubernetes
 requires-python = ">=3.12"
 dependencies = [
     "ollama>=0.4",
+    "pyyaml>=6.0.3",
     "sentence-transformers>=6.0.1",
 ]
 

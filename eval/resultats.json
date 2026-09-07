@@ -1,0 +1,140 @@
+[
+  {
+    "id": "syntaxe",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "top": [
+        "Specification",
+        "`moved` block reference",
+        "Complete configuration"
+      ]
+    },
+    "score_max": 0.6110101342201233,
+    "generation": {
+      "ok": true,
+      "manquants": [],
+      "interdits": []
+    },
+    "reponse": "La syntaxe exacte du bloc `moved` en Terraform est la suivante :\n\n```hcl\nmoved {\n    from = <ancien chemin de la ressource>\n    to = <nouveau chemin de la ressource>\n}\n```\n\nCette syntaxe permet de spécifier le chemin de la ressource avant et après le déplacement."
+  },
+  {
+    "id": "guillemets",
+    "type": "piege",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "top": [
+        "Configuration model",
+        "Specification",
+        "Complete configuration"
+      ]
+    },
+    "score_max": 0.45489299297332764,
+    "generation": {
+      "ok": true,
+      "manquants": [],
+      "interdits": []
+    },
+    "reponse": "Non, les arguments `from` et `to` ne prennent pas de guillemets."
+  },
+  {
+    "id": "exemple_concret",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "top": [
+        "Example",
+        "Complete configuration",
+        "Specification"
+      ]
+    },
+    "score_max": 0.6831453442573547,
+    "generation": {
+      "ok": true,
+      "manquants": [],
+      "interdits": []
+    },
+    "reponse": "```hcl\nmoved {\n  from = aws_instance.old_instance\n  to   = aws_instance.new_instance\n}\n```"
+  },
+  {
+    "id": "comportement_state",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "top": [
+        "Specification",
+        "`moved` block reference",
+        "Complete configuration"
+      ]
+    },
+    "score_max": 0.5577110648155212,
+    "generation": {
+      "ok": true,
+      "manquants": [],
+      "interdits": []
+    },
+    "reponse": "Non, Terraform ne détruit pas la ressource quand on utilise le bloc `moved`."
+  },
+  {
+    "id": "version",
+    "type": "absent",
+    "retrieval": {
+      "applicable": false
+    },
+    "score_max": 0.6109283566474915,
+    "generation": {
+      "ok": true,
+      "manquants": [],
+      "interdits": []
+    },
+    "reponse": "Le contexte fourni ne contient pas cette information."
+  },
+  {
+    "id": "hors_sujet",
+    "type": "absent",
+    "retrieval": {
+      "applicable": false
+    },
+    "score_max": 0.4243818521499634,
+    "generation": {
+      "ok": true,
+      "manquants": [],
+      "interdits": []
+    },
+    "reponse": "Le contexte fourni ne contient pas cette information."
+  },
+  {
+    "id": "from_obligatoire",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "top": [
+        "Configuration model",
+        "Specification",
+        "Complete configuration"
+      ]
+    },
+    "score_max": 0.6666293144226074,
+    "generation": {
+      "ok": true,
+      "manquants": [],
+      "interdits": []
+    },
+    "reponse": "Oui, les arguments `from` et `to` sont obligatoires dans un bloc `moved`."
+  }
+]
