@@ -49,7 +49,7 @@ def main() -> None:
     debut = time.time()
 
     for cas in cas_tests:
-        trouves = rag2.chercher(cas["question"], k=rag2.TOP_K)
+        trouves = rag2.chercher_hybride(cas["question"], k=rag2.TOP_K)
         fichiers = [c["fichier"] for c, _ in trouves]
 
         attendus = cas.get("fichier_attendu") or []

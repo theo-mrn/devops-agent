@@ -19,6 +19,9 @@ import ollama
 import torch
 from sentence_transformers import SentenceTransformer
 
+# Import différé dans chercher() pour éviter une boucle : hybride
+# importe rag2 pour la partie dense.
+
 MODELE_LLM = "qwen2.5-coder:7b-instruct-q4_K_M"
 MODELE_EMB = "BAAI/bge-m3"
 INDEX = Path("data/index/corpus.pkl")
@@ -54,7 +57,8 @@ def charger():
     return _cache["index"], _cache["enc"]
 
 
-def chercher(question: str, k: int = TOP_K):
+def chercher_dense(question: str, k: int = TOP_K):
+    """Recherche vectorielle pure."""
     index, enc = charger()
     vq = enc.encode(question, normalize_embeddings=True)
     scores = index["vecteurs"] @ vq
@@ -62,9 +66,23 @@ def chercher(question: str, k: int = TOP_K):
     return [(index["chunks"][i], float(scores[i])) for i in ordre]
 
 
+# Alias conservé : hybride.py appelle rag2.chercher pour la partie dense.
+chercher = chercher_dense
+
+
+def chercher_hybride(question: str, k: int = TOP_K):
+    """Recherche hybride RRF — le mode par défaut du pipeline.
+
+    Mesuré en brique 7 : Hit Rate 100 % / MRR 0,933,
+    contre 90 % / 0,850 pour le dense seul.
+    """
+    import hybride
+    return [(c, s) for c, s, _ in hybride.chercher(question, k=k)]
+
+
 def repondre(question: str) -> None:
     debut = time.time()
-    resultats = chercher(question)
+    resultats = chercher_hybride(question)
     t_recherche = time.time() - debut
 
     print(f"\n\033[1m QUESTION \033[0m {question}\n")
