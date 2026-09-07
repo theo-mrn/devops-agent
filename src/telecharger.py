@@ -54,6 +54,24 @@ SOURCES = [
     ("hashicorp/web-unified-docs", "main", "content/terraform/v1.11.x/docs/language/backend", "tf-backend"),
     ("hashicorp/web-unified-docs", "main", "content/terraform/v1.11.x/docs/cli/commands", "tf-cli"),
     ("hashicorp/web-unified-docs", "main", "content/terraform/v1.11.x/docs/cli/state", "tf-cli-state"),
+
+    # ═══ Brique 12 : élargissement au métier DevOps ═══
+    # L'assistant couvrait deux outils (K8s, Terraform), pas le métier.
+    # Docker, Linux/systemd et CI/CD sont le socle quotidien d'un SRE.
+
+    # --- Docker / conteneurs ---
+    ("docker/docs", "main", "content/manuals/engine/containers", "docker-containers"),
+    ("docker/docs", "main", "content/manuals/engine/daemon", "docker-daemon"),
+    ("docker/docs", "main", "content/manuals/engine/logging", "docker-logging"),
+    ("docker/docs", "main", "content/manuals/engine/manage-resources", "docker-resources"),
+    ("docker/docs", "main", "content/manuals/engine/network", "docker-network"),
+    ("docker/docs", "main", "content/manuals/engine/storage", "docker-storage"),
+
+    # --- CI/CD : GitHub Actions ---
+    ("github/docs", "main", "content/actions/concepts/workflows-and-actions", "ci-concepts"),
+    ("github/docs", "main", "content/actions/reference/workflows-and-actions", "ci-reference"),
+    ("github/docs", "main", "content/actions/how-tos/manage-workflow-runs", "ci-runs"),
+    ("github/docs", "main", "content/actions/how-tos/write-workflows", "ci-howto"),
 ]
 
 EXTENSIONS = {".md", ".mdx"}

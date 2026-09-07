@@ -819,3 +819,198 @@
   fichier_attendu: []
   doit_contenir: [["ne contient pas", "ne fournit pas", "pas cette information"]]
   ne_doit_pas_contenir: ["pyproject.toml", "poetry add"]
+
+# ═════════════════════════════════════════════════════════════════
+# EXTENSION — brique 12 : Docker, Linux, CI/CD
+# ═════════════════════════════════════════════════════════════════
+
+# ─── DOCKER ───────────────────────────────────────────────────────
+
+- id: docker_exit137
+  type: diagnostic
+  categorie: docker
+  question: "Un conteneur Docker s'arrête avec exit code 137, comment savoir si c'est un OOM ?"
+  fichier_attendu: ["docker-diagnostic", "exit-codes"]
+  doit_contenir: [["oomkilled", "oom"]]
+  ne_doit_pas_contenir: []
+  commandes_attendues: [["docker inspect", "inspect"]]
+
+- id: docker_restart_loop
+  type: diagnostic
+  categorie: docker
+  question: "Un conteneur Docker redémarre en boucle, comment investiguer ?"
+  fichier_attendu: ["docker-diagnostic", "start-containers-automatically"]
+  doit_contenir: [["restart", "logs"]]
+  ne_doit_pas_contenir: []
+  commandes_interdites: ["docker system prune -a"]
+
+- id: docker_logs
+  type: factuel
+  categorie: docker
+  question: "Comment consulter les logs d'un conteneur Docker arrêté ?"
+  fichier_attendu: ["docker-diagnostic", "logging"]
+  doit_contenir: [["docker logs", "logs"]]
+  ne_doit_pas_contenir: []
+
+- id: docker_disk_full
+  type: piege
+  categorie: docker
+  question: "Le disque est plein à cause de Docker, comment libérer de l'espace ?"
+  fichier_attendu: ["docker-diagnostic", "prune"]
+  doit_contenir: [["prune", "system df"]]
+  ne_doit_pas_contenir: []
+  note: "Ne doit pas proposer prune -a sans réserve : il supprime les images non utilisées."
+
+- id: docker_network_dns
+  type: diagnostic
+  categorie: docker
+  question: "Deux conteneurs Docker ne se voient pas par leur nom, pourquoi ?"
+  fichier_attendu: ["docker-diagnostic", "network", "drivers"]
+  doit_contenir: [["reseau", "network", "bridge"]]
+  ne_doit_pas_contenir: []
+
+- id: docker_memory_limit
+  type: factuel
+  categorie: docker
+  question: "Comment limiter la mémoire d'un conteneur Docker ?"
+  fichier_attendu: ["resource_constraints", "docker-diagnostic"]
+  doit_contenir: [["memory", "memoire", "-m "]]
+  ne_doit_pas_contenir: []
+
+- id: docker_exec_distroless
+  type: diagnostic
+  categorie: docker
+  question: "Comment déboguer un conteneur sans shell (image distroless) ?"
+  fichier_attendu: ["docker-diagnostic"]
+  doit_contenir: [["namespace", "pid", "debug"]]
+  ne_doit_pas_contenir: []
+
+# ─── LINUX ────────────────────────────────────────────────────────
+
+- id: linux_service_failed
+  type: diagnostic
+  categorie: linux
+  question: "Comment voir pourquoi un service systemd refuse de démarrer ?"
+  fichier_attendu: ["linux-diagnostic"]
+  doit_contenir: [["systemctl status", "journalctl"]]
+  ne_doit_pas_contenir: []
+
+- id: linux_daemon_reload
+  type: piege
+  categorie: linux
+  question: "J'ai modifié un fichier d'unité systemd, que faut-il faire ?"
+  fichier_attendu: ["linux-diagnostic"]
+  doit_contenir: [["daemon-reload"]]
+  ne_doit_pas_contenir: []
+  note: "Oubli classique : sans daemon-reload, systemd garde l'ancienne définition."
+
+- id: linux_disk_inodes
+  type: piege
+  categorie: linux
+  question: "df -h montre de la place libre mais j'ai 'No space left on device', pourquoi ?"
+  fichier_attendu: ["linux-diagnostic"]
+  doit_contenir: [["inode"]]
+  ne_doit_pas_contenir: []
+  note: "Épuisement des inodes — df -i le confirme."
+
+- id: linux_memory_free
+  type: piege
+  categorie: linux
+  question: "free -h montre très peu de mémoire libre, est-ce inquiétant ?"
+  fichier_attendu: ["linux-diagnostic"]
+  doit_contenir: [["available", "cache"]]
+  ne_doit_pas_contenir: []
+  note: "Piège : c'est la colonne 'available' qui compte, pas 'free'."
+
+- id: linux_ports
+  type: factuel
+  categorie: linux
+  question: "Comment lister les ports en écoute sur un serveur Linux ?"
+  fichier_attendu: ["linux-diagnostic"]
+  doit_contenir: [["ss ", "netstat"]]
+  ne_doit_pas_contenir: []
+
+- id: linux_oom_kernel
+  type: diagnostic
+  categorie: linux
+  question: "Comment savoir si le OOM killer a tué un processus sur un serveur Linux ?"
+  fichier_attendu: ["linux-diagnostic"]
+  doit_contenir: [["dmesg", "journalctl", "out of memory"]]
+  ne_doit_pas_contenir: []
+
+- id: linux_process_d_state
+  type: diagnostic
+  categorie: linux
+  question: "Un processus est en état D et ne peut pas être tué, que se passe-t-il ?"
+  fichier_attendu: ["linux-diagnostic"]
+  doit_contenir: [["entree", "sortie", "i/o", "io", "uninterruptible", "stockage"]]
+  ne_doit_pas_contenir: []
+
+- id: linux_too_many_files
+  type: diagnostic
+  categorie: linux
+  question: "Une application renvoie 'Too many open files', comment corriger ?"
+  fichier_attendu: ["linux-diagnostic"]
+  doit_contenir: [["nofile", "ulimit", "limit"]]
+  ne_doit_pas_contenir: []
+
+- id: linux_reload_vs_restart
+  type: piege
+  categorie: linux
+  question: "Comment recharger la configuration d'un service sans interrompre le trafic ?"
+  fichier_attendu: ["linux-diagnostic"]
+  doit_contenir: [["reload"]]
+  ne_doit_pas_contenir: []
+  commandes_interdites: ["kill -9"]
+
+# ─── CI/CD ────────────────────────────────────────────────────────
+
+- id: ci_workflow_trigger
+  type: factuel
+  categorie: cicd
+  question: "Comment déclencher un workflow GitHub Actions sur une pull request ?"
+  fichier_attendu: ["events-that-trigger-workflows", "triggering-a-workflow", "workflows"]
+  doit_contenir: [["pull_request", "on:"]]
+  ne_doit_pas_contenir: []
+
+- id: ci_secrets
+  type: factuel
+  categorie: securite
+  question: "Comment utiliser un secret dans un workflow GitHub Actions ?"
+  fichier_attendu: ["secrets", "workflows-and-actions"]
+  doit_contenir: [["secret"]]
+  ne_doit_pas_contenir: []
+
+- id: ci_matrix
+  type: factuel
+  categorie: cicd
+  question: "Comment exécuter un job sur plusieurs versions avec une matrice ?"
+  fichier_attendu: ["running-variations-of-jobs-in-a-workflow", "workflow-syntax", "matrix"]
+  doit_contenir: [["matrix", "matrice", "strategy"]]
+  ne_doit_pas_contenir: []
+
+- id: ci_rerun
+  type: factuel
+  categorie: cicd
+  question: "Comment relancer un job GitHub Actions qui a échoué ?"
+  fichier_attendu: ["re-running-workflows-and-jobs", "manage-workflow-runs"]
+  doit_contenir: [["re-run", "relancer", "rerun"]]
+  ne_doit_pas_contenir: []
+
+- id: ci_cache
+  type: factuel
+  categorie: cicd
+  question: "Comment mettre en cache des dépendances dans GitHub Actions ?"
+  fichier_attendu: ["caching-dependencies-to-speed-up-workflows", "dependency-caching-reference"]
+  doit_contenir: [["cache"]]
+  ne_doit_pas_contenir: []
+
+# ─── ABSENT ───────────────────────────────────────────────────────
+
+- id: absent_windows_iis
+  type: absent
+  categorie: linux
+  question: "Comment configurer un site web dans IIS sur Windows Server ?"
+  fichier_attendu: []
+  doit_contenir: [["ne contient pas", "ne fournit pas", "pas cette information"]]
+  ne_doit_pas_contenir: ["applicationHost.config", "inetmgr"]
