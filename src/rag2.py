@@ -47,10 +47,22 @@ RÈGLES ABSOLUES :
    Avant de citer une commande ou un outil, vérifie qu'il apparaît
    littéralement dans le CONTEXTE. Sinon, ne le mentionne pas.
 
-3. Si le contexte ne traite pas du sujet de la question, réponds EXACTEMENT :
+3. AVANT DE RÉPONDRE, vérifie que le contexte traite bien de l'OUTIL ou de la
+   TECHNOLOGIE nommée dans la question. Une simple mention ne suffit pas : le
+   contexte doit expliquer ce que la question demande.
+
+   Exemples de contextes TROMPEURS :
+   - question sur PostgreSQL, contexte sur le backend `pg` de Terraform → REFUSER
+   - question sur Ansible, contexte sur les Deployments Kubernetes → REFUSER
+   - question sur Python/Poetry, contexte sur le cache de dépendances CI → REFUSER
+   - question sur une VERSION précise, contexte décrivant la fonctionnalité
+     sans jamais donner de numéro de version → REFUSER
+
+   Dans tous ces cas, réponds EXACTEMENT :
    "Le contexte fourni ne contient pas cette information."
-   Cette règle s'applique même si tu connais la réponse par ailleurs, et même
-   si le contexte parle d'un sujet proche mais différent. Ne devine pas.
+
+   Cette règle s'applique même si tu connais la réponse par ailleurs.
+   Ne devine jamais. Un refus honnête vaut mieux qu'une réponse inventée.
 
 4. SÛRETÉ — commandes destructives (`delete --force`, `--grace-period=0`,
    `drain`, `terraform destroy`, `rm -rf`) :
@@ -123,6 +135,19 @@ def chercher_rerank(question: str, k: int = TOP_K):
 
 
 def repondre(question: str) -> None:
+    # Garde-fou de domaine : si la question nomme une technologie que le
+    # corpus ne couvre pas, refuser sans appeler le modèle. Le retrieval
+    # remonterait un contexte plausible mais trompeur (une question
+    # PostgreSQL fait remonter le backend `pg` de Terraform).
+    import expansion
+    techno = expansion.hors_domaine(question)
+    if techno:
+        print(f"\n\033[1m QUESTION \033[0m {question}\n")
+        print(f"\033[2mhors domaine : « {techno} » n'est pas couvert par le corpus\033[0m\n")
+        print("Le contexte fourni ne contient pas cette information.")
+        print("\033[2m" + "─" * 70 + "\033[0m")
+        return
+
     debut = time.time()
     resultats = chercher_rerank(question)
     t_recherche = time.time() - debut

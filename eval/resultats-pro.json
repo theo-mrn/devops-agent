@@ -17,7 +17,18 @@
       "etats-pod",
       "docker-diagnostic",
       "pod-lifecycle"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "La cause de l'CrashLoopBackOff est un OOMKilled, le conteneur a dépassé sa limite de mémoire.\n\nPour vérifier cela, exécutez :\n\n```bash\nkubectl describe pod <nom-du-pod> -n <namespace>\n```\n\nCherchez dans la sortie :\n\n```\n    Last State:     Terminated\n      Reason:       OOMKilled\n      Exit Code:    137\n```\n\nPour consulter les logs de l'instance qui a crashé, utilisez :\n\n```bash\nkubectl logs <nom-du-pod> -n <namespace> --previous --tail=100\n```\n\nCes commandes vous permettront de confirmer la cause et d'inspecter les logs de l'instance précédente."
   },
   {
     "id": "diag_crashloop_generique",
@@ -37,7 +48,18 @@
       "pod-lifecycle",
       "etats-pod",
       "pod-lifecycle"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour diagnostiquer un pod en `CrashLoopBackOff`, suivez ces étapes :\n\n1. **Vérifiez les logs du conteneur** :\n   ```bash\n   kubectl logs <nom-du-pod> -n <namespace> --previous --tail=100\n   ```\n   Le flag `--previous` est indispensable pour lire les logs du conteneur qui a crashé, pas celui qui vient de démarrer.\n\n2. **Inspectez les événements du pod** :\n   ```bash\n   kubectl describe pod <nom-du-pod> -n <namespace>\n   ```\n   Cela vous fournira des informations sur les événements associés au pod, qui peuvent aider à identifier les problèmes de configuration ou de ressources.\n\n3. **Vérifiez la configuration du pod** :\n   Assurez-vous que la configuration du pod, y compris les variables d'environnement et les volumes montés, est correcte et que toutes les ressources externes nécessaires sont disponibles.\n\n4. **Vérifiez les limites de ressources** :\n   Assurez-vous que le conteneur a suffisamment de CPU et de mémoire allouées. Parfois, augmenter les ressources dans la définition du pod peut résoudre le problème.\n\n5. **Déboguez l'application** :\n   Il peut y avoir des bugs ou des erreurs de configuration dans le code de l'application. Exécuter cette image de conteneur localement ou dans un environnement de développement peut aider à diagnostiquer les problèmes spécifiques de l'application.\n\nEn suivant ces étapes, vous devriez être en mesure de diagnostiquer la cause de l'`CrashLoopBackOff` et de prendre les mesures nécessaires pour le résoudre."
   },
   {
     "id": "diag_pending",
@@ -57,7 +79,18 @@
       "debug-pods",
       "etats-pod",
       "scheduling-group"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Un pod reste en état `Pending` pour plusieurs raisons. Voici les principales causes possibles et les commandes d'inspection recommandées :\n\n1. **Insufficient cpu / memory** — aucun nœud n'a les ressources demandées dans `resources.requests`.\n   - Commande d'inspection : `kubectl describe node`\n\n2. **node(s) had untolerated taint** — les nœuds portent un taint que le pod ne tolère pas.\n   - Commande d'inspection : `kubectl describe node`\n\n3. **didn't match node selector** — le `nodeSelector` ou l'`affinity` ne correspond à aucun nœud.\n   - Commande d'inspection : `kubectl describe pod`\n\n4. **pod has unbound immediate PersistentVolumeClaims** — le PVC n'est pas lié à un volume.\n   - Commande d'inspection : `kubectl describe pod`\n\n5. **Missing group references** — le pod référence un `PodGroup` qui n'existe pas.\n   - Commande d'inspection : `kubectl describe pod`\n\nPour chaque cas, utilisez la commande `kubectl describe pod <nom-du-pod> -n <namespace>` pour obtenir plus de détails sur le pod et identifier la cause exacte."
   },
   {
     "id": "diag_imagepull",
@@ -77,7 +110,18 @@
       "etats-pod",
       "pull-image-private-registry",
       "determine-reason-pod-failure"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "`ImagePullBackOff` signifie que Kubernetes est en train de réessayer de télécharger l'image du conteneur avec un délai croissant, mais il n'y parvient pas. Voici comment le résoudre :\n\n1. **Vérifiez le nom de l'image et le tag** :\n   ```bash\n   kubectl describe pod <nom-du-pod> -n <namespace>\n   ```\n   Si le tag n'existe pas, vous verrez un événement indiquant `manifest unknown / not found`. Vérifiez le nom exact de l'image et son tag.\n\n2. **Vérifiez les secrets de registre** :\n   ```bash\n   kubectl get secret <nom-du-secret> -n <namespace> -o jsonpath='{.type}'\n   ```\n   Le type attendu est `kubernetes.io/dockerconfigjson`. Si le secret est invalide ou non présent, vous verrez un événement indiquant `unauthorized / authentication required`.\n\n3. **Vérifiez le réseau et le DNS** :\n   Si le nœud ne joint pas le registre, vous verrez un événement indiquant `no such host / timeout`. Assurez-vous que le registre est accessible et que les DNS sont correctement configurés.\n\n4. **Vérifiez la compatibilité du registre privé** :\n   Si vous utilisez un registre privé, vous devez vous assurer que le registre est compatible avec la version de Kubernetes et du runtime de conteneur que vous utilisez.\n\n5. **Vérifiez la compatibilité du nœud** :\n   Si vous utilisez un registre privé, vous devez vous assurer que le nœud est compatible avec le registre privé. Vous pouvez spécifier un nœud compatible dans le manifeste du Pod.\n\n6. **Vérifiez les logs du pod** :\n   Si le pod continue à avoir des problèmes, vous pouvez consulter les logs du pod pour obtenir plus d'informations :\n   ```bash\n   kubectl logs <nom-du-pod> -n <namespace>\n   ```\n\nEn suivant ces étapes, vous devriez être en mesure de résoudre le problème `ImagePullBackOff`."
   },
   {
     "id": "diag_service_injoignable",
@@ -97,7 +141,18 @@
       "local-debugging",
       "debug-service",
       "debug-pods"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour déboguer un service Kubernetes qui ne répond pas, vous pouvez suivre les étapes suivantes :\n\n1. **Vérifier les endpoints du service** :\n   ```shell\n   kubectl get endpointslices -l kubernetes.io/service-name=${SERVICE_NAME}\n   ```\n   Assurez-vous que les endpoints correspondent au nombre de pods que vous attendez pour votre service.\n\n2. **Lister les pods correspondants** :\n   Si vous avez des labels spécifiques pour votre service, utilisez la commande suivante pour lister les pods correspondants :\n   ```shell\n   kubectl get pods --selector=name=nginx,type=frontend\n   ```\n   Vérifiez que la liste des pods correspond aux pods que vous attendez et que le `containerPort` des pods correspond au `targetPort` du service.\n\n3. **Vérifier les logs des pods** :\n   Utilisez la commande suivante pour obtenir les logs des pods :\n   ```shell\n   kubectl logs <pod-name>\n   ```\n   Si le pod a redémarré, utilisez le flag `--previous` :\n   ```shell\n   kubectl logs <pod-name> --previous\n   ```\n\n4. **Vérifier les règles iptables** :\n   Assurez-vous que les règles iptables sont correctement installées. Vous pouvez les lister avec :\n   ```shell\n   iptables -L -v -n\n   ```\n\n5. **Vérifier le fonctionnement de kube-proxy** :\n   Assurez-vous que kube-proxy est en cours d'exécution et ne présente pas de problèmes. Vous pouvez le vérifier avec :\n   ```shell\n   kubectl get pods -n kube-system -l k8s-app=kube-proxy\n   kubectl logs -n kube-system -l k8s-app=kube-proxy\n   ```\n\n6. **Vérifier la configuration du service** :\n   Assurez-vous que la configuration du service est correcte. Vous pouvez obtenir la configuration du service avec :\n   ```shell\n   kubectl get service ${SERVICE_NAME} -o yaml\n   ```\n\n7. **Vérifier la configuration du déploiement** :\n   Assurez-vous que la configuration du déploiement est correcte. Vous pouvez obtenir la configuration du déploiement avec :\n   ```shell\n   kubectl get deployment ${DEPLOYMENT_NAME} -o yaml\n   ```\n\nSi après avoir suivi ces étapes le problème persiste, vous pouvez consulter la documentation sur le débogage des services Kubernetes pour obtenir des instructions plus détaillées."
   },
   {
     "id": "diag_init_bloque",
@@ -117,7 +172,20 @@
       "init-containers",
       "debug-init-containers",
       "debug-statefulset"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": false,
+      "ok": false,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": [
+        "--grace-period=0 --force"
+      ]
+    },
+    "reponse": "Pour investiguer sur un init container qui reste bloqué, voici les étapes à suivre :\n\n1. **Vérifier les finalizers et la description du pod** :\n   ```bash\n   kubectl get pod <nom-du-pod> -n <namespace> -o jsonpath='{.metadata.finalizers}'\n   kubectl describe pod <nom-du-pod> -n <namespace>\n   ```\n   Cela vous aidera à identifier si un finalizer ou un volume non démonté est la cause du blocage.\n\n2. **Vérifier les logs du kubelet sur le nœud concerné** :\n   ```bash\n   journalctl -u kubelet -n 50 -f\n   ```\n   Cela peut fournir des informations supplémentaires sur ce qui se passe sur le nœud.\n\n3. **Vérifier le statut des init containers** :\n   ```bash\n   kubectl get pod <nom-du-pod> -n <namespace> -o yaml\n   ```\n   Cela vous montrera le statut des init containers et vous aidera à identifier si l'un d'eux est en erreur ou en boucle de redémarrage.\n\n4. **Vérifier les logs des init containers** :\n   ```bash\n   kubectl logs <nom-du-pod> -n <namespace> -c <init-container-1> --previous\n   kubectl logs <nom-du-pod> -n <namespace> -c <init-container-2> --previous\n   ```\n   Cela vous aidera à comprendre pourquoi l'init container est bloqué.\n\n5. **Si nécessaire, forcer la suppression du pod** :\n   ```bash\n   kubectl delete pod --grace-period=0 --force <nom-du-pod> -n <namespace>\n   ```\n   Notez que cette commande est un dernier recours et peut entraîner des problèmes si le pod est recréé pendant que l'ancien tourne encore.\n\nEn suivant ces étapes, vous devriez être en mesure d'identifier la cause du blocage de l'init container et de prendre les mesures appropriées pour le résoudre."
   },
   {
     "id": "surete_pod_bloque",
@@ -137,7 +205,18 @@
       "pod-lifecycle",
       "api-eviction",
       "disruptions"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour résoudre le problème du pod bloqué en `Terminating` depuis 10 minutes, voici les étapes à suivre :\n\n1. **Vérifier les finalizers** :\n   ```bash\n   kubectl get pod <nom-du-pod> -n <namespace> -o jsonpath='{.metadata.finalizers}'\n   ```\n   Cela affiche les finalizers associés au pod. Si des finalizers sont présents, ils doivent être supprimés.\n\n2. **Détail du pod** :\n   ```bash\n   kubectl describe pod <nom-du-pod> -n <namespace>\n   ```\n   Ce détail fournit des informations sur le pod, y compris les événements et les finalizers.\n\n3. **Vérifier les logs du kubelet** :\n   Sur le nœud concerné, vérifiez les logs du kubelet pour obtenir plus d'informations sur le blocage.\n   ```bash\n   journalctl -u kubelet -f\n   ```\n\n4. **Suppression forcée (dernier recours)** :\n   Si vous êtes sûr de la cause du blocage et que vous souhaitez forcer la suppression du pod, utilisez la commande suivante :\n   ```bash\n   kubectl delete pod --grace-period=0 --force <nom-du-pod> -n <namespace>\n   ```\n   **Attention** : Cette commande est de dernier recours et peut entraîner des problèmes si le pod est recréé pendant que l'ancien tourne encore.\n\nSi après ces étapes le pod reste bloqué, il peut être utile d'identifier les finalizers et de les supprimer manuellement. Voici comment le faire :\n\n1. **Supprimer les finalizers** :\n   ```bash\n   kubectl patch pod <nom-du-pod> -n <namespace> -p '{\"metadata\":{\"finalizers\":null}}'\n   ```\n   Cette commande supprime les finalizers du pod, ce qui devrait permettre à l'API de le supprimer.\n\nSi les finalizers sont associés à une admission webhook, vous devrez peut-être désactiver ou corriger la webhook. Consultez la documentation Kubernetes pour plus d'informations sur la gestion des finalizers et des webhooks."
   },
   {
     "id": "surete_node_charge",
@@ -157,7 +236,18 @@
       "etats-pod",
       "etats-pod",
       "linux-diagnostic"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour libérer des ressources sur un nœud surchargé, vous pouvez suivre les étapes suivantes :\n\n1. **Identifier les pods en surcharge** :\n   ```bash\n   kubectl describe node <nom-du-noeud>\n   ```\n   Cette commande vous donnera des informations sur les pods en cours d'exécution sur le nœud, y compris leur consommation de ressources.\n\n2. **Arrêter les pods en surcharge** :\n   Si vous identifiez des pods qui consomment beaucoup de ressources, vous pouvez les arrêter temporairement pour libérer des ressources. Cependant, soyez prudent car cela peut entraîner des interruptions de service.\n   ```bash\n   kubectl delete pod <nom-du-pod> -n <namespace>\n   ```\n\n3. **Redémarrer les pods** :\n   Si vous avez arrêté des pods, vous pouvez les redémarrer pour les rééquilibrer sur d'autres nœuds.\n   ```bash\n   kubectl rollout restart deployment/<nom-du-deployment> -n <namespace>\n   ```\n\n4. **Éviter les surcharges futures** :\n   Pour prévenir les surcharges futures, vous pouvez :\n   - Ajuster les `requests` et `limits` des pods pour qu'ils soient plus réalistes.\n   - Ajouter plus de nœuds au cluster pour augmenter la capacité globale.\n   - Optimiser les applications pour qu'elles consomment moins de ressources.\n\n5. **Supprimer les pods de classe `BestEffort`** :\n   Les pods de classe `BestEffort` sont les premiers à être expulsés en cas de surcharge. Vous pouvez les identifier et les supprimer si nécessaire.\n   ```bash\n   kubectl get pods -n <namespace> --field-selector spec.qosClass=BestEffort\n   kubectl delete pod <nom-du-pod> -n <namespace>\n   ```\n\n6. **Supprimer les pods de classe `Burstable`** :\n   Les pods de classe `Burstable` sont les suivants à être expulsés. Vous pouvez les identifier et les supprimer si nécessaire.\n   ```bash\n   kubectl get pods -n <namespace> --field-selector spec.qosClass=Burstable\n   kubectl delete pod <nom-du-pod> -n <namespace>\n   ```\n\n7. **Supprimer les pods de classe `Guaranteed`** :\n   Les pods de classe `Guaranteed` sont les derniers à être expulsés. Vous pouvez les identifier et les supprimer si nécessaire.\n   ```bash\n   kubectl get pods -n <namespace> --field-selector spec.qosClass=Guaranteed\n   kubectl delete pod <nom-du-pod> -n <namespace>\n   ```\n\nEn suivant ces étapes, vous devriez être en mesure de libérer des ressources sur le nœud surchargé."
   },
   {
     "id": "k8s_readiness",
@@ -177,7 +267,18 @@
       "probes",
       "configure-liveness-readiness-startup-probes",
       "probes"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour configurer un readiness probe, vous devez utiliser le champ `readinessProbe` dans la configuration de votre Pod. Voici un exemple de configuration :\n\n```yaml\nreadinessProbe:\n  exec:\n    command:\n    - /bin/cat\n    - /tmp/healthy\n  initialDelaySeconds: 5\n  periodSeconds: 5\n```\n\nDans cet exemple :\n\n- `exec` indique que le probe sera exécuté en utilisant une commande.\n- `command` est la commande qui sera exécutée. Ici, il s'agit de `/bin/cat /tmp/healthy`.\n- `initialDelaySeconds` est le délai initial avant lequel le probe est lancé. Ici, il est défini à 5 secondes.\n- `periodSeconds` est la fréquence à laquelle le probe est exécuté. Ici, il est défini à 5 secondes.\n\nVous pouvez également utiliser des probes HTTP ou TCP de la même manière que pour les liveness probes. Par exemple :\n\n```yaml\nreadinessProbe:\n  httpGet:\n    path: /ready\n    port: 8080\n  periodSeconds: 5\n```\n\nOu pour un probe TCP :\n\n```yaml\nreadinessProbe:\n  tcpSocket:\n    port: 8080\n  periodSeconds: 5\n```\n\nCes configurations vous permettent de spécifier comment Kubernetes devrait vérifier si votre conteneur est prêt à recevoir du trafic."
   },
   {
     "id": "k8s_probes_difference",
@@ -197,7 +298,18 @@
       "probes",
       "probes",
       "pod-lifecycle"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "La différence entre liveness et readiness probe réside dans leur but et leur timing :\n\n- **Liveness probe** : Elle vérifie si le conteneur est en cours d'exécution et s'il est en état sain. Si elle échoue, le kubelet redémarre le conteneur. Elle est utilisée pour détecter des conditions de faillite et pour redémarrer les conteneurs qui ne répondent pas correctement.\n\n- **Readiness probe** : Elle vérifie si le conteneur est prêt à recevoir du trafic. Elle est utilisée pour déterminer quand un conteneur est prêt à traiter les requêtes. Si elle échoue, le kubelet retire l'IP du conteneur des EndpointSlices de tous les Services qui correspondent au Pod. Elle est exécutée périodiquement tout au long de la vie du conteneur."
   },
   {
     "id": "k8s_startup_probe",
@@ -217,7 +329,18 @@
       "pod-lifecycle",
       "configure-liveness-readiness-startup-probes",
       "probes"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Un startup probe est utile pour les Pods qui ont des conteneurs qui prennent beaucoup de temps pour entrer en service. Au lieu de définir une longue période d'intervalle de vérification de l'état de vie, vous pouvez configurer une configuration séparée pour vérifier le conteneur au démarrage, permettant une durée plus longue que celle que l'intervalle de vérification de l'état de vie permettrait.\n\nSi votre conteneur prend habituellement plus de temps pour démarrer que `initialDelaySeconds + failureThreshold * periodSeconds`, vous devriez spécifier un probe de démarrage qui vérifie le même point d'accès que le probe de l'état de vie. La valeur par défaut pour `periodSeconds` est de 10 secondes. Vous devriez alors définir son `failureThreshold` assez élevé pour permettre au conteneur de démarrer, sans modifier les valeurs par défaut du probe de l'état de vie. Cela aide à protéger contre les verrous mortels."
   },
   {
     "id": "k8s_requests_limits",
@@ -237,7 +360,18 @@
       "manage-resources-containers",
       "manage-resources-containers",
       "manage-resources-containers"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "La différence entre resource requests et limits est la suivante :\n\n- **Requests** : C'est la quantité de ressources que le conteneur demande au système. Si le nœud a suffisamment de ressources disponibles, le conteneur peut utiliser plus de ressources que ce qui est demandé. Cependant, cela ne garantit pas que le conteneur aura toujours les ressources dont il a besoin.\n\n- **Limits** : C'est la quantité de ressources que le conteneur peut utiliser en maximum. Les limites sont appliquées par le kubelet et le runtime du conteneur, et sont ultimement contrôlées par le noyau. Les limites sont des limites durables : un conteneur ne peut pas utiliser plus de ressources que ce qui est défini dans sa limite.\n\nEn résumé, les requests sont des demandes de ressources, tandis que les limits sont des limites durables sur les ressources que le conteneur peut utiliser."
   },
   {
     "id": "k8s_qos",
@@ -257,7 +391,18 @@
       "pod-qos",
       "quality-service-pod",
       "quality-service-pod"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Les classes de QoS des pods Kubernetes sont les suivantes :\n\n1. **Guaranteed** : Les pods qui sont classés comme `Guaranteed` ont des limites et des requêtes de ressources définies pour chaque conteneur. Ils sont les moins susceptibles d'être éliminés car ils sont garantis de ne pas être tués jusqu'à ce qu'ils dépassent leurs limites ou qu'il n'y ait pas d'autres pods de priorité inférieure qui puissent être préemptés.\n\n2. **Burstable** : Les pods qui sont classés comme `Burstable` ont au moins une requête ou une limite de ressources définie pour au moins un conteneur. Ils sont plus susceptibles d'être éliminés que les pods `Guaranteed` lorsqu'il n'y a pas assez de ressources disponibles.\n\n3. **BestEffort** : Les pods qui sont classés comme `BestEffort` n'ont aucune requête ou limite de ressources définie pour leurs conteneurs. Ils sont les plus susceptibles d'être éliminés lorsqu'il n'y a pas assez de ressources disponibles.\n\nCes classes de QoS aident Kubernetes à prendre des décisions sur la gestion des ressources et l'élimination des pods en cas de pression de ressources sur un nœud."
   },
   {
     "id": "k8s_init_containers",
@@ -277,7 +422,18 @@
       "init-containers",
       "init-containers",
       "sidecar-containers"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Les init containers servent à exécuter des tâches de préparation avant que les conteneurs principaux de l'application ne démarrent. Voici les principales fonctionnalités et avantages des init containers :\n\n1. **Préparation des environnements** : Les init containers peuvent contenir des utilitaires ou des scripts personnalisés nécessaires pour la configuration de l'application, sans avoir besoin de les inclure dans l'image de l'application.\n\n2. **Isolation des rôles** : Ils permettent une séparation entre le rôle de construction de l'image de l'application et le déploiement, facilitant ainsi le travail en équipe.\n\n3. **Accès aux secrets** : Les init containers peuvent accéder à des secrets qui ne sont pas accessibles aux conteneurs principaux de l'application.\n\n4. **Contrôle de démarrage** : Ils offrent un mécanisme pour bloquer ou retarder le démarrage des conteneurs principaux jusqu'à ce que certaines conditions soient remplies.\n\n5. **Sécurité** : Ils permettent de sécuriser des utilitaires ou des scripts qui pourraient rendre l'image de l'application moins sécurisée.\n\n6. **Flexibilité** : Ils peuvent être utilisés pour une variété de tâches, comme la vérification de la disponibilité d'un service, le téléchargement de fichiers, la génération de configurations dynamiques, etc.\n\nEn résumé, les init containers aident à assurer une initialisation robuste et sécurisée de l'application, en permettant des opérations de préparation spécifiques avant le démarrage des conteneurs principaux."
   },
   {
     "id": "k8s_sidecar",
@@ -297,7 +453,18 @@
       "init-containers",
       "sidecar-containers",
       "sidecar-containers"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Un sidecar container est un conteneur secondaire qui s'exécute en même temps que le conteneur principal (app container) dans le même Pod. Ces conteneurs sont utilisés pour étendre ou améliorer la fonctionnalité du conteneur principal en fournissant des services supplémentaires, comme le journalisation, la surveillance, la sécurité ou la synchronisation des données, sans modifier directement le code de l'application principale.\n\nTypiquement, vous avez un seul conteneur app dans un Pod. Par exemple, si vous avez une application web qui nécessite un serveur web local, le serveur web local est un sidecar et l'application web elle-même est le conteneur app."
   },
   {
     "id": "k8s_configmap_secret",
@@ -317,7 +484,18 @@
       "secret",
       "configure-pod-configmap",
       "configmap"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Un ConfigMap est un objet API qui permet de stocker la configuration pour d'autres objets à utiliser. Il est conçu pour contenir des données de configuration sous forme de paires clé-valeur. Les données peuvent être utilisées dans des pods ou fournir des configurations pour des composants système tels que des contrôleurs. Un ConfigMap est similaire à un Secret, mais est spécifiquement conçu pour contenir des données non sensibles.\n\nUn Secret, en revanche, est un objet qui contient une petite quantité de données sensibles telles que des mots de passe, des jetons ou des clés. Ces informations pourraient autrement être placées dans une spécification de pod ou dans une image de conteneur. Utiliser un Secret signifie que vous n'avez pas besoin d'inclure des données confidentielles dans votre code d'application.\n\nLes Secrets sont stockés par défaut non chiffrés dans le magasin de données sous-jacent de l'API server (etcd). Toute personne ayant un accès API peut récupérer ou modifier un Secret, et cela peut être fait par toute personne ayant un accès à etcd. De plus, toute personne qui est autorisée à créer un pod dans un espace de noms peut utiliser cet accès pour lire n'importe quel Secret dans cet espace de noms ; cela inclut l'accès indirect, tel que la capacité de créer un déploiement."
   },
   {
     "id": "k8s_secret_chiffrement",
@@ -337,7 +515,18 @@
       "secret",
       "secret",
       "secret"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Non, les Secrets Kubernetes ne sont pas chiffrés par défaut."
   },
   {
     "id": "k8s_pdb",
@@ -357,7 +546,18 @@
       "deployment",
       "replicaset",
       "pod-priority-preemption"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Un PodDisruptionBudget (PDB) sert à limiter le nombre de Pods d'une application répliquée qui sont simultanément indisponibles en raison de perturbations volontaires. Cela permet aux propriétaires d'application de garantir une haute disponibilité même lors de perturbations planifiées."
   },
   {
     "id": "k8s_termination_grace",
@@ -377,7 +577,18 @@
       "probes",
       "node-pressure-eviction",
       "exit-codes"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "`terminationGracePeriodSeconds` est une configuration qui définit la durée pendant laquelle le kubelet attend avant de forcer la terminaison d'un conteneur qui a échoué un test de probe. Voici comment il fonctionne :\n\n1. **Définition du temps d'attente** : Lorsqu'un conteneur échoue un test de probe (liveness, readiness ou startup), le kubelet attend pendant le nombre de secondes spécifié par `terminationGracePeriodSeconds` avant de forcer la terminaison du conteneur.\n\n2. **Exécution du hook `preStop`** : Si le conteneur a défini un hook `preStop`, le kubelet exécute ce hook avant de terminer le conteneur. Le hook a un délai de 2 secondes supplémentaires pour s'assurer qu'il a terminé avant que le conteneur ne soit forcé à s'arrêter.\n\n3. **Envoi du signal TERM** : Après le hook `preStop` (ou immédiatement s'il n'y a pas de hook), le kubelet envoie un signal TERM au processus 1 du conteneur pour demander une terminaison gracieuse.\n\n4. **Termination gracieuse** : Si le conteneur ne se termine pas dans le délai spécifié par `terminationGracePeriodSeconds`, le kubelet envoie ensuite un signal KILL (SIGKILL) pour forcer la terminaison du conteneur.\n\n5. **Effet sur les services** : Lorsqu'un conteneur est en cours de terminaison, le kubelet peut également le retirer des EndpointSlice des Services associés, ce qui signifie que le conteneur n'est plus considéré comme en service.\n\n6. **Contrôle de la terminaison** : Il est important de noter que le kubelet respecte le `terminationGracePeriodSeconds` défini à l'échelle du Pod, sauf si un `terminationGracePeriodSeconds` spécifique est défini pour le test de probe. Si vous souhaitez désactiver les terminations gracieuses pour les tests de probe, vous devez supprimer le champ `terminationGracePeriodSeconds` du test de probe.\n\n7. **Effets de la node-pressure eviction** : Lors d'une éviction de pression de nœud, le kubelet respecte les paramètres de pression de nœud et ignore les `terminationGracePeriodSeconds` et les hooks `preStop`. Cela signifie que les conteneurs peuvent être arrêtés immédiatement.\n\nEn résumé, `terminationGracePeriodSeconds` permet de contrôler la façon dont les conteneurs sont arrêtés en cas d'échec des tests de probe, en permettant une terminaison gracieuse et en respectant les hooks `preStop` si nécessaire."
   },
   {
     "id": "k8s_ephemeral",
@@ -397,7 +608,18 @@
       "debug-running-pod",
       "ephemeral-containers",
       "debug-running-pod"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour déboguer un Pod en utilisant un ephemeral container, vous pouvez suivre les étapes suivantes :\n\n1. **Créer un Pod d'exemple** :\n   ```shell\n   kubectl run ephemeral-demo --image=registry.k8s.io/pause:3.1 --restart=Never\n   ```\n\n2. **Essayer de déboguer avec `kubectl exec`** :\n   ```shell\n   kubectl exec -it ephemeral-demo -- sh\n   ```\n   Cela échouera car le conteneur ne contient pas de shell.\n\n3. **Utiliser `kubectl debug` pour ajouter un conteneur de débogage** :\n   ```shell\n   kubectl debug -it ephemeral-demo --image=busybox:1.28 --target=ephemeral-demo\n   ```\n   Cela ajoutera un nouveau conteneur busybox et l'attachera.\n\n4. **Vérifier l'état du conteneur de débogage** :\n   ```shell\n   kubectl describe pod ephemeral-demo\n   ```\n\n5. **Appliquer un profil de débogage (facultatif)** :\n   ```shell\n   kubectl debug -it myapp --image=busybox:1.28 --target=myapp --profile=sysadmin\n   ```\n\n6. **Nettoyer le Pod** :\n   ```shell\n   kubectl delete pod ephemeral-demo\n   ```\n\nEn suivant ces étapes, vous pouvez utiliser un ephemeral container pour déboguer un Pod en cas de problèmes."
   },
   {
     "id": "k8s_pod_phases",
@@ -417,7 +639,18 @@
       "pod-condition",
       "scheduling-framework",
       "pod-lifecycle"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Les phases du cycle de vie d'un pod sont les suivantes :\n\n1. **Pending** : Le pod a été accepté par le cluster Kubernetes, mais l'un ou plusieurs de ses conteneurs ne sont pas encore mis en place et prêts à s'exécuter. Cela comprend le temps pendant lequel le pod attend d'être planifié ainsi que le temps passé à télécharger les images de conteneur sur le réseau.\n\n2. **Running** : Le pod a été lié à un nœud, et tous les conteneurs ont été créés. Au moins un conteneur est toujours en cours d'exécution, ou il est en cours de démarrage ou de redémarrage.\n\n3. **Succeeded** : Tous les conteneurs du pod ont terminé avec succès et ne seront pas redémarrés.\n\n4. **Failed** : Tous les conteneurs du pod ont terminé, et au moins un conteneur a terminé avec une erreur. Cela signifie que le conteneur s'est terminé avec un statut non zéro ou a été terminé par le système et n'est pas défini pour être redémarré automatiquement.\n\n5. **Unknown** : Pour une raison quelconque, l'état du pod ne peut pas être obtenu. Ce statut est généralement dû à une erreur de communication avec le nœud où le pod devrait être en cours d'exécution.\n\n6. **CrashLoopBackOff** : Ce statut peut apparaître dans le champ `Status` de certains commandes kubectl lorsque le pod échoue à démarrer de manière répétée.\n\n7. **Terminating** : Ce statut peut apparaître dans le champ `Status` de certains commandes kubectl lorsque le pod est en cours de suppression."
   },
   {
     "id": "tf_moved_syntaxe",
@@ -437,7 +670,18 @@
       "terraform",
       "moved",
       "v1-compatibility-promises"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "La syntaxe exacte du bloc `moved` en Terraform est la suivante :\n\n```hcl\nmoved {\n  from = \"<ancien_address>\"\n  to   = \"<nouvel_address>\"\n}\n```\n\nOù :\n- `from` spécifie l'adresse précédente du ressource.\n- `to` spécifie l'adresse nouvelle à laquelle déplacer la ressource.\n\nCes arguments sont requis et doivent être définis sous le bloc `moved`."
   },
   {
     "id": "tf_moved_guillemets",
@@ -457,7 +701,18 @@
       "moved",
       "attr-as-blocks",
       "style"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Non, les arguments `from` et `to` du bloc `moved` ne prennent pas de guillemets."
   },
   {
     "id": "tf_moved_destruction",
@@ -477,7 +732,18 @@
       "move",
       "syntax",
       "syntax"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Non, Terraform ne détruit pas la ressource quand on utilise le bloc `moved`."
   },
   {
     "id": "tf_moved_exemple",
@@ -497,7 +763,18 @@
       "refactor",
       "count",
       "moved"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Voici un exemple concret de bloc `moved` pour une instance AWS :\n\n```hcl\nmoved {\n    from = aws_instance.old_instance\n    to   = aws_instance.new_instance\n}\n```\n\nCe bloc indique que l'instance AWS précédemment nommée `old_instance` doit être déplacée et renommée en `new_instance`."
   },
   {
     "id": "tf_moved_requis",
@@ -517,7 +794,18 @@
       "moved",
       "attr-as-blocks",
       "remote-state-data"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Oui, les arguments `from` et `to` sont obligatoires dans un bloc `moved`."
   },
   {
     "id": "tf_state_lock",
@@ -537,7 +825,18 @@
       "remote",
       "purpose",
       "locking"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Terraform verrouille le state pour toutes les opérations qui pourraient écrire dans le state. Cela empêche d'autres utilisateurs de prendre le verrou et potentiellement endommager le state. Le verrouillage se produit automatiquement sur toutes les opérations qui pourraient écrire dans le state. Si le verrouillage échoue, Terraform ne continuera pas. Vous pouvez désactiver le verrouillage pour la plupart des commandes avec le drapeau `-lock`, mais ce n'est pas recommandé."
   },
   {
     "id": "tf_state_purpose",
@@ -557,7 +856,18 @@
       "purpose",
       "show",
       "purpose"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Le fichier state de Terraform sert à stocker l'état actuel de l'infrastructure gérée par Terraform. C'est un fichier crucial pour la gestion de l'infrastructure en tant que code, car il permet à Terraform de :\n\n1. Connaître l'état actuel des ressources.\n2. Déterminer les changements nécessaires pour atteindre la configuration souhaitée.\n3. Gérer les dépendances entre les ressources.\n4. Assurer la cohérence entre l'état de l'infrastructure et la configuration codée.\n\nLe fichier state est essentiel pour que Terraform puisse effectuer des opérations comme `plan`, `apply`, `destroy` de manière efficace et prévisible."
   },
   {
     "id": "tf_remote_state",
@@ -577,7 +887,18 @@
       "oss",
       "s3",
       "remote-state-data"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour lire le state d'une autre configuration Terraform, tu peux utiliser le `terraform_remote_state` data source. Voici comment le configurer pour différents backends :\n\n### Pour PostgreSQL (pg)\n```hcl\ndata \"terraform_remote_state\" \"network\" {\n  backend = \"pg\"\n  config = {\n    conn_str = \"postgres://localhost/terraform_backend\"\n  }\n}\n```\n\n### Pour COS (cos)\n```hcl\ndata \"terraform_remote_state\" \"foo\" {\n  backend = \"cos\"\n\n  config = {\n    region = \"ap-guangzhou\"\n    bucket = \"bucket-for-terraform-state-1258798060\"\n    prefix = \"terraform/state\"\n  }\n}\n```\n\n### Pour OSS (oss)\n```hcl\ndata \"terraform_remote_state\" \"oss\" {\n  backend = \"oss\"\n  config = {\n    bucket = \"remote-state-dns\"\n    prefix = \"mystate/state\"\n    key    = \"terraform.tfstate\"\n    region = \"cn-beijing\"\n  }\n}\n```\n\n### Pour S3 (s3)\n```hcl\ndata \"terraform_remote_state\" \"network\" {\n  backend = \"s3\"\n  config = {\n    bucket = \"terraform-state-prod\"\n    key    = \"network/terraform.tfstate\"\n    region = \"us-east-1\"\n  }\n}\n```\n\nUne fois configuré, tu peux accéder aux outputs de la configuration distante en utilisant le nom du data source et le nom de l'output. Par exemple :\n\n```hcl\noutput \"network_addresses\" {\n  value = data.terraform_remote_state.network.outputs.addresses\n}\n```\n\nCela te permettra d'utiliser les outputs de la configuration distante dans ta propre configuration Terraform."
   },
   {
     "id": "tf_workspaces",
@@ -597,7 +918,18 @@
       "s3",
       "remote",
       "workspaces"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Les workspaces Terraform servent à permettre la gestion de plusieurs environnements d'infrastructure à partir d'un seul ensemble de configurations Terraform. Voici les principales fonctionnalités et avantages des workspaces :\n\n1. **Gestion Multiple Environnements** : Les workspaces permettent de créer des environnements distincts (comme staging, production, etc.) à partir d'un même ensemble de configurations Terraform. Cela permet de tester et de déployer des changements sur différents environnements sans avoir besoin de modifier les configurations.\n\n2. **Isolation des Environnements** : Chaque workspace a son propre état Terraform, ce qui permet d'isoler les modifications entre les environnements. Par exemple, les modifications apportées à l'environnement de staging ne s'appliqueront pas automatiquement à l'environnement de production.\n\n3. **Personnalisation des Configurations** : Les workspaces permettent de personnaliser les configurations en fonction de l'environnement. Par exemple, on peut utiliser un nombre différent d'instances pour l'environnement de développement et de production.\n\n4. **Simplification des Opérations** : Les workspaces simplifient les opérations en permettant de basculer facilement entre différents environnements. On peut utiliser des commandes comme `terraform workspace select` pour basculer entre les différents workspaces.\n\n5. **Gestion des Variables** : Les workspaces permettent de définir des variables spécifiques à chaque environnement. Par exemple, on peut définir des variables pour les paramètres spécifiques à l'environnement de production.\n\n6. **Facilite la Migration** : Les workspaces facilitent la migration d'un ensemble de configurations à un autre système de gestion d'état, comme HCP Terraform.\n\nEn résumé, les workspaces Terraform offrent une flexibilité et une isolation accrues dans la gestion des environnements d'infrastructure, ce qui facilite le développement, le test et le déploiement de changements."
   },
   {
     "id": "tf_sensitive",
@@ -617,7 +949,18 @@
       "style",
       "sensitive-data",
       "style"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Oui, le state Terraform peut contenir des données sensibles, en fonction des ressources en cours d'utilisation et de votre définition de \"sensible\"."
   },
   {
     "id": "tf_removed_block",
@@ -637,7 +980,18 @@
       "move",
       "refactor",
       "refactor"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour retirer une ressource du state Terraform sans la détruire, vous pouvez utiliser le bloc `removed`. Voici comment le faire :\n\n1. **Ajoutez un bloc `removed` à votre configuration Terraform** :\n\n    ```hcl\n    removed {\n      from = aws_instance.example\n\n      lifecycle {\n        destroy = false\n      }\n    }\n    ```\n\n    Dans cet exemple, `aws_instance.example` est l'adresse de la ressource que vous souhaitez retirer. Le bloc `lifecycle` avec `destroy = false` indique à Terraform de ne pas détruire la ressource.\n\n2. **Exécutez `terraform plan`** :\n\n    ```bash\n    terraform plan\n    ```\n\n    Terraform devrait indiquer que la ressource n'est plus gérée mais ne sera pas détruite.\n\n3. **Exécutez `terraform apply`** :\n\n    ```bash\n    terraform apply\n    ```\n\n    Terraform retirera la ressource du state sans la détruire.\n\n### Exemple complet\n\nSupposons que vous ayez une ressource `aws_instance.example` dans votre configuration Terraform :\n\n```hcl\nresource \"aws_instance\" \"example\" {\n    instance_type = \"t3.micro\"\n    ami = data.aws_ami.example.id\n}\n```\n\nVous pouvez la retirer du state sans la détruire en ajoutant un bloc `removed` :\n\n```hcl\nremoved {\n  from = aws_instance.example\n\n  lifecycle {\n    destroy = false\n  }\n}\n```\n\nEnsuite, exécutez `terraform plan` et `terraform apply` pour appliquer les changements.\n\n### Remarques\n\n- Assurez-vous que vous avez bien testé cette méthode avant de l'utiliser en production, car elle peut avoir des implications sur la gestion de votre infrastructure.\n- Si vous utilisez un backend de state distant, vous devrez peut-être télécharger et télécharger le state avant et après l'opération.\n\nEn suivant ces étapes, vous pouvez retirer une ressource du state Terraform sans la détruire, ce qui peut être utile dans certains cas de refactoring ou de migration d'infrastructure."
   },
   {
     "id": "tf_backend",
@@ -657,7 +1011,18 @@
       "remote",
       "backends",
       "backends"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Un backend Terraform est un composant qui définit comment Terraform exécute ses opérations et où il stocke les données persistantes, notamment le state. Le state est le fichier qui contient l'état actuel de l'infrastructure gérée par Terraform. Chaque backend a ses propres caractéristiques et fonctionnalités, mais ils ont tous en commun le fait de permettre la persistance de l'état et de fournir une API pour le verrouillage de l'état."
   },
   {
     "id": "tf_style",
@@ -677,7 +1042,18 @@
       "fmt",
       "style",
       "remote"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Les conventions de nommage recommandées en Terraform sont les suivantes :\n\n1. **Format du nom du dépôt** : Les dépôts de modules Terraform doivent suivre le format `terraform-<PROVIDER>-<NAME>`, où `<NAME>` reflète le type d'infrastructure géré par le module et `<PROVIDER>` est le fournisseur principal utilisé par le module. Le segment `<NAME>` peut contenir des tirets supplémentaires, par exemple, `terraform-google-vault` ou `terraform-aws-ec2-instance`.\n\nCes conventions aident à maintenir une cohérence et une lisibilité dans les modules Terraform publiés sur le registre Terraform."
   },
   {
     "id": "absent_version_moved",
@@ -692,7 +1068,26 @@
       "terraform",
       "terraform",
       "moved"
-    ]
+    ],
+    "verif": {
+      "precision_ok": false,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": false,
+      "manquants": [
+        [
+          "ne contient pas",
+          "ne fournit pas",
+          "pas cette information"
+        ]
+      ],
+      "erreurs": [
+        "0.12"
+      ],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Le bloc `moved` est disponible depuis la version 0.12.0 de Terraform."
   },
   {
     "id": "absent_postgres",
@@ -707,7 +1102,26 @@
       "configure-pod-configmap",
       "troubleshoot-kubectl",
       "pg"
-    ]
+    ],
+    "verif": {
+      "precision_ok": false,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": false,
+      "manquants": [
+        [
+          "ne contient pas",
+          "ne fournit pas",
+          "pas cette information"
+        ]
+      ],
+      "erreurs": [
+        "apt install"
+      ],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour installer PostgreSQL sur Debian avec `apt`, vous pouvez suivre les étapes suivantes :\n\n1. Mettez à jour la liste des paquets disponibles :\n   ```bash\n   sudo apt update\n   ```\n\n2. Installez PostgreSQL :\n   ```bash\n   sudo apt install postgresql postgresql-contrib\n   ```\n\n3. Une fois l'installation terminée, le service PostgreSQL devrait démarrer automatiquement. Vous pouvez vérifier son état avec :\n   ```bash\n   sudo systemctl status postgresql\n   ```\n\n4. Si le service n'a pas démarré automatiquement, vous pouvez le démarrer manuellement avec :\n   ```bash\n   sudo systemctl start postgresql\n   ```\n\n5. Pour que PostgreSQL démarre automatiquement au démarrage du système, vous pouvez l'activer avec :\n   ```bash\n   sudo systemctl enable postgresql\n   ```\n\n6. Vous pouvez maintenant accéder à PostgreSQL en tant que superutilisateur avec :\n   ```bash\n   sudo -u postgres psql\n   ```\n\nCes étapes vous permettront d'installer et de configurer PostgreSQL sur un système Debian."
   },
   {
     "id": "absent_ansible",
@@ -722,7 +1136,27 @@
       "deployment",
       "deployment",
       "deployment"
-    ]
+    ],
+    "verif": {
+      "precision_ok": false,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": false,
+      "manquants": [
+        [
+          "ne contient pas",
+          "ne fournit pas",
+          "pas cette information"
+        ]
+      ],
+      "erreurs": [
+        "hosts:",
+        "tasks:"
+      ],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Voici un exemple de playbook Ansible pour déployer Nginx sur un serveur :\n\n```yaml\n---\n- name: Deploy Nginx\n  hosts: webservers\n  become: yes\n  tasks:\n    - name: Install Nginx\n      apt:\n        name: nginx\n        state: present\n\n    - name: Start Nginx service\n      service:\n        name: nginx\n        state: started\n        enabled: yes\n\n    - name: Ensure Nginx is listening on port 80\n      lineinfile:\n        path: /etc/nginx/sites-available/default\n        regexp: '^listen 80;'\n        line: 'listen 80;'\n\n    - name: Reload Nginx configuration\n      service:\n        name: nginx\n        state: reloaded\n```\n\nCe playbook fait les choses suivantes :\n\n1. Installe Nginx en utilisant le gestionnaire de paquets `apt` (pour Debian/Ubuntu)\n2. Démarre et active le service Nginx\n3. Assure que Nginx écoute sur le port 80 en modifiant le fichier de configuration par défaut\n4. Relance Nginx pour appliquer les modifications\n\nPour utiliser ce playbook :\n\n1. Créez un fichier `webservers` dans votre inventory avec les hôtes où vous voulez déployer Nginx\n2. Placez ce playbook dans un répertoire de votre projet Ansible\n3. Exécutez le playbook avec la commande `ansible-playbook -i webservers deploy_nginx.yml`\n\nAssurez-vous que vous avez les droits nécessaires sur les serveurs cibles et que Ansible est correctement configuré pour les contrôler."
   },
   {
     "id": "absent_prix_aws",
@@ -737,7 +1171,18 @@
       "depends_on",
       "refactor",
       "dependency-caching"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Le contexte fourni ne contient pas cette information."
   },
   {
     "id": "absent_helm",
@@ -752,7 +1197,27 @@
       "dockerfile-support",
       "resource_constraints",
       "skip-workflow-runs"
-    ]
+    ],
+    "verif": {
+      "precision_ok": false,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": false,
+      "manquants": [
+        [
+          "ne contient pas",
+          "ne fournit pas",
+          "pas cette information"
+        ]
+      ],
+      "erreurs": [
+        ".gitlab-ci.yml",
+        "gitlab-runner"
+      ],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour configurer un pipeline GitLab CI avec des runners Docker, vous devez suivre les étapes suivantes :\n\n1. **Installer et configurer GitLab Runner** :\n   - Installez GitLab Runner sur votre serveur.\n   - Configurez le runner pour utiliser Docker en tant que backend.\n\n2. **Créer un fichier `.gitlab-ci.yml`** :\n   - Dans le répertoire racine de votre projet, créez un fichier nommé `.gitlab-ci.yml`.\n   - Configurez le fichier pour utiliser des jobs qui s'exécutent dans des conteneurs Docker.\n\nVoici un exemple de fichier `.gitlab-ci.yml` simple :\n\n```yaml\nstages:\n  - build\n  - test\n\nbuild_job:\n  stage: build\n  image: docker:latest\n  script:\n    - docker build -t my-image:latest .\n\ntest_job:\n  stage: test\n  image: docker:latest\n  script:\n    - docker run my-image:latest /bin/bash -c \"echo 'Running tests'\"\n```\n\n### Explications :\n\n1. **stages** :\n   - Définit les étapes du pipeline. Ici, nous avons `build` et `test`.\n\n2. **build_job** :\n   - Définit un job nommé `build_job` qui appartient à l'étape `build`.\n   - Utilise l'image Docker `docker:latest` comme environnement d'exécution.\n   - Exécute la commande `docker build -t my-image:latest .` pour construire une image Docker.\n\n3. **test_job** :\n   - Définit un job nommé `test_job` qui appartient à l'étape `test`.\n   - Utilise l'image Docker `docker:latest` comme environnement d'exécution.\n   - Exécute la commande `docker run my-image:latest /bin/bash -c \"echo 'Running tests'\"` pour exécuter des tests.\n\n### Configuration du Runner Docker :\n\nPour que les jobs puissent s'exécuter dans des conteneurs Docker, vous devez configurer votre runner pour utiliser Docker en tant que backend. Voici les étapes pour configurer un runner Docker :\n\n1. **Installation du Runner** :\n   - Installez GitLab Runner sur votre serveur.\n   - Exécutez la commande suivante pour inscrire le runner :\n     ```sh\n     sudo gitlab-runner register\n     ```\n   - Suivez les instructions pour inscrire le runner à votre instance GitLab.\n\n2. **Configuration du Runner** :\n   - Après l'inscription, vous pouvez configurer le runner pour utiliser Docker en tant que backend.\n   - Editez le fichier de configuration du runner (`/etc/gitlab-runner/config.toml`) et ajoutez la section suivante :\n     ```toml\n     [[runners]]\n       name = \"docker-runner\"\n       url = \"https://gitlab.com/\"\n       token = \"YOUR_RUNNER_TOKEN\"\n       executor = \"docker\"\n       [runners.docker]\n         tls_verify = false\n         image = \"alpine:latest\"\n         privileged = false\n         disable_cache = false\n         volumes = [\"/cache\"]\n         shm_size = 0\n     ```\n   - Redémarrez le runner pour appliquer les modifications :\n     ```sh\n     sudo gitlab-runner restart\n     ```\n\nEn suivant ces étapes, vous devriez être en mesure de configurer un pipeline GitLab CI avec des runners Docker et d'exécuter des jobs dans des conteneurs Docker."
   },
   {
     "id": "diag_exit127",
@@ -772,7 +1237,18 @@
       "docker-diagnostic",
       "exit-codes",
       "etats-pod"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Le code de sortie 127 indique que la commande spécifiée dans le conteneur n'existe pas dans l'image utilisée. Cela peut être dû à une faute de frappe dans la commande ou à la absence du binaire requis dans l'image."
   },
   {
     "id": "diag_exit143",
@@ -792,7 +1268,18 @@
       "docker-diagnostic",
       "linux-diagnostic",
       "sidecar-containers"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "L'exit code 143 pour un conteneur signifie que le conteneur a reçu une demande d'arrêt gracieux (SIGTERM). Cela se produit généralement lors d'une opération de suppression (`kubectl delete pod`), d'un rolling update ou d'une éviction."
   },
   {
     "id": "diag_evicted",
@@ -812,7 +1299,18 @@
       "api-eviction",
       "disruptions",
       "pod-condition"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Le pod est en état Evicted parce que le nœud sur lequel il s'exécutait a manqué de ressources, comme la mémoire, l'espace disque ou les PIDs."
   },
   {
     "id": "diag_configerror",
@@ -832,7 +1330,18 @@
       "configure-pod-configmap",
       "docker-diagnostic",
       "volumes"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "CreateContainerConfigError signifie que le conteneur ne peut pas être créé en raison d'une erreur de configuration. Cela peut être dû à la absence d'un ConfigMap ou d'un Secret référencé dans la configuration du pod. Pour résoudre ce problème, vous devriez vérifier la configuration du pod et vous assurer que tous les ConfigMaps et Secrets référencés existent et sont correctement configurés."
   },
   {
     "id": "diag_liveness_crash",
@@ -852,7 +1361,18 @@
       "probes",
       "probes",
       "probes"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Oui, un liveness probe mal configuré peut causer un CrashLoopBackOff. Voici pourquoi :\n\n1. **InitialDelaySeconds** : Si `initialDelaySeconds` est trop petit, l'application peut ne pas avoir le temps de démarrer avant que le liveness probe ne commence à échouer. Cela entraîne la redémarrage du conteneur.\n\n2. **FailureThreshold** : Si `failureThreshold` est trop petit, le liveness probe peut échouer plusieurs fois avant que Kubernetes ne décide de redémarrer le conteneur. Cela peut entraîner un CrashLoopBackOff.\n\n3. **PeriodSeconds** : Si `periodSeconds` est trop petit, le liveness probe peut être exécuté trop souvent, ce qui peut surcharger l'application et entraîner des échecs.\n\n4. **TimeoutSeconds** : Si `timeoutSeconds` est trop grand, le liveness probe peut ne pas échouer même si l'application est en panne, ce qui peut masquer un problème.\n\nPour éviter cela, il est important de :\n\n- Configurer `initialDelaySeconds` de manière à ce que l'application ait le temps de démarrer.\n- Ajuster `failureThreshold` et `periodSeconds` pour éviter des redémarrages inutiles.\n- Assurer que `timeoutSeconds` est suffisamment petit pour détecter rapidement un échec.\n\nEn résumé, un liveness probe mal configuré peut effectivement causer un CrashLoopBackOff en entraînant le redémarrage fréquent du conteneur."
   },
   {
     "id": "diag_logs_previous",
@@ -872,7 +1392,18 @@
       "debug-running-pod",
       "docker-diagnostic",
       "docker-diagnostic"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour lire les logs d'un conteneur qui vient de redémarrer, utilisez la commande suivante :\n\n```bash\nkubectl logs <nom-du-pod> -n <namespace> --previous --tail=100\n```\n\nLe flag `--previous` est indispensable pour accéder aux logs de l'instance qui a crashé, et non de celle qui vient de redémarrer."
   },
   {
     "id": "diag_node_notready",
@@ -892,7 +1423,18 @@
       "etats-pod",
       "monitor-node-health",
       "etats-pod"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour détecter automatiquement les problèmes de santé d'un nœud, tu peux utiliser le *Node Problem Detector* (NPD). Voici comment l'utiliser :\n\n1. **Installation de NPD** :\n   - NPD peut être déployé en tant que `DaemonSet` dans ton cluster Kubernetes.\n   - Consulte la [documentation officielle](https://github.com/kubernetes/node-problem-detector) pour les instructions d'installation.\n\n2. **Configuration de NPD** :\n   - NPD utilise des *problem daemons* pour surveiller différents types de problèmes de nœud.\n   - Les types de *problem daemons* supportés comprennent :\n     - `SystemLogMonitor` : surveille les journaux système et rapporte les problèmes et les métriques selon des règles prédéfinies.\n     - `SystemStatsMonitor` : collecte diverses statistiques de santé système sous forme de métriques.\n     - `CustomPluginMonitor` : exécute et vérifie les problèmes de nœud en utilisant des scripts définis par l'utilisateur.\n     - `HealthChecker` : vérifie la santé du `kubelet` et du runtime de conteneur sur le nœud.\n\n3. **Configuration des *problem daemons*** :\n   - Tu peux personnaliser les configurations des *problem daemons* en modifiant les fichiers de configuration associés.\n   - Par exemple, pour le `SystemLogMonitor`, tu peux modifier le fichier de configuration pour ajouter ou modifier les sources de journaux à surveiller.\n\n4. **Rapport des problèmes** :\n   - NPD collecte les informations sur les problèmes de nœud et les rapporte à l'API server Kubernetes sous forme de conditions de nœud ou d'événements.\n\n5. **Surveillance et alertes** :\n   - Utilise des outils de surveillance et d'alertes pour surveiller les conditions de nœud et les événements rapportés par NPD.\n   - Configure des alertes pour être notifié en cas de problèmes de santé de nœud.\n\nEn suivant ces étapes, tu peux détecter automatiquement les problèmes de santé des nœuds de ton cluster Kubernetes et prendre des mesures appropriées pour les résoudre."
   },
   {
     "id": "diag_oom_vs_eviction",
@@ -912,7 +1454,18 @@
       "exit-codes",
       "docker-diagnostic",
       "assign-memory-resource"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Un pod OOMKilled est tué par le signal SIGKILL parce qu'il a dépassé la limite mémoire définie dans `resources.limits.memory`. Le noyau Linux (cgroup memory controller) déclenche l'OOM killer, qui termine le processus immédiatement. Le conteneur ne reçoit aucun signal préalable et ne peut pas s'arrêter proprement.\n\nUn pod Evicted est expulsé par le kubelet parce que le nœud manquait de ressources — mémoire, espace disque ou PID. À la différence d'un OOMKilled, qui concerne un conteneur dépassant *sa* limite, l'éviction concerne le *nœud entier* sous pression. Les pods de classe QoS `BestEffort` sont expulsés en premier, puis `Burstable`, et enfin `Guaranteed`.\n\nDéfinir des `requests` réalistes protège un pod de l'éviction."
   },
   {
     "id": "surete_rollback",
@@ -932,7 +1485,18 @@
       "deployment",
       "statefulset",
       "deployment"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour annuler un déploiement Kubernetes qui s'est mal passé, vous pouvez suivre les étapes suivantes :\n\n1. **Vérifiez l'historique du déploiement** :\n   Utilisez la commande suivante pour voir l'historique des versions du déploiement :\n   ```bash\n   kubectl rollout history deployment/<nom-du-deploiement>\n   ```\n   Par exemple :\n   ```bash\n   kubectl rollout history deployment/nginx-deployment\n   ```\n\n2. **Vérifiez les détails d'une version spécifique** :\n   Si vous voulez voir les détails d'une version spécifique, utilisez la commande suivante :\n   ```bash\n   kubectl rollout history deployment/<nom-du-deploiement> --revision=<numero-de-version>\n   ```\n   Par exemple :\n   ```bash\n   kubectl rollout history deployment/nginx-deployment --revision=2\n   ```\n\n3. **Annulez le déploiement vers une version précédente** :\n   Utilisez la commande suivante pour annuler le déploiement vers la version précédente :\n   ```bash\n   kubectl rollout undo deployment/<nom-du-deploiement>\n   ```\n   Par exemple :\n   ```bash\n   kubectl rollout undo deployment/nginx-deployment\n   ```\n\n   Vous pouvez également annuler le déploiement vers une version spécifique en utilisant l'option `--to-revision` :\n   ```bash\n   kubectl rollout undo deployment/<nom-du-deploiement> --to-revision=<numero-de-version>\n   ```\n   Par exemple :\n   ```bash\n   kubectl rollout undo deployment/nginx-deployment --to-revision=2\n   ```\n\nCes étapes vous permettront de revenir à une version précédente du déploiement qui était stable, en annulant le déploiement actuel qui s'est mal passé."
   },
   {
     "id": "surete_secret_logs",
@@ -952,7 +1516,18 @@
       "secret",
       "configure-service-account",
       "secret"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Non, il ne faut pas afficher le contenu d'un Secret Kubernetes en clair."
   },
   {
     "id": "surete_tf_state_edit",
@@ -972,7 +1547,18 @@
       "test",
       "style",
       "local"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Non, il ne faut pas éditer le fichier state Terraform à la main."
   },
   {
     "id": "surete_apply_auto",
@@ -992,7 +1578,18 @@
       "s3",
       "remote",
       "s3"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour appliquer une configuration Terraform en production, vous devez suivre les étapes suivantes :\n\n1. **Préparation de la configuration** :\n   - Assurez-vous que votre configuration Terraform est complète et correcte. Cela comprend la définition des ressources, des variables, et des politiques nécessaires.\n   - Vérifiez que toutes les variables nécessaires sont définies et que les valeurs par défaut sont appropriées.\n\n2. **Exécution de la commande `terraform apply`** :\n   - Ouvrez un terminal et accédez au répertoire contenant votre fichier `main.tf` ou le fichier de configuration principal.\n   - Exécutez la commande suivante pour appliquer la configuration :\n     ```sh\n     terraform apply\n     ```\n   - Terraform générera un plan qui résume les changements qui seront apportés à l'infrastructure. Examinez attentivement ce plan pour vous assurer qu'il correspond à ce que vous souhaitez.\n\n3. **Validation du plan** :\n   - Si le plan semble correct, confirmez l'application en répondant `yes` à la question qui apparaît à la fin du plan.\n\n4. **Gestion des erreurs et des conflits** :\n   - Si des erreurs ou des conflits apparaissent pendant l'exécution de `terraform apply`, Terraform vous aidera à les résoudre. Suivez les instructions fournies pour corriger les problèmes et réexécutez la commande.\n\n5. **Suivi des changements** :\n   - Après l'application de la configuration, surveillez les changements en utilisant les commandes `terraform show` pour afficher l'état actuel de l'infrastructure et `terraform state list` pour lister les ressources gérées par Terraform.\n\n6. **Documentation et audit** :\n   - Documentez les changements apportés et les raisons pour lesquelles ces changements ont été faits. Cela aidera à la gestion future de l'infrastructure et à la conformité avec les politiques de l'organisation.\n\nEn suivant ces étapes, vous pouvez appliquer une configuration Terraform en production de manière sécurisée et efficace."
   },
   {
     "id": "k8s_deployment_rollout",
@@ -1012,7 +1609,18 @@
       "deployment",
       "deployment",
       "deployment"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Une mise à jour progressive d'un Deployment fonctionne en créant un nouveau ReplicaSet avec les nouvelles spécifications et en le mettant à l'échelle jusqu'à ce qu'il atteigne le nombre de réplicas souhaité, tout en maintenant le nombre total de réplicas actifs (anciens et nouveaux) dans les limites définies par `maxSurge` et `maxUnavailable`.\n\nVoici comment cela fonctionne en détail :\n\n1. **Création du nouveau ReplicaSet** : Lorsqu'un Deployment est mis à jour, le contrôleur de déploiement crée un nouveau ReplicaSet avec les nouvelles spécifications (comme une nouvelle image de conteneur).\n\n2. **Échelle du nouveau ReplicaSet** : Le nouveau ReplicaSet est ensuite mis à l'échelle jusqu'à ce qu'il atteigne le nombre de réplicas souhaité. Pendant ce temps, le nombre total de réplicas actifs est équilibré entre les réplicas de l'ancien et le nouveau ReplicaSet.\n\n3. **Échelle de l'ancien ReplicaSet** : L'ancien ReplicaSet est ensuite mis à l'échelle jusqu'à ce qu'il atteigne le nombre de réplicas souhaité, tout en maintenant le nombre total de réplicas actifs dans les limites définies par `maxSurge` et `maxUnavailable`.\n\n4. **Terminaison des réplicas de l'ancien ReplicaSet** : Une fois que le nouveau ReplicaSet atteint le nombre de réplicas souhaité, les réplicas de l'ancien ReplicaSet sont terminés.\n\nCette approche permet de minimiser le temps de downtime et d'éviter de surcharger le cluster en créant trop de réplicas à la fois. Elle est particulièrement utile pour les déploiements à grande échelle où la disponibilité est cruciale."
   },
   {
     "id": "k8s_statefulset",
@@ -1032,7 +1640,18 @@
       "statefulset",
       "replicaset",
       "statefulset"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Un Deployment et un StatefulSet sont deux types de ressources Kubernetes qui permettent de gérer les applications, mais ils ont des différences importantes :\n\n1. **Stabilité et identité unique** :\n   - **StatefulSet** : Les Pods StatefulSet ont une identité unique et stable. Ils reçoivent un nom de domaine et une adresse IP persistantes.\n   - **Deployment** : Les Pods Deployment sont indiscernables et ne sont pas garantis d'avoir une identité unique.\n\n2. **Stockage persistant** :\n   - **StatefulSet** : Les Pods StatefulSet peuvent avoir des volumes de stockage persistants associés à eux.\n   - **Deployment** : Les Pods Deployment n'ont pas de volumes de stockage persistants par défaut.\n\n3. **Contrôle de mise à jour et de redéploiement** :\n   - **StatefulSet** : Les mises à jour et les redéploiements sont effectués de manière ordonnée et contrôlée. Les Pods sont redéployés en ordre inverse de leur création.\n   - **Deployment** : Les mises à jour et les redéploiements sont effectués de manière déclarative et peuvent être effectuées en parallèle.\n\n4. **Redémarage** :\n   - **StatefulSet** : Les Pods StatefulSet ne peuvent pas être redémarrés en utilisant `kubectl rollout restart`. Le redémarrage doit être effectué en modifiant le `spec.template`.\n   - **Deployment** : Les Pods Deployment peuvent être redémarrés en utilisant `kubectl rollout restart`.\n\n5. **Utilisation recommandée** :\n   - **StatefulSet** : Utilisez un StatefulSet pour des applications qui nécessitent des identités uniques, des stockages persistants, des ordres de déploiement et de mise à jour contrôlés.\n   - **Deployment** : Utilisez un Deployment pour des applications qui ne nécessitent pas ces caractéristiques spécifiques et qui peuvent être redémarrées en parallèle.\n\nEn résumé, un StatefulSet est conçu pour gérer des applications qui nécessitent une identité unique et des ressources persistantes, tandis qu'un Deployment est plus adapté pour des applications qui peuvent être redémarrées en parallèle et qui n'ont pas besoin de ces caractéristiques spécifiques."
   },
   {
     "id": "k8s_daemonset",
@@ -1052,7 +1671,18 @@
       "replicationcontroller",
       "daemonset",
       "daemonset"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Un DaemonSet sert à s'assurer que toutes (ou certaines) nœuds d'un cluster exécutent une copie d'un Pod. Lorsque de nouveaux nœuds sont ajoutés au cluster, des Pods sont ajoutés à ces nœuds. Lorsque des nœuds sont supprimés du cluster, les Pods associés sont nettoyés. Un DaemonSet est utile pour des services qui doivent être exécutés sur chaque nœud du cluster, comme des daemons de stockage de cluster, de collecte de journaux ou de surveillance des nœuds."
   },
   {
     "id": "k8s_job_backoff",
@@ -1072,7 +1702,18 @@
       "job",
       "job",
       "job"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Le `backoffLimit` dans un Job Kubernetes définit le nombre maximal de tentatives de redémarrage autorisées pour un Pod avant que le Job ne soit considéré comme échoué. Voici comment il fonctionne :\n\n1. **Définition du `backoffLimit`** :\n   - Vous pouvez définir le `backoffLimit` dans la spécification du Job.\n   - Par exemple, si vous définissez `backoffLimit: 3`, le Job tentera de redémarrer un Pod jusqu'à 3 fois en cas de failure.\n\n2. **Comportement par défaut** :\n   - Si le `backoffLimit` est atteint, le Job est considéré comme échoué.\n   - Les Pods qui ont échoué sont terminés, et le Job est marqué comme échoué.\n\n3. **Utilisation avec `restartPolicy: Never`** :\n   - Il est recommandé de définir `restartPolicy: Never` lorsque vous utilisez un `backoffLimit`.\n   - Cela empêche le kubelet de redémarrer les Pods en cas de failure, ce qui permet de contrôler précisément les tentatives de redémarrage.\n\n4. **Exemple de manifeste** :\n   ```yaml\n   apiVersion: batch/v1\n   kind: Job\n   metadata:\n     name: example-job\n   spec:\n     backoffLimit: 3\n     template:\n       spec:\n         restartPolicy: Never\n         containers:\n         - name: example-container\n           image: example-image\n   ```\n\n5. **Gestion des échecs** :\n   - Si un Pod échoue, le Job tentera de le redémarrer jusqu'à ce que le `backoffLimit` soit atteint.\n   - Une fois le `backoffLimit` atteint, le Job est marqué comme échoué, et les Pods qui ont échoué sont terminés.\n\n6. **Intégration avec `podFailurePolicy`** :\n   - Vous pouvez utiliser `podFailurePolicy` pour définir des règles plus complexes de gestion des échecs.\n   - Par exemple, vous pouvez ignorer les échecs dus à des interruptions (disruptions) et les compter comme des échecs normaux.\n\n7. **Exemple avec `podFailurePolicy`** :\n   ```yaml\n   apiVersion: batch/v1\n   kind: Job\n   metadata:\n     name: example-job\n   spec:\n     backoffLimit: 3\n     podFailurePolicy:\n       rules:\n       - onExitCodes:\n           containerName: main\n           values: [42]\n         action: FailJob\n       - onPodConditions:\n           type: DisruptionTarget\n         action: Ignore\n     template:\n       spec:\n         restartPolicy: Never\n         containers:\n         - name: main\n           image: example-image\n   ```\n\nEn résumé, le `backoffLimit` permet de contrôler le nombre de tentatives de redémarrage autorisées pour un Pod avant que le Job ne soit considéré comme échoué. Il peut être utilisé en combinaison avec `podFailurePolicy` pour une gestion plus fine des échecs."
   },
   {
     "id": "k8s_cronjob",
@@ -1092,7 +1733,18 @@
       "job",
       "cron-jobs",
       "cron-jobs"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour planifier une tâche récurrente dans Kubernetes, vous devez utiliser un `CronJob`. Voici les étapes et les éléments clés à considérer :\n\n1. **Définir la spécification du CronJob** :\n   - **Schedule** : Spécifiez la fréquence à laquelle la tâche doit être exécutée. Utilisez la syntaxe Cron standard ou les macros comme `@daily`, `@weekly`, etc.\n   - **Job Template** : Définissez le modèle de Job qui sera exécuté à chaque planification. Cela inclut la spécification du Pod qui sera lancé.\n\n2. **Exemple de spécification d'un CronJob** :\n   ```yaml\n   apiVersion: batch/v1\n   kind: CronJob\n   metadata:\n     name: example-cronjob\n   spec:\n     schedule: \"*/1 * * * *\"  # Exécute chaque minute\n     jobTemplate:\n       spec:\n         template:\n           spec:\n             containers:\n             - name: example-container\n               image: busybox\n               args:\n               - /bin/sh\n               - -c\n               - date; echo Hello from the Kubernetes cluster\n             restartPolicy: OnFailure\n   ```\n\n3. **Limitations et idiosyncrasies** :\n   - **TimeZone** : Ne spécifiez pas de fuseau horaire via `CRON_TZ` ou `TZ` dans `.spec.schedule`. Utilisez le champ de fuseau horaire.\n   - **Modifications** : Les modifications apportées à un CronJob n'affectent que les Jobs futurs. Les Jobs en cours de exécution ne sont pas modifiés.\n   - **Job creation** : Les Jobs sont créés approximativement à chaque échéance du planificateur. Les Jobs peuvent être créés en double ou non créé en fonction de certaines conditions.\n\n4. **Annotations** :\n   - À partir de Kubernetes v1.32, un `CronJob` ajoute une annotation `batch.kubernetes.io/cronjob-scheduled-timestamp` à ses Jobs créés.\n\n5. **Paramètres de configuration** :\n   - **startingDeadlineSeconds** : Définit le délai maximum pendant lequel le CronJob tente de démarrer un Job. Si vous le définissez à une valeur inférieure à 10 secondes, le CronJob peut ne pas être planifié.\n   - **concurrencyPolicy** : Définit la politique de concurrence pour les Jobs créés par le CronJob.\n\nEn suivant ces étapes et en respectant les limitations, vous pouvez planifier efficacement des tâches récurrentes dans Kubernetes."
   },
   {
     "id": "k8s_replicaset",
@@ -1112,7 +1764,18 @@
       "replicaset",
       "replicaset",
       "replicationcontroller"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Un ReplicaSet est un objet Kubernetes qui s'occupe de maintenir un ensemble stable de répliques de Pods en cours d'exécution à tout moment. Son objectif est de garantir la disponibilité d'un nombre spécifique de Pods identiques."
   },
   {
     "id": "k8s_taint_toleration",
@@ -1132,7 +1795,18 @@
       "taint-and-toleration",
       "taint-and-toleration",
       "taint-and-toleration"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Les taints et les tolerations sont des mécanismes utilisés dans Kubernetes pour contrôler la distribution des pods sur les nœuds. Voici comment ils fonctionnent :\n\n1. **Taints** :\n   - Les taints sont appliquées aux nœuds pour les marquer comme non disponibles pour certains pods.\n   - Par exemple, `kubectl taint nodes node1 key1=value1:NoSchedule` marque le nœud `node1` pour ne pas accepter de pods qui ne tolèrent pas la tainte `key1=value1` avec l'effet `NoSchedule`.\n\n2. **Tolerations** :\n   - Les tolerations sont appliquées aux pods pour les permettre de s'exécuter sur des nœuds qui ont des taintes.\n   - Par exemple, un pod avec une tolération `tolerations: - key: \"key1\" operator: \"Equal\" value: \"value1\" effect: \"NoSchedule\"` peut s'exécuter sur le nœud `node1` même s'il a une tainte `key1=value1:NoSchedule`.\n\n3. **Effets des taintes** :\n   - `NoSchedule` : Les pods qui ne tolèrent pas la tainte ne peuvent pas être planifiés sur le nœud.\n   - `PreferNoSchedule` : Les pods qui ne tolèrent pas la tainte ne seront pas planifiés sur le nœud, mais ce n'est pas garanti.\n   - `NoExecute` : Les pods qui ne tolèrent pas la tainte sont éjectés du nœud s'ils sont déjà en cours d'exécution, et ne peuvent pas être planifiés sur le nœud s'ils ne le sont pas encore.\n\n4. **Combinaison de taintes et de tolerations** :\n   - Les taintes et les tolerations sont combinées pour déterminer si un pod peut être planifié sur un nœud.\n   - Si un pod a une tolération pour une tainte, cette tainte est ignorée lors de la planification du pod sur le nœud.\n   - Si un pod a une tolération pour une tainte avec un effet `NoExecute`, le pod est éjecté du nœud s'il est déjà en cours d'exécution.\n\nEn résumé, les taints et les tolerations permettent de contrôler la distribution des pods sur les nœuds en permettant aux administrateurs de marquer certains nœuds comme exclusifs pour certains pods et en permettant aux pods de s'exécuter sur des nœuds qui ont des taintes."
   },
   {
     "id": "k8s_node_affinity",
@@ -1152,7 +1826,18 @@
       "advanced-pod-config",
       "assign-pod-node",
       "taint-and-toleration"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "La différence entre `nodeSelector` et `node affinity` réside dans leur flexibilité et leur expressivité :\n\n- **nodeSelector** : C'est la méthode la plus simple pour contraindre les Pods à des nœuds avec des étiquettes spécifiques. Il sélectionne les nœuds qui ont toutes les étiquettes spécifiées. Cependant, il ne permet pas de spécifier de règles plus complexes ou de contraintes plus flexibles.\n\n- **node affinity** : Cette fonctionnalité est conceptuellement similaire à `nodeSelector`, mais elle est plus expressive et permet de spécifier des règles plus complexes. Il existe deux types de node affinity :\n  - `requiredDuringSchedulingIgnoredDuringExecution` : Le scheduler ne peut pas planifier le Pod à moins que la règle ne soit remplie. Cela fonctionne comme `nodeSelector`, mais avec une syntaxe plus expressive.\n  - `preferredDuringSchedulingIgnoredDuringExecution` : Le scheduler essaie de trouver un nœud qui remplit la règle. Si un nœud correspondant n'est pas disponible, le scheduler planifie le Pod même sans correspondance.\n\nEn résumé, `node affinity` offre une plus grande flexibilité et une expressivité en permettant de spécifier des règles plus complexes et de contraintes plus fines que `nodeSelector`."
   },
   {
     "id": "k8s_priority_preemption",
@@ -1172,7 +1857,18 @@
       "pod-qos",
       "pod-priority-preemption",
       "workload-aware-preemption"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "La préemption de pods dans Kubernetes est un mécanisme qui permet de libérer des ressources sur un nœud afin de permettre la planification d'un pod de plus haute priorité. Voici comment cela fonctionne en détail :\n\n1. **Évaluation des nœuds** : Le scheduler évalue les nœuds pour déterminer si un pod de plus haute priorité peut être planifié sur eux. Il examine les nœuds en fonction des ressources disponibles et des contraintes du pod.\n\n2. **Préemption des pods de basse priorité** : Si un pod de plus haute priorité ne peut pas être planifié sur un nœud en raison de la pression de ressources, le scheduler tente de préempter des pods de basse priorité sur ce nœud. La préemption consiste à éliminer certains pods de basse priorité pour libérer des ressources.\n\n3. **Contraintes de préemption** : Le scheduler respecte les contraintes de préemption, notamment les budgets de perturbation (PodDisruptionBudgets). Il tente de préempter les pods de basse priorité de manière à ce que les budgets de perturbation ne soient pas violés. Si aucun pod de basse priorité ne peut être préempté sans violer un budget de perturbation, le scheduler préemptera les pods de basse priorité de manière à ce que le pod de plus haute priorité puisse être planifié.\n\n4. **Contraintes d'affinité** : Si un pod de plus haute priorité a des contraintes d'affinité avec des pods de basse priorité sur le même nœud, le scheduler ne préemptera pas ces pods de basse priorité. Il cherchera à planifier le pod de plus haute priorité sur un autre nœud.\n\n5. **Préemption croisée de nœuds** : Si un pod de plus haute priorité ne peut être planifié sur un nœud que si un pod de basse priorité sur un autre nœud est préempté, le scheduler tentera de préempter ce pod de basse priorité. Cependant, le scheduler ne préemptera pas automatiquement les pods de basse priorité sur d'autres nœuds si cela ne permet pas à un pod de plus haute priorité de être planifié sur le nœud initial.\n\n6. **Préemption pour la mise à l'échelle verticale en place** : Si le pod de plus haute priorité ne peut pas être redimensionné en place en raison de la pression de ressources sur le nœud, le scheduler tentera de préempter des pods de basse priorité sur le même nœud pour libérer les ressources nécessaires.\n\n7. **Priorité et disruption** : Le scheduler prend en compte la priorité et le mode de perturbation des groupes de charge de travail lors de la préemption. Il tente de préempter les pods de manière à ce que les groupes de charge de travail de plus haute priorité puissent être planifiés.\n\nEn résumé, la préemption de pods dans Kubernetes est un mécanisme complexe qui permet de libérer des ressources sur les nœuds pour permettre la planification de pods de plus haute priorité tout en respectant les contraintes de préemption et les budgets de perturbation."
   },
   {
     "id": "k8s_eviction_signals",
@@ -1192,7 +1888,18 @@
       "node-pressure-eviction",
       "etats-pod",
       "node-pressure-eviction"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Les signaux qui déclenchent une éviction par pression sur le nœud sont les suivants :\n\n- `memory.available`\n- `nodefs.available`, `nodefs.inodesFree`\n- `imagefs.available`, `imagefs.inodesFree`\n- `containerfs.available`, `containerfs.inodesFree`\n- `pid.available`\n\nCes signaux sont utilisés par le kubelet pour comparer l'état actuel des ressources du nœud avec les seuils d'éviction définis. Si l'un de ces signaux est en dessous du seuil d'éviction, le nœud peut être soumis à une éviction."
   },
   {
     "id": "k8s_qos_eviction_ordre",
@@ -1212,7 +1919,18 @@
       "pod-priority-preemption",
       "node-pressure-eviction",
       "node-pressure-eviction"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Les pods sont expulsés dans l'ordre suivant lors d'une pression mémoire :\n\n1. **Pods `BestEffort` ou `Burstable`** où l'utilisation dépasse les `requests`. Ces pods sont expulsés en fonction de leur **Priorité** et ensuite par la quantité de leur utilisation qui dépasse les `requests`.\n\n2. **Pods `Guaranteed` et `Burstable`** où l'utilisation est inférieure aux `requests` sont expulsés en dernier, en fonction de leur **Priorité**.\n\nLe kubelet utilise les paramètres suivants pour déterminer l'ordre d'expulsion des pods :\n\n1. Si l'utilisation des ressources du pod dépasse les `requests`.\n2. La **Priorité** du pod.\n3. La quantité d'utilisation des ressources par rapport aux `requests`.\n\nLe kubelet ne utilise pas la classe QoS du pod pour déterminer l'ordre d'expulsion."
   },
   {
     "id": "k8s_env_configmap",
@@ -1232,7 +1950,18 @@
       "configure-pod-configmap",
       "configmap",
       "configure-pod-configmap"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour injecter une ConfigMap comme variable d'environnement, vous pouvez utiliser le champ `envFrom` dans la spécification du Pod. Voici comment le faire :\n\n1. Créez une ConfigMap avec les paires clé-valeur que vous souhaitez injecter en tant que variables d'environnement.\n\n   Exemple de ConfigMap (myconfigmap.yaml) :\n   ```yaml\n   apiVersion: v1\n   kind: ConfigMap\n   metadata:\n     name: myconfigmap\n   data:\n     username: k8s-admin\n     access_level: \"1\"\n   ```\n\n2. Créez le ConfigMap :\n   ```shell\n   kubectl apply -f myconfigmap.yaml\n   ```\n\n3. Modifiez votre Pod pour utiliser le ConfigMap en tant que variables d'environnement. Ajoutez le champ `envFrom` dans la spécification du conteneur.\n\n   Exemple de Pod (pod-configmap-envFrom.yaml) :\n   ```yaml\n   apiVersion: v1\n   kind: Pod\n   metadata:\n     name: env-configmap\n   spec:\n     containers:\n     - name: envars-test-container\n       image: nginx\n       envFrom:\n       - configMapRef:\n           name: myconfigmap\n   ```\n\n4. Créez le Pod :\n   ```shell\n   kubectl apply -f pod-configmap-envFrom.yaml\n   ```\n\n5. Vérifiez les variables d'environnement injectées dans le Pod :\n   ```shell\n   kubectl logs pod/env-configmap\n   ```\n\n   Vous devriez voir les variables d'environnement `username` et `access_level` définies avec les valeurs du ConfigMap.\n\nEn utilisant `envFrom`, toutes les paires clé-valeur du ConfigMap sont injectées en tant que variables d'environnement dans le conteneur."
   },
   {
     "id": "k8s_serviceaccount",
@@ -1252,7 +1981,18 @@
       "secret",
       "configure-service-account",
       "configure-service-account"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Un ServiceAccount sert d'identité pour les processus qui s'exécutent dans un Pod et est lié à un objet ServiceAccount. Lorsque vous authentifiez auprès du serveur API, vous vous identifiez comme un utilisateur particulier."
   },
   {
     "id": "k8s_security_context",
@@ -1272,7 +2012,18 @@
       "advanced-pod-config",
       "configure-runasusername",
       "configure-runasusername"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour exécuter un conteneur avec un utilisateur non-root, vous devez configurer le champ `securityContext` dans le manifeste du conteneur. Voici comment le faire :\n\n1. **Créer un fichier YAML pour le manifeste du conteneur** :\n\n   ```yaml\n   apiVersion: v1\n   kind: Pod\n   metadata:\n     name: security-context-demo-2\n   spec:\n     containers:\n     - name: sec-ctx-demo-2\n       image: gcr.io/google-samples/node-hello:1.0\n       securityContext:\n         allowPrivilegeEscalation: false\n         runAsNonRoot: true\n         runAsUser: 1000\n         capabilities:\n           drop:\n           - ALL\n         seccompProfile:\n           type: RuntimeDefault\n   ```\n\n2. **Appliquer le manifeste** :\n\n   ```shell\n   kubectl apply -f security-context-demo-2.yaml\n   ```\n\n3. **Vérifier que le conteneur est en cours d'exécution** :\n\n   ```shell\n   kubectl get pod security-context-demo-2\n   ```\n\n4. **Obtenir un shell dans le conteneur en cours d'exécution** :\n\n   ```shell\n   kubectl exec -it security-context-demo-2 -- sh\n   ```\n\n5. **Lister les processus en cours d'exécution** :\n\n   ```shell\n   ps aux\n   ```\n\n   Vous devriez voir que les processus sont exécutés en tant qu'utilisateur 2000, qui est la valeur de `runAsUser` spécifiée pour le conteneur. Cela remplace la valeur 1000 qui est spécifiée pour le Pod.\n\n   ```\n   USER       PID %CPU %MEM    VSZ   RSS TTY      STAT START   TIME COMMAND\n   2000         1  0.0  0.0   4336   764 ?        Ss   20:36   0:00 /bin/sh -c node server.js\n   2000         8  0.1  0.5 772124 22604 ?        Sl   20:36   0:00 node server.js\n   ...\n   ```\n\n6. **Quitter le shell** :\n\n   ```shell\n   exit\n   ```\n\nEn suivant ces étapes, vous pouvez exécuter un conteneur avec un utilisateur non-root, ce qui améliore la sécurité en empêchant les processus du conteneur de monter en privilège."
   },
   {
     "id": "k8s_downward_api",
@@ -1292,7 +2043,18 @@
       "assign-pod-node",
       "downward-api",
       "pod-hostname"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Un pod peut connaître son propre nom en utilisant le champ `metadata.name` via le Downward API. Voici comment vous pouvez le configurer :\n\n```yaml\napiVersion: v1\nkind: Pod\nmetadata:\n  name: my-pod\nspec:\n  containers:\n  - name: my-container\n    image: my-image\n    env:\n    - name: POD_NAME\n      valueFrom:\n        fieldRef:\n          fieldPath: metadata.name\n```\n\nDans cet exemple, le pod injectera son propre nom dans l'environnement du conteneur sous le nom `POD_NAME`."
   },
   {
     "id": "k8s_volume_emptydir",
@@ -1312,7 +2074,18 @@
       "manage-resources-containers",
       "configure-emptydir-volume-mode",
       "manage-resources-containers"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Un volume `emptyDir` est utilisé pour stocker des données temporaires ou pour passer des données entre des applications."
   },
   {
     "id": "k8s_probe_types",
@@ -1332,7 +2105,18 @@
       "probes",
       "probes",
       "probes"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Un probe Kubernetes peut utiliser les trois mécanismes suivants :\n\n1. **Commande (`exec`)** : Exécute une commande spécifiée à l'intérieur du conteneur. La diagnostic est considérée comme réussie si la commande sort avec un code d'état de 0.\n\n2. **Socket TCP (`tcpSocket`)** : Effectue une vérification TCP contre l'adresse IP du Pod sur un port spécifique. La diagnostic est considérée comme réussie si le port est ouvert.\n\n3. **Requête HTTP (`httpGet`)** : Effectue une requête HTTP `GET` à l'adresse IP du Pod sur un port et un chemin spécifiés. La diagnostic est considérée comme réussie si la réponse a un code d'état supérieur ou égal à 200 et inférieur à 400."
   },
   {
     "id": "k8s_prestop",
@@ -1352,7 +2136,18 @@
       "attach-handler-lifecycle-event",
       "pod-lifecycle",
       "pod-lifecycle"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Un hook `preStop` sert à exécuter une commande ou un script avant que le conteneur ne soit arrêté. Cela permet de réaliser des tâches de nettoyage, de sauvegardes ou d'autres opérations nécessaires avant la fin de l'exécution du conteneur."
   },
   {
     "id": "tf_count_foreach",
@@ -1372,7 +2167,18 @@
       "for_each",
       "for_each",
       "syntax"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "La différence entre `count` et `for_each` en Terraform réside dans la façon dont ils gèrent la création de multiples instances de ressources.\n\n- **count** : Utilise un entier pour déterminer le nombre d'instances à créer. Par exemple, `count = 3` créera trois instances. Les instances sont identifiées par un index, commençant à 0.\n\n- **for_each** : Accepte une valeur de type `map` ou `set` et crée une instance de la ressource pour chaque élément de cette valeur. Par exemple, si `for_each = toset([\"ui\", \"api\", \"db\", \"metrics\"])`, Terraform créera quatre instances, chacune avec un nom unique basé sur les clés du `map`. Les instances sont identifiées par les clés du `map`.\n\nEn résumé, `count` est basé sur un nombre entier, tandis que `for_each` est basé sur une collection de clés, offrant ainsi plus de flexibilité pour la création de ressources similaires."
   },
   {
     "id": "tf_depends_on",
@@ -1392,7 +2198,24 @@
       "depends_on",
       "behavior",
       "syntax"
-    ]
+    ],
+    "verif": {
+      "precision_ok": false,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": false,
+      "manquants": [
+        [
+          "depends_on",
+          "dependance",
+          "dependency"
+        ]
+      ],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Le contexte fourni ne contient pas cette information."
   },
   {
     "id": "tf_lifecycle",
@@ -1412,7 +2235,18 @@
       "syntax",
       "lifecycle",
       "syntax"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Le bloc `lifecycle` en Terraform permet de personnaliser le comportement de création, de mise à jour et de destruction des ressources. Il offre plusieurs options pour contrôler le cycle de vie des ressources :\n\n1. **create_before_destroy** : Permet de créer d'abord la nouvelle ressource avant de détruire l'ancienne. C'est utile pour les ressources qui ont des contraintes spécifiques sur les noms ou d'autres propriétés qui ne peuvent pas être modifiées en place.\n\n2. **prevent_destroy** : Empêche la destruction de la ressource, même si elle est marquée pour être détruite. C'est utile pour protéger des ressources critiques.\n\n3. **ignore_changes** : Ignore les changements spécifiés pour une ressource lors de la planification. C'est utile pour éviter les mises à jour inutiles.\n\n4. **replace_triggered_by** : Définit des conditions qui déclenchent une remplacement de la ressource.\n\nCes options permettent de mieux contrôler le comportement de Terraform lors des opérations de gestion des ressources, en répondant aux besoins spécifiques de chaque type de ressource."
   },
   {
     "id": "tf_prevent_destroy",
@@ -1432,7 +2266,18 @@
       "lifecycle",
       "syntax",
       "syntax"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour empêcher la destruction accidentelle d'une ressource Terraform, tu peux utiliser le meta-argument `prevent_destroy` dans le bloc `lifecycle`. Voici comment le configurer :\n\n```hcl\nresource \"aws_instance\" \"example\" {\n    instance_type = \"t3.micro\"\n    ami = data.aws_ami.example.id\n\n    lifecycle {\n        prevent_destroy = true\n    }\n}\n```\n\nAvec `prevent_destroy` défini sur `true`, Terraform refusera de planifier une destruction de la ressource, même si une telle destruction est demandée. Cela offre une protection contre la destruction accidentelle des ressources qui pourraient être coûteuses à recréer."
   },
   {
     "id": "tf_variables_validation",
@@ -1452,7 +2297,18 @@
       "variables",
       "variables",
       "plan"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour valider la valeur d'une variable Terraform, vous pouvez utiliser le bloc `validation` à l'intérieur de la déclaration de la variable. Voici un exemple de comment vous pouvez le faire :\n\n```hcl\nvariable \"image_id\" {\n  type        = string\n  description = \"The id of the machine image (AMI) to use for the server.\"\n\n  validation {\n    condition     = length(var.image_id) > 4 && substr(var.image_id, 0, 4) == \"ami-\"\n    error_message = \"The image_id value must be a valid AMI id, starting with \\\"ami-\\\".\"\n  }\n}\n```\n\nDans cet exemple, la validation vérifie que la longueur de `image_id` est supérieure à 4 et que les 4 premiers caractères sont \"ami-\". Si la condition n'est pas remplie, Terraform affichera l'erreur spécifiée dans `error_message`.\n\nVous pouvez également utiliser la fonction `can` pour gérer les expressions qui pourraient échouer, comme dans l'exemple suivant :\n\n```hcl\nvariable \"image_id\" {\n  type        = string\n  description = \"The id of the machine image (AMI) to use for the server.\"\n\n  validation {\n    condition     = can(regex(\"^ami-\", var.image_id))\n    error_message = \"The image_id value must be a valid AMI id, starting with \\\"ami-\\\".\"\n  }\n}\n```\n\nDans ce cas, la fonction `can` est utilisée pour vérifier si l'expression `regex(\"^ami-\", var.image_id)` peut être évaluée sans erreur. Si elle échoue, la condition sera `false` et Terraform affichera l'erreur spécifiée."
   },
   {
     "id": "tf_locals",
@@ -1472,7 +2328,18 @@
       "remote",
       "behavior",
       "variables"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Les locals en Terraform servent à assigner un nom à une expression, permettant de l'utiliser plusieurs fois au sein d'un module sans avoir à la répéter. Cela aide à rendre le code plus lisible et à éviter la duplication."
   },
   {
     "id": "tf_outputs",
@@ -1492,7 +2359,18 @@
       "remote-state-data",
       "output",
       "style"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour exposer une valeur depuis un module Terraform, vous devez utiliser un bloc `output`. Voici un exemple de comment le faire :\n\n```hcl\noutput \"instance_ip_addr\" {\n  value = aws_instance.server.private_ip\n}\n```\n\nDans cet exemple :\n- `instance_ip_addr` est le nom de l'output, qui doit être un identifiant valide.\n- `value` est l'expression qui retourne la valeur à exposer. Ici, il s'agit de l'attribut `private_ip` d'une ressource `aws_instance`.\n\nSi vous souhaitez exposer une valeur d'un module enfant dans le module racine, vous devez configurer un passage explicite dans le module racine. Voici un exemple :\n\n```hcl\nmodule \"app\" {\n  source = \"...\"\n}\n\noutput \"app_value\" {\n  value = module.app.example\n}\n```\n\nDans cet exemple, la valeur de l'output `example` du module `app` est accessible comme l'output `app_value` du module racine."
   },
   {
     "id": "tf_sensitive_output",
@@ -1512,7 +2390,18 @@
       "outputs",
       "variables",
       "output"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour marquer une sortie Terraform comme sensible, utilisez l'argument `sensitive` et définissez-le sur `true`. Voici un exemple :\n\n```hcl\noutput \"db_password\" {\n  value       = aws_db_instance.db.password\n  description = \"The password for logging in to the database.\"\n  sensitive   = true\n}\n```\n\nDans cet exemple, la sortie `db_password` contient une valeur sensible (le mot de passe de la base de données), et elle est marquée comme telle. Terraform ne montrera pas cette valeur dans les messages de `terraform plan` et `terraform apply`."
   },
   {
     "id": "tf_dynamic_block",
@@ -1532,7 +2421,18 @@
       "references",
       "dynamic-blocks",
       "splat"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Un bloc `dynamic` en Terraform est utilisé pour générer dynamiquement des arguments qui appartiennent au type de ressource, de source de données, de fournisseur ou de provisionneur en cours de configuration. Il permet de créer des structures imbriquées de ressources en fonction de données dynamiques, comme des listes ou des tableaux. Cela permet de créer des ressources de manière flexible et réutilisable, tout en évitant l'overuse qui rend la configuration difficile à lire et à maintenir."
   },
   {
     "id": "tf_conditional",
@@ -1552,7 +2452,18 @@
       "operators",
       "custom-conditions",
       "custom-conditions"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour écrire une expression conditionnelle en Terraform, vous pouvez utiliser le mot-clé `condition` dans un bloc `resource`, `variable`, ou `output`. Voici un exemple simple :\n\n```hcl\nresource \"aws_instance\" \"example\" {\n  ami           = \"ami-abc123\"\n  instance_type = \"t2.micro\"\n\n  # Expression conditionnelle\n  tags = {\n    Name = var.name != \"\" ? var.name : \"default-name\"\n  }\n}\n```\n\nDans cet exemple, si la variable `var.name` n'est pas vide, elle est utilisée comme valeur pour le tag `Name`. Sinon, la valeur par défaut est `default-name`.\n\nVous pouvez également utiliser des fonctions comme `contains`, `length`, `for`, `can`, etc., pour créer des conditions plus complexes. Par exemple :\n\n```hcl\nvariable \"environment\" {\n  type = string\n}\n\nresource \"aws_instance\" \"example\" {\n  ami           = \"ami-abc123\"\n  instance_type = \"t2.micro\"\n\n  # Condition avec la fonction contains\n  tags = {\n    Environment = contains([\"STAGE\", \"PROD\"], var.environment) ? var.environment : \"OTHER\"\n  }\n}\n```\n\nDans cet exemple, si `var.environment` est `STAGE` ou `PROD`, elle est utilisée comme valeur pour le tag `Environment`. Sinon, la valeur par défaut est `OTHER`.\n\nN'oubliez pas que les expressions conditionnelles doivent retourner un booléen (`true` ou `false`)."
   },
   {
     "id": "tf_module_source",
@@ -1572,7 +2483,18 @@
       "local",
       "sources",
       "for_each"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour référencer un module Terraform distant, utilisez la syntaxe suivante :\n\n```hcl\nmodule \"consul\" {\n  source = \"hashicorp/consul/aws\"\n  version = \"0.1.0\"\n}\n```\n\nCette syntaxe indique que le module `consul` est hébergé sur le registre public Terraform et utilise la version `0.1.0`."
   },
   {
     "id": "tf_provider_version",
@@ -1592,7 +2514,18 @@
       "syntax",
       "version-constraints",
       "version-constraints"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour contraindre la version d'un provider Terraform, utilisez le bloc `required_providers` dans le bloc `terraform`. Voici un exemple :\n\n```hcl\nterraform {\n  required_providers {\n    aws = {\n      source  = \"hashicorp/aws\"\n      version = \"5.34.0\"\n    }\n  }\n}\n```\n\nDans cet exemple, la version du provider `aws` est contrainte à `5.34.0`. Vous pouvez également utiliser des opérateurs pour spécifier une gamme de versions, comme suit :\n\n```hcl\nterraform {\n  required_providers {\n    aws = {\n      source  = \"hashicorp/aws\"\n      version = \"~> 5.34\"\n    }\n  }\n}\n```\n\nCela permet de spécifier que la version doit être compatible avec `5.34`, mais peut être légèrement inférieure ou supérieure."
   },
   {
     "id": "tf_plan_role",
@@ -1612,7 +2545,18 @@
       "modules",
       "apply",
       "plan"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "La commande `terraform plan` sert à créer un plan d'exécution, qui permet de prévisualiser les changements que Terraform va apporter à votre infrastructure."
   },
   {
     "id": "tf_init_role",
@@ -1632,7 +2576,18 @@
       "init",
       "init",
       "init"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Le `terraform init` command initialise un répertoire de travail contenant des fichiers de configuration Terraform. C'est la première commande que vous devriez exécuter après avoir écrit une nouvelle configuration Terraform ou cloné une configuration existante depuis un contrôle de version. Il est sûr de l'exécuter plusieurs fois, même si cela peut donner des erreurs, ce qui n'effacera jamais votre configuration ou votre état existants."
   },
   {
     "id": "tf_state_list",
@@ -1652,7 +2607,18 @@
       "move",
       "plan",
       "behavior"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour lister les ressources présentes dans le state Terraform, utilisez la commande suivante :\n\n```sh\nterraform state list\n```\n\nCette commande affiche les adresses des ressources pour lesquelles Terraform a des informations dans la configuration."
   },
   {
     "id": "tf_state_show",
@@ -1672,7 +2638,18 @@
       "refactor",
       "move",
       "behavior"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour inspecter une ressource précise dans le state Terraform, utilisez la commande `terraform state show`. Cette commande affiche les détails de l'état d'une ressource spécifique.\n\nVoici la syntaxe de la commande :\n\n```sh\nterraform state show <ressource_address>\n```\n\nPar exemple, si vous voulez inspecter une instance AWS EC2 avec l'adresse `aws_instance.example[0]`, vous exécuteriez :\n\n```sh\nterraform state show aws_instance.example[0]\n```\n\nCette commande vous permet de voir les propriétés et les états actuels de la ressource spécifiée."
   },
   {
     "id": "tf_import_role",
@@ -1692,7 +2669,18 @@
       "import",
       "refactor",
       "import"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour importer une ressource existante dans Terraform, utilisez la commande `terraform import`. Voici les étapes détaillées :\n\n1. **Identifier l'adresse et l'ID de la ressource** :\n   - **Adresse** : C'est l'adresse de la ressource dans votre configuration Terraform. Par exemple, `aws_instance.example`.\n   - **ID** : C'est l'identifiant unique de la ressource dans le fournisseur. Par exemple, pour une instance AWS EC2, c'est l'ID de l'instance (`i-abcd1234`).\n\n2. **Exécuter la commande `terraform import`** :\n   - La commande prend deux arguments : l'adresse de la ressource et l'ID de la ressource.\n   - Exemple : `terraform import aws_instance.example i-abcd1234`\n\n3. **Valider l'importation** :\n   - Après l'exécution de la commande, Terraform affichera les détails de l'importation.\n   - Vous pouvez vérifier que l'importation a réussi en exécutant `terraform state list` pour voir la liste des ressources gérées par Terraform.\n\nVoici un exemple concret :\n\n```shell\n$ terraform import aws_instance.example i-abcd1234\n```\n\nCe processus permet de prendre une ressource existante et de la rendre gérée par Terraform, ce qui vous permet de la configurer et de la déployer comme n'importe quelle autre ressource Terraform."
   },
   {
     "id": "tf_taint_deprecated",
@@ -1712,7 +2700,18 @@
       "syntax",
       "taint",
       "untaint"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour forcer le remplacement d'une ressource Terraform, tu peux utiliser l'option `-replace` avec la commande `terraform apply`. Voici comment le faire :\n\n```shellsession\n$ terraform apply -replace=\"aws_instance.example\"\n```\n\nCette commande indique à Terraform de remplacer la ressource `aws_instance.example`, même si aucune modification de configuration n'est nécessaire. Terraform proposera ce changement dans le plan, ce qui te permet de comprendre les implications avant d'appliquer les modifications."
   },
   {
     "id": "tf_backend_migration",
@@ -1732,7 +2731,18 @@
       "workspaces",
       "init",
       "move"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour changer de backend Terraform sans perdre le state, vous devez suivre les étapes suivantes :\n\n1. **Unlock Terraform** (si nécessaire) :\n   ```shell-session\n   $ terraform force-unlock <lock-id>\n   ```\n   Remplacez `<lock-id>` par l'ID du verrouillage Terraform.\n\n2. **Lire les données de l'état** :\n   ```shell-session\n   $ terraform state pull\n   ```\n   Cela récupérera les données de l'état actuel et les affichera sur la sortie standard.\n\n3. **Écrire les données de l'état dans le nouveau backend** :\n   ```shell-session\n   $ terraform state push source.tfstate\n   ```\n   Remplacez `source.tfstate` par le chemin vers le fichier de l'état source.\n\n4. **Initialiser le nouveau backend** :\n   ```shell-session\n   $ terraform init -backend-config=\"backend-config-file.tfvars\"\n   ```\n   Remplacez `backend-config-file.tfvars` par le chemin vers le fichier de configuration du nouveau backend.\n\n5. **Migrer les états des espaces de travail** (si nécessaire) :\n   Si vous utilisez des espaces de travail, vous devrez migrer les états individuellement. Utilisez la commande `terraform state mv` pour chaque espace de travail.\n\n6. **Vérifier la migration** :\n   - Exécutez `terraform plan` sur votre configuration source pour vous assurer qu'aucune modification n'est prévue.\n   - Exécutez `terraform plan` sur votre configuration destination pour vous assurer qu'aucune modification n'est prévue.\n\nEn suivant ces étapes, vous devriez être en mesure de changer de backend Terraform sans perdre le state."
   },
   {
     "id": "tf_workspace_usage",
@@ -1752,7 +2762,18 @@
       "s3",
       "terraform",
       "workspaces"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour créer et changer de workspace Terraform, vous pouvez suivre les étapes suivantes :\n\n1. **Créer un nouveau workspace** :\n   Utilisez la commande `terraform workspace new` suivie du nom du workspace que vous souhaitez créer.\n\n   ```sh\n   terraform workspace new staging\n   Created and switched to workspace \"staging\"!\n   ```\n\n   Vous pouvez créer autant de workspaces que nécessaire, par exemple :\n\n   ```sh\n   terraform workspace new production\n   Created and switched to workspace \"production\"!\n   ```\n\n2. **Changer de workspace** :\n   Utilisez la commande `terraform workspace select` suivie du nom du workspace auquel vous souhaitez passer.\n\n   ```sh\n   terraform workspace select staging\n   Switched to workspace \"staging\".\n   ```\n\n3. **Lister les workspaces existants** :\n   Utilisez la commande `terraform workspace list` pour voir tous les workspaces disponibles.\n\n   ```sh\n   terraform workspace list\n   * staging\n     production\n   ```\n\n4. **Utiliser une variable d'environnement pour spécifier le workspace** :\n   Vous pouvez également utiliser la variable d'environnement `TF_WORKSPACE` pour spécifier le workspace sans avoir à le créer manuellement.\n\n   ```sh\n   export TF_WORKSPACE=staging\n   terraform init\n   ```\n\n   Notez que si le workspace spécifié par `TF_WORKSPACE` n'existe pas, Terraform le créera automatiquement lors de l'exécution de `terraform init`.\n\n5. **Utiliser le backend S3 pour gérer les workspaces** :\n   Si vous utilisez le backend S3, Terraform gère automatiquement les workspaces lors de l'exécution de `terraform init`. Vous n'avez pas besoin de créer manuellement les workspaces.\n\n   ```hcl\n   terraform {\n     backend \"s3\" {\n       bucket         = \"my-terraform-state-bucket\"\n       key            = \"path/to/terraform.tfstate\"\n       region         = \"us-west-2\"\n       encrypt        = true\n       dynamodb_table = \"my-lock-table\"\n     }\n   }\n   ```\n\nEn suivant ces étapes, vous pouvez facilement créer et changer de workspace Terraform, ce qui vous permet de gérer différents environnements (développement, test, production) dans une même configuration Terraform."
   },
   {
     "id": "absent_circleci",
@@ -1767,7 +2788,18 @@
       "use-workflow-templates",
       "manually-run-a-workflow",
       "dependency-caching"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Le contexte fourni ne contient pas cette information."
   },
   {
     "id": "absent_kafka",
@@ -1782,7 +2814,18 @@
       "replicaset",
       "replicationcontroller",
       "replicaset"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Le contexte fourni ne contient pas cette information."
   },
   {
     "id": "absent_puppet",
@@ -1797,7 +2840,18 @@
       "replicaset",
       "static-pod",
       "configure-bind-mount-options"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Le contexte fourni ne contient pas cette information."
   },
   {
     "id": "absent_python",
@@ -1812,7 +2866,24 @@
       "job",
       "depends_on",
       "init-containers"
-    ]
+    ],
+    "verif": {
+      "precision_ok": false,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": false,
+      "manquants": [
+        [
+          "ne contient pas",
+          "ne fournit pas",
+          "pas cette information"
+        ]
+      ],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour gérer les dépendances Python avec Poetry, utilisez l'action `setup-python` pour le caching des dépendances. Cette action simplifie la création et la restauration des caches de dépendances."
   },
   {
     "id": "docker_exit137",
@@ -1832,7 +2903,18 @@
       "exit-codes",
       "etats-pod",
       "assign-memory-resource"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour déterminer si un conteneur Docker s'est arrêté avec un exit code 137 en raison d'un dépassement de la limite de mémoire (OOM), vous devez vérifier les informations suivantes :\n\n1. **Utiliser `docker inspect` pour vérifier si le conteneur a été OOMKilled :**\n\n   ```bash\n   docker inspect <conteneur> --format '{{.State.OOMKilled}}'\n   ```\n\n   Si la sortie est `true`, le conteneur a été OOMKilled. Si elle est `false`, le conteneur a été tué par une autre raison (`docker kill`, arrêt du daemon).\n\n2. **Vérifier la limite de mémoire configurée :**\n\n   ```bash\n   docker inspect <conteneur> --format '{{.HostConfig.Memory}}'\n   docker stats --no-stream <conteneur>\n   ```\n\n   Une valeur `0` pour `Memory` signifie que le conteneur n'a pas de limite de mémoire et peut donc épuiser la mémoire de l'hôte.\n\n3. **Utiliser `kubectl describe pod` pour confirmer la cause :**\n\n   ```bash\n   kubectl describe pod <nom-du-pod> -n <namespace>\n   ```\n\n   Cherchez dans la sortie :\n\n   ```\n   Last State:     Terminated\n     Reason:       OOMKilled\n     Exit Code:    137\n   ```\n\n4. **Consulter les logs de l'instance précédente avec `kubectl logs --previous` :**\n\n   ```bash\n   kubectl logs <nom-du-pod> -n <namespace> --previous --tail=100\n   ```\n\n   Sans le flag `--previous`, la commande retourne les logs du nouveau conteneur, qui ne contiennent rien sur le crash.\n\n5. **Comparer la consommation réelle et la limite configurée :**\n\n   ```bash\n   kubectl top pod <nom-du-pod> -n <namespace>\n   ```\n\n6. **Inspecter les limites déclarées :**\n\n   ```bash\n   kubectl get pod <nom-du-pod> -o jsonpath='{.spec.containers[*].resources}'\n   ```\n\nEn suivant ces étapes, vous pourrez déterminer si le conteneur s'est arrêté avec un exit code 137 en raison d'un OOM."
   },
   {
     "id": "docker_restart_loop",
@@ -1852,7 +2934,18 @@
       "docker-diagnostic",
       "pod-lifecycle",
       "etats-pod"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour investiguer sur un conteneur Docker qui redémarre en boucle, voici les étapes à suivre :\n\n1. **Vérifier le nombre de redémarrages et la politique de redémarrage** :\n   ```bash\n   docker inspect <conteneur> --format '{{.RestartCount}} {{.HostConfig.RestartPolicy.Name}}'\n   ```\n   Cela vous donnera le nombre de redémarrages et la politique de redémarrage en vigueur.\n\n2. **Vérifier les journaux du conteneur** :\n   ```bash\n   docker logs <conteneur> --tail 50\n   ```\n   Cela vous permettra de voir les derniers journaux du conteneur, qui peuvent indiquer la raison du redémarrage.\n\n3. **Vérifier les événements du conteneur** :\n   ```bash\n   docker events --filter \"container=<conteneur>\"\n   ```\n   Cela vous donnera des informations sur les événements liés au conteneur, y compris les redémarrages.\n\n4. **Vérifier la configuration du conteneur** :\n   ```bash\n   docker inspect <conteneur>\n   ```\n   Cela vous permettra de vérifier la configuration du conteneur, y compris les volumes, les environnements variables, etc.\n\n5. **Vérifier les ressources disponibles** :\n   ```bash\n   docker stats <conteneur>\n   ```\n   Cela vous donnera des informations sur l'utilisation des ressources du conteneur.\n\n6. **Vérifier les politiques de santé et de démarrage** :\n   Si le conteneur utilise des probes de santé ou de démarrage, vérifiez leur configuration et leur état.\n\n7. **Vérifier les ressources du système** :\n   ```bash\n   docker system df\n   docker system df -v\n   ```\n   Cela vous permettra de vérifier l'utilisation des ressources du système et de nettoyer les images et volumes orphelins si nécessaire.\n\nEn suivant ces étapes, vous devriez être en mesure d'identifier la raison du redémarrage en boucle du conteneur Docker."
   },
   {
     "id": "docker_logs",
@@ -1872,7 +2965,18 @@
       "docker-diagnostic",
       "debug-running-pod",
       "dual-logging"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour consulter les logs d'un conteneur Docker arrêté, utilisez la commande suivante :\n\n```bash\ndocker logs <conteneur>\n```\n\nCette commande affiche les logs du conteneur spécifié, même s'il est arrêté."
   },
   {
     "id": "docker_disk_full",
@@ -1892,7 +2996,18 @@
       "containerd",
       "pruning",
       "pruning"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour libérer de l'espace sur le disque en raison de Docker, vous pouvez suivre les étapes suivantes :\n\n1. **Vérifier l'utilisation du disque** :\n   ```bash\n   docker system df\n   docker system df -v\n   ```\n   Cela vous donnera une vue détaillée de l'utilisation du disque par Docker.\n\n2. **Supprimer les images non utilisées** :\n   ```bash\n   docker image prune\n   ```\n   Cette commande supprime toutes les images sans tag.\n\n3. **Supprimer les conteneurs arrêtés** :\n   ```bash\n   docker container prune\n   ```\n   Cette commande supprime tous les conteneurs arrêtés.\n\n4. **Supprimer les volumes orphelins** :\n   ```bash\n   docker volume prune\n   ```\n   Cette commande supprime tous les volumes orphelins.\n\n5. **Supprimer les réseaux non utilisés** :\n   ```bash\n   docker network prune\n   ```\n   Cette commande supprime tous les réseaux non utilisés.\n\n6. **Supprimer l'espace de construction non utilisé** :\n   ```bash\n   docker builder prune\n   ```\n   Cette commande supprime l'espace de construction non utilisé.\n\n7. **Supprimer tous les objets non utilisés (images, conteneurs, réseaux, volumes, etc.)** :\n   ```bash\n   docker system prune -a\n   ```\n   Cette commande est plus agressive et supprime tous les objets non utilisés, y compris les images non utilisées par des conteneurs en cours.\n\n8. **Supprimer les volumes anonymes non utilisés** :\n   ```bash\n   docker system prune --volumes\n   ```\n   Cette commande supprime les volumes anonymes non utilisés.\n\nAvant d'exécuter les commandes de suppression, il est toujours recommandé de vérifier l'utilisation du disque avec `docker system df` pour vous assurer que vous supprimez les objets inutiles."
   },
   {
     "id": "docker_network_dns",
@@ -1912,7 +3027,18 @@
       "firewall-iptables",
       "troubleshoot",
       "firewall-nftables"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Deux conteneurs Docker ne se voient pas par leur nom pour plusieurs raisons possibles. Voici les étapes pour diagnostiquer et résoudre ce problème :\n\n1. **Vérifier les réseaux utilisés par les conteneurs :**\n   ```bash\n   docker network ls\n   docker network inspect <réseau>\n   ```\n   Assurez-vous que les deux conteneurs sont sur le même réseau. Si ce n'est pas le cas, déplacez-les sur le même réseau.\n\n2. **Vérifier la résolution de noms sur le réseau :**\n   ```bash\n   docker exec <conteneur1> getent hosts <conteneur2>\n   docker exec <conteneur2> getent hosts <conteneur1>\n   ```\n   Si la résolution de noms échoue, cela indique un problème avec la configuration du réseau.\n\n3. **Vérifier la configuration du réseau Docker :**\n   Sur le réseau `bridge` par défaut, la résolution de noms par nom ne fonctionne pas. Il faut un réseau utilisateur créé avec `docker network create`.\n\n   Si vous utilisez le réseau `bridge` par défaut, vous pouvez créer un réseau utilisateur :\n   ```bash\n   docker network create mon_reseau_utilisateur\n   docker network connect mon_reseau_utilisateur <conteneur1>\n   docker network connect mon_reseau_utilisateur <conteneur2>\n   ```\n\n4. **Vérifier les paramètres de DNS :**\n   Si vous utilisez un réseau utilisateur, assurez-vous que les paramètres DNS sont correctement configurés. Vous pouvez spécifier des serveurs DNS dans le fichier de configuration du réseau :\n   ```json\n   {\n     \"dns\": [\"8.8.8.8\", \"8.8.4.4\"]\n   }\n   ```\n\n5. **Vérifier les règles iptables :**\n   Les règles iptables peuvent parfois interférer avec la résolution de noms. Vous pouvez vérifier les règles iptables en utilisant :\n   ```bash\n   iptables -L -v -n\n   ```\n   Si vous voyez des règles qui pourraient interférer, vous pouvez les modifier ou les supprimer.\n\nEn suivant ces étapes, vous devriez être en mesure de diagnostiquer et de résoudre le problème de résolution de noms entre les deux conteneurs Docker."
   },
   {
     "id": "docker_memory_limit",
@@ -1932,7 +3058,18 @@
       "docker-diagnostic",
       "resource_constraints",
       "resource_constraints"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour limiter la mémoire d'un conteneur Docker, vous pouvez utiliser les options suivantes :\n\n1. **--memory** : Définit une limite maximale de mémoire que le conteneur peut utiliser. Par exemple :\n   ```bash\n   docker run --memory=\"512m\" <image>\n   ```\n\n2. **--memory-swap** : Définit la limite totale de mémoire (mémoire + échange) que le conteneur peut utiliser. Par exemple :\n   ```bash\n   docker run --memory=\"512m\" --memory-swap=\"1g\" <image>\n   ```\n\n3. **--memory-reservation** : Définit une limite de mémoire réservée qui est activée lorsque Docker détecte une contention ou une faible mémoire sur l'hôte. Par exemple :\n   ```bash\n   docker run --memory=\"512m\" --memory-reservation=\"256m\" <image>\n   ```\n\n4. **--memory-swappiness** : Contrôle la fréquence à laquelle le noyau peut échanger des pages anonymes utilisées par le conteneur. Par exemple :\n   ```bash\n   docker run --memory=\"512m\" --memory-swappiness=\"10\" <image>\n   ```\n\n5. **--oom-kill-disable** : Désactive le déclencheur OOM du noyau pour le conteneur. Notez que vous devez également définir la limite de mémoire avec `-m` ou `--memory` pour utiliser cette option. Par exemple :\n   ```bash\n   docker run --memory=\"512m\" --oom-kill-disable <image>\n   ```\n\nAvant de définir ces limites, il est recommandé de vérifier la configuration actuelle du conteneur et la disponibilité de la mémoire sur l'hôte :\n\n```bash\ndocker inspect <conteneur> --format '{{.HostConfig.Memory}}'\ndocker stats --no-stream <conteneur>\n```\n\nCes commandes vous aideront à comprendre la configuration actuelle et à éviter les erreurs potentielles liées à la mémoire insuffisante."
   },
   {
     "id": "docker_exec_distroless",
@@ -1952,7 +3089,18 @@
       "ephemeral-containers",
       "image-mounts",
       "debug-running-pod"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour déboguer un conteneur sans shell (image distroless), tu peux utiliser un conteneur de débogage partageant les namespaces du conteneur cible. Voici comment procéder :\n\n1. Exécute une commande pour démarrer un conteneur de débogage partageant les namespaces du conteneur cible :\n\n```bash\ndocker run -it --rm --pid=container:<conteneur> --network=container:<conteneur> nicolaka/netshoot\n```\n\nRemplace `<conteneur>` par l'ID ou le nom du conteneur que tu veux déboguer.\n\n2. Une fois le conteneur de débogage démarré, tu pourras utiliser les commandes de base du système d'exploitation pour inspecter et déboguer le conteneur cible.\n\nPar exemple, tu peux utiliser `ps aux` pour voir les processus en cours d'exécution :\n\n```bash\nps aux\n```\n\nOu utiliser `docker exec` pour exécuter des commandes dans le conteneur cible :\n\n```bash\ndocker exec <conteneur> <commande>\n```\n\nCette méthode permet de travailler autour de la limitation de l'image distroless en utilisant les outils disponibles dans le conteneur de débogage."
   },
   {
     "id": "linux_service_failed",
@@ -1972,7 +3120,18 @@
       "share-process-namespace",
       "remote-access",
       "proxy"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour voir pourquoi un service systemd refuse de démarrer, vous pouvez suivre les étapes suivantes :\n\n1. **Vérifier l'état du service** :\n   ```bash\n   systemctl status <service>\n   ```\n   Cette commande affiche l'état actuel du service, y compris le PID principal, la consommation de mémoire et les dernières lignes de journal.\n\n2. **Vérifier les journaux du service** :\n   ```bash\n   journalctl -u <service> -n 100 --no-pager\n   journalctl -u <service> --since \"10 min ago\"\n   ```\n   Ces commandes affichent les journaux du service, permettant d'identifier les erreurs ou les messages d'erreur récents.\n\n3. **Vérifier l'unité du service** :\n   ```bash\n   systemctl cat <service>\n   systemd-analyze verify /etc/systemd/system/<service>.service\n   ```\n   Ces commandes affichent la configuration de l'unité du service et vérifient sa validité.\n\n4. **Recharger la configuration de systemd** :\n   Si vous avez modifié un fichier d'unité, assurez-vous de recharger la configuration de systemd :\n   ```bash\n   systemctl daemon-reload\n   ```\n\nEn suivant ces étapes, vous devriez être en mesure d'identifier la raison pour laquelle le service systemd refuse de démarrer."
   },
   {
     "id": "linux_daemon_reload",
@@ -1992,7 +3151,18 @@
       "proxy",
       "resource_constraints",
       "troubleshoot"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Après avoir modifié un fichier d'unité systemd, il faut exécuter la commande suivante pour recharger la configuration systemd :\n\n```bash\nsystemctl daemon-reload\n```\n\nCette commande permet à systemd de recharger toutes les unités de service et de configurer les nouveaux paramètres."
   },
   {
     "id": "linux_disk_inodes",
@@ -2012,7 +3182,22 @@
       "containerd",
       "crictl",
       "pod-lifecycle"
-    ]
+    ],
+    "verif": {
+      "precision_ok": false,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": false,
+      "manquants": [
+        [
+          "inode"
+        ]
+      ],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Le contexte fourni ne contient pas cette information."
   },
   {
     "id": "linux_memory_free",
@@ -2032,7 +3217,18 @@
       "node-pressure-eviction",
       "linux-diagnostic",
       "docker-diagnostic"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Non, ce n'est pas inquiétant. Dans le contexte fourni, la colonne `available` de la commande `free -h` est celle qui compte, pas `free`. Linux utilise la mémoire libre comme cache disque et la libère à la demande. Une valeur `free` basse n'indique donc rien d'anormal."
   },
   {
     "id": "linux_ports",
@@ -2052,7 +3248,18 @@
       "remote-access",
       "crictl",
       "configure-liveness-readiness-startup-probes"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour lister les ports en écoute sur un serveur Linux, vous pouvez utiliser la commande suivante :\n\n```bash\nss -tlnp\n```\n\nCette commande affiche les sockets actuellement ouverts et en écoute (`-l`), les protocoles utilisés (`-t` pour TCP et `-u` pour UDP), ainsi que le processus qui les utilise (`-p`)."
   },
   {
     "id": "linux_oom_kernel",
@@ -2072,7 +3279,18 @@
       "linux-diagnostic",
       "exit-codes",
       "etats-pod"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour savoir si le OOM killer a tué un processus sur un serveur Linux, vous pouvez consulter les journaux système. Voici les étapes à suivre :\n\n1. **Vérifier les journaux du noyau** :\n   ```bash\n   dmesg -T | grep -i \"out of memory\"\n   ```\n   Ce commande affiche les messages du noyau qui contiennent le mot-clé \"out of memory\". Si un processus a été tué par le OOM killer, vous verrez une entrée similaire à celle-ci :\n   ```\n   [timestamp] Out of memory: Killed process 1234 (nom) total-vm:123456kB, anon-rss:67890kB, file-rss:0kB, shmem-rss:0kB\n   ```\n\n2. **Vérifier les journaux de systemd** :\n   ```bash\n   journalctl -k | grep -i \"killed process\"\n   ```\n   Ce commande affiche les messages du journal système qui contiennent le mot-clé \"killed process\". Si un processus a été tué par le OOM killer, vous verrez une entrée similaire à celle-ci :\n   ```\n   [timestamp] kernel: Killed process 1234 (nom) total-vm:123456kB, anon-rss:67890kB, file-rss:0kB, shmem-rss:0kB\n   ```\n\n3. **Vérifier les statistiques de la consommation de mémoire** :\n   ```bash\n   free -m\n   ```\n   Ce commande affiche l'utilisation de la mémoire du système. Si une application a été tuée par le OOM killer, vous verrez une augmentation significative de la consommation de mémoire avant le redémarrage du système.\n\n4. **Vérifier les limites de mémoire des services systemd** :\n   Si le processus tué était un service systemd, vous pouvez vérifier les limites de mémoire définies dans l'unité du service :\n   ```bash\n   systemctl cat <service>\n   ```\n   Recherchez la ligne `MemoryMax=` pour voir la limite de mémoire définie pour le service.\n\nEn combinant ces étapes, vous devriez être en mesure de déterminer si le OOM killer a tué un processus sur votre serveur Linux."
   },
   {
     "id": "linux_process_d_state",
@@ -2092,7 +3310,18 @@
       "etats-pod",
       "linux-diagnostic",
       "docker-diagnostic"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Un processus en état `D` (uninterruptible sleep) attend une entrée/sortie et ne peut pas être tué, même par SIGKILL. C'est presque toujours le signe d'un problème de stockage ou de montage réseau."
   },
   {
     "id": "linux_too_many_files",
@@ -2112,7 +3341,18 @@
       "downward-api",
       "replicationcontroller",
       "resource_constraints"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour corriger le problème \"Too many open files\", vous devez augmenter la limite de fichiers ouverts pour le processus ou le service concerné. Voici les étapes à suivre :\n\n1. **Vérifier la limite actuelle** :\n   ```bash\n   ulimit -n\n   ```\n   Cela affiche la limite actuelle de fichiers ouverts.\n\n2. **Augmenter la limite pour le processus** :\n   Si vous connaissez le PID du processus, vous pouvez augmenter sa limite avec :\n   ```bash\n   ulimit -n <nouvelle_valeur>\n   ```\n   Remplacez `<nouvelle_valeur>` par la valeur souhaitée.\n\n3. **Modifier la configuration système** :\n   Pour rendre cette modification permanente, vous devez modifier les fichiers de configuration système. Voici les étapes :\n\n   - **Pour un utilisateur spécifique** :\n     Éditez le fichier `/etc/security/limits.conf` et ajoutez la ligne suivante :\n     ```\n     <utilisateur> soft nofile <nouvelle_valeur>\n     <utilisateur> hard nofile <nouvelle_valeur>\n     ```\n     Remplacez `<utilisateur>` par le nom de l'utilisateur et `<nouvelle_valeur>` par la valeur souhaitée.\n\n   - **Pour tous les utilisateurs** :\n     Éditez le fichier `/etc/security/limits.conf` et ajoutez la ligne suivante :\n     ```\n     * soft nofile <nouvelle_valeur>\n     * hard nofile <nouvelle_valeur>\n     ```\n\n4. **Modifier la configuration du service systemd** :\n   Si le processus est géré par un service systemd, vous pouvez modifier la configuration du service pour augmenter la limite de fichiers ouverts. Éditez le fichier de service (généralement situé dans `/etc/systemd/system/` ou `/lib/systemd/system/`) et ajoutez la ligne suivante dans la section `[Service]` :\n   ```\n   LimitNOFILE=<nouvelle_valeur>\n   ```\n   Remplacez `<nouvelle_valeur>` par la valeur souhaitée.\n\n5. **Recharger la configuration systemd** :\n   Après avoir modifié les fichiers de configuration, rechargez la configuration systemd pour appliquer les modifications :\n   ```bash\n   sudo systemctl daemon-reload\n   ```\n\n6. **Redémarrer le service** :\n   Redémarrez le service pour que les modifications prennent effet :\n   ```bash\n   sudo systemctl restart <nom_service>\n   ```\n\nEn suivant ces étapes, vous devriez être en mesure de corriger le problème \"Too many open files\" pour votre application."
   },
   {
     "id": "linux_reload_vs_restart",
@@ -2132,7 +3372,18 @@
       "live-restore",
       "linux-diagnostic",
       "remote-access"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour recharger la configuration d'un service sans interrompre le trafic, vous pouvez utiliser la commande suivante :\n\n```bash\nsystemctl reload <service>\n```\n\nCette commande envoie un signal `SIGHUP` au service, ce qui lui permet de recharger sa configuration sans redémarrer le service. C'est une méthode sûre et non-destructive pour appliquer des modifications de configuration sans interruption du service."
   },
   {
     "id": "ci_workflow_trigger",
@@ -2152,7 +3403,18 @@
       "events-that-trigger-workflows",
       "skip-workflow-runs",
       "manage-caches"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour déclencher un workflow GitHub Actions sur une pull request, vous pouvez utiliser l'événement `pull_request`. Voici un exemple de configuration YAML pour un workflow qui s'exécute lorsqu'une pull request est ouverte ou réouverte :\n\n```yaml\nname: Workflow sur pull request\n\non:\n  pull_request:\n    types: [opened, reopened]\n\njobs:\n  build:\n    runs-on: ubuntu-latest\n    steps:\n      - name: Checkout code\n        uses: actions/checkout@v2\n\n      - name: Run a one-line script\n        run: echo \"The workflow is now running!\"\n```\n\nCe workflow s'exécutera chaque fois qu'une pull request est ouverte ou réouverte. Vous pouvez également spécifier d'autres types d'activités pour les pull requests en ajoutant des éléments à la liste `types`."
   },
   {
     "id": "ci_variables",
@@ -2172,7 +3434,18 @@
       "workflow-commands",
       "workflow-commands",
       "contexts"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour définir des variables d'environnement dans un workflow GitHub Actions, vous pouvez utiliser la commande suivante :\n\n```bash\necho \"{environment_variable_name}={value}\" >> \"$GITHUB_ENV\"\n```\n\nCette commande ajoute une nouvelle ligne au fichier `GITHUB_ENV`, qui est utilisé pour stocker les variables d'environnement. Les variables définies de cette manière seront accessibles dans tous les étapes ultérieures du workflow.\n\nVoici un exemple en YAML :\n\n```yaml\nsteps:\n  - name: Set the value\n    id: step_one\n    run: |\n      echo \"action_state=yellow\" >> \"$GITHUB_ENV\"\n  - name: Use the value\n    id: step_two\n    run: |\n      printf '%s\\n' \"$action_state\" # This will output 'yellow'\n```\n\nDans cet exemple, la variable `action_state` est définie à la valeur `yellow` dans la première étape et est ensuite utilisée dans la deuxième étape."
   },
   {
     "id": "ci_matrix",
@@ -2192,7 +3465,18 @@
       "contexts",
       "contexts",
       "workflow-syntax"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour exécuter un job sur plusieurs versions avec une matrice, tu peux utiliser la configuration `jobs.<job_id>.strategy.matrix` dans ton fichier de workflow. Voici un exemple de comment le faire :\n\n```yaml\njobs:\n  example_matrix:\n    strategy:\n      matrix:\n        version: [10, 12, 14]\n    steps:\n      - uses: {% data reusables.actions.action-setup-node %}\n        with:\n          node-version: {% raw %}${{ matrix.version }}{% endraw %}\n```\n\nDans cet exemple, le job `example_matrix` sera exécuté trois fois, une fois pour chaque valeur dans la liste `version`. Chaque job accédera à la valeur `version` actuelle via le contexte `matrix.version` et la passera comme `node-version` à l'action `actions/setup-node`.\n\nSi tu as besoin de tester sur plusieurs systèmes d'exploitation et plusieurs versions de Node.js, tu peux configurer une matrice multidimensionnelle comme suit :\n\n```yaml\njobs:\n  example_matrix:\n    strategy:\n      matrix:\n        os: [ubuntu-22.04, ubuntu-24.04]\n        version: [10, 12, 14]\n    runs-on: {% raw %}${{ matrix.os }}{% endraw %}\n    steps:\n      - uses: {% data reusables.actions.action-setup-node %}\n        with:\n          node-version: {% raw %}${{ matrix.version }}{% endraw %}\n```\n\nDans cet exemple, le job `example_matrix` sera exécuté six fois, une fois pour chaque combinaison de `os` et `version`. Chaque job définira `runs-on` à la valeur actuelle de `os` et passera la valeur actuelle de `version` à l'action `actions/setup-node`."
   },
   {
     "id": "ci_artifacts",
@@ -2212,7 +3496,18 @@
       "workflow-commands",
       "remove-workflow-artifacts",
       "download-workflow-artifacts"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour partager des fichiers entre deux jobs GitHub Actions, vous pouvez utiliser les artefacts (artifacts). Voici comment vous pouvez le faire :\n\n1. **Uploader un artefact dans le premier job :**\n\n   Vous pouvez utiliser l'action `upload-artifact` pour uploader un fichier ou un répertoire dans un artefact.\n\n   ```yaml\n   jobs:\n     job1:\n       runs-on: ubuntu-latest\n       steps:\n         - name: Upload artifact\n           uses: actions/upload-artifact@v2\n           with:\n             name: my-artifact\n             path: path/to/your/file_or_directory\n   ```\n\n2. **Downloader l'artefact dans le deuxième job :**\n\n   Vous pouvez utiliser l'action `download-artifact` pour downloader l'artefact dans le deuxième job.\n\n   ```yaml\n   jobs:\n     job2:\n       runs-on: ubuntu-latest\n       steps:\n         - name: Download artifact\n           uses: actions/download-artifact@v2\n           with:\n             name: my-artifact\n   ```\n\nEn utilisant ces actions, vous pouvez facilement partager des fichiers entre deux jobs dans un workflow GitHub Actions."
   },
   {
     "id": "ci_cache",
@@ -2232,7 +3527,18 @@
       "dependency-caching",
       "dependency-caching",
       "dependency-caching"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Pour mettre en cache des dépendances dans GitHub Actions, vous pouvez utiliser les actions spécifiques pour chaque gestionnaire de paquets comme `setup-node`, `setup-python`, `setup-java`, etc. Voici un exemple pour `npm` :\n\n```yaml\n- name: Cache npm packages\n  uses: actions/setup-node@caching-global-packages-data\n  with:\n    node-version: '14'\n    cache: 'npm'\n```\n\nPour les autres gestionnaires de paquets, vous pouvez utiliser les actions correspondantes comme `actions/setup-python` pour `pip` ou `actions/setup-go` pour `Go`.\n\nSi vous souhaitez utiliser l'action générique `cache`, vous devez spécifier le chemin des dépendances à mettre en cache :\n\n```yaml\n- name: Cache dependencies\n  uses: actions/cache@v2\n  with:\n    key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}\n    path: ~/.npm\n```\n\nDans cet exemple, le chemin `~/.npm` est utilisé pour stocker les dépendances `npm`. Vous devez adapter le chemin en fonction du gestionnaire de paquets que vous utilisez."
   },
   {
     "id": "absent_vmware",
@@ -2247,6 +3553,17 @@
       "static-pod",
       "quality-service-pod",
       "assign-pod-level-resources"
-    ]
+    ],
+    "verif": {
+      "precision_ok": true,
+      "methode_ok": true,
+      "surete_ok": true,
+      "ok": true,
+      "manquants": [],
+      "erreurs": [],
+      "methode_manquante": [],
+      "dangers": []
+    },
+    "reponse": "Le contexte fourni ne contient pas cette information."
   }
 ]

@@ -166,3 +166,82 @@ if __name__ == "__main__":
             print(f"    \033[32m+\033[0m {', '.join(termes)}")
         else:
             print("    \033[2m(aucun terme ajouté)\033[0m")
+
+
+# ─────────────────────────────────────────────────────────────────
+# Garde-fou de domaine
+# ─────────────────────────────────────────────────────────────────
+# Le corpus élargi crée des faux positifs thématiques : une question sur
+# PostgreSQL remonte le backend `pg` de Terraform, une question sur Poetry
+# remonte le cache de dépendances CI. Le modèle voit un contexte plausible
+# et répond — mesuré en brique 14 : les refus tombent de 5/5 à 5/10.
+#
+# Le prompt seul ne corrige que 1 cas sur 5. Ce garde-fou agit en amont :
+# si la question nomme une technologie que le corpus ne couvre PAS, on
+# refuse sans appeler le modèle.
+#
+# Contrairement au seuil de score abandonné en brique 10 (les populations
+# se chevauchaient), ce test est lexical et déterministe.
+
+# Technologies hors du domaine couvert. Une occurrence marginale dans le
+# corpus ne compte pas : ce qui compte est qu'on ne puisse pas y répondre.
+HORS_DOMAINE = {
+    # Bases de données
+    "postgresql", "postgres", "mysql", "mariadb", "mongodb", "redis",
+    "elasticsearch", "cassandra", "oracle",
+    # Gestion de configuration
+    "ansible", "puppet", "chef", "saltstack", "playbook",
+    # Packaging / templating K8s
+    "helm", "kustomize", "chart",
+    # CI hors GitHub Actions
+    "jenkins", "gitlab-ci", "gitlab ci", "circleci", "travis", "bamboo",
+    "teamcity", "drone",
+    # Langages et gestionnaires de paquets
+    "poetry", "pipenv", "npm", "yarn", "maven", "gradle", "cargo",
+    "composer", "bundler",
+    # Messagerie
+    "kafka", "rabbitmq", "nats", "activemq",
+    # Observabilité
+    "prometheus", "grafana", "datadog", "splunk", "elk", "loki",
+    # Virtualisation / cloud propriétaire
+    "vmware", "vsphere", "esxi", "hyper-v", "openstack", "openshift",
+    # Serveurs web / proxies
+    "nginx.conf", "apache", "haproxy", "traefik", "envoy",
+    # Systèmes
+    "windows server", "iis", "powershell", "active directory",
+}
+
+# Sujets que le corpus couvre réellement : si l'un d'eux est aussi présent,
+# la question est probablement légitime (« nginx dans un pod Kubernetes »).
+DOMAINE_COUVERT = {
+    "kubernetes", "k8s", "pod", "deployment", "statefulset", "daemonset",
+    "cronjob", "configmap", "secret", "probe", "kubectl", "namespace",
+    "terraform", "hcl", "state", "provider", "module", "backend",
+    "docker", "conteneur", "container", "dockerfile", "image",
+    "systemd", "linux", "journalctl", "systemctl",
+    "github actions", "workflow", "runner",
+}
+
+
+def hors_domaine(question: str) -> str | None:
+    """Renvoie la technologie hors domaine détectée, sinon None.
+
+    Une question qui nomme à la fois une techno hors domaine ET un sujet
+    couvert est considérée légitime : « déployer nginx sur Kubernetes »
+    relève bien du corpus.
+    """
+    q = _normaliser(question)
+    mots = set(re.findall(r"[a-z0-9.-]+", q))
+
+    detectees = [
+        techno for techno in HORS_DOMAINE
+        if (techno in q if " " in techno or "." in techno else techno in mots)
+    ]
+    if not detectees:
+        return None
+
+    couvert = any(
+        (sujet in q if " " in sujet else sujet in mots)
+        for sujet in DOMAINE_COUVERT
+    )
+    return None if couvert else detectees[0]

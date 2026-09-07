@@ -1,49 +1,52 @@
 # Commandes du projet. `make` seul affiche cette aide.
 
 .DEFAULT_GOAL := help
-.PHONY: help baseline rag ask chunks embed eval eval-fast eval-cat ablation methodes corpus index check
+.PHONY: help ask rag corpus index eval eval-fast eval-cat methodes expansion check archive
 
 help:  ## Affiche cette aide
 	@grep -E '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | \
 		awk -F':.*?## ' '{printf "  \033[36m%-12s\033[0m %s\n", $$1, $$2}'
 
-baseline:  ## Questions de référence sur le modèle NU (sans RAG)
-	@uv run python src/baseline.py
-
-rag:  ## Questions de démonstration sur le corpus complet
-	@uv run python src/rag2.py 2>/dev/null
+# ── Usage ────────────────────────────────────────────────────────
 
 ask:  ## Question libre : make ask Q="ta question"
 	@uv run python src/rag2.py "$(Q)" 2>/dev/null
 
-corpus:  ## Télécharge les documents sources
+rag:  ## Questions de démonstration
+	@uv run python src/rag2.py 2>/dev/null
+
+# ── Corpus ───────────────────────────────────────────────────────
+
+corpus:  ## Télécharge les documents sources (~2 min, réseau)
 	@uv run python src/telecharger.py
 
-index:  ## Reconstruit l'index vectoriel (387 chunks, ~30s)
+index:  ## Reconstruit l'index vectoriel (~2,5 min de GPU)
 	@uv run python src/corpus.py 2>/dev/null
 
-chunks:  ## Compare découpage naïf et structurel
-	@uv run python src/comparer.py
+# ── Mesure ───────────────────────────────────────────────────────
 
-embed:  ## Matrice de similarité entre phrases témoins
-	@uv run python src/embeddings.py
-
-eval:  ## Score complet, 115 cas (~30 min) - a reserver aux fins de chantier
-	@uv run python src/evaluer3.py 2>/dev/null
-
-eval-fast:  ## Retrieval seul, 115 cas (~3 min) - suffit pour 80% des decisions
+eval-fast:  ## Retrieval seul (~3 min) — suffit pour 80% des décisions
 	@uv run python src/evaluer3.py --retrieval-seul 2>/dev/null
 
-eval-cat:  ## Une seule categorie (~2 min) : make eval-cat C=docker
+eval-cat:  ## Une catégorie (~2 min) : make eval-cat C=docker
 	@uv run python src/evaluer3.py --categorie $(C) 2>/dev/null
 
-ablation:  ## Compare les stratégies de chunking
-	@uv run python src/ablation.py 2>/dev/null
+eval:  ## Score complet, 115 cas (~35 min) — à réserver aux fins de chantier
+	@uv run python src/evaluer3.py 2>/dev/null
 
-methodes:  ## Compare dense / BM25 / hybride sur le jeu de test
+methodes:  ## Compare dense / BM25 / hybride / reranker
 	@uv run python src/ablation2.py 2>/dev/null
 
+expansion:  ## Montre les termes ajoutés par le glossaire
+	@uv run python src/expansion.py "$(Q)"
+
+# ── Divers ───────────────────────────────────────────────────────
+
 check:  ## Vérifie que la stack locale répond
-	@echo "Ollama  : $$(curl -s localhost:11434/api/version 2>/dev/null || echo 'hors service')"
+	@echo "Ollama  : $$(curl -s -m 5 localhost:11434/api/version 2>/dev/null || echo 'hors service')"
 	@echo "Modèles : $$(ollama list 2>/dev/null | tail -n +2 | wc -l | tr -d ' ') installé(s)"
-	@echo "RAM     : $$(memory_pressure 2>/dev/null | grep -i 'free percentage' || echo 'n/a')"
+	@echo "Index   : $$(du -h data/index/corpus.pkl 2>/dev/null | cut -f1) · $$(ls data/raw 2>/dev/null | wc -l | tr -d ' ') fichiers sources"
+	@echo "RAM     : $$(memory_pressure 2>/dev/null | grep -i 'free percentage' | sed 's/^.*: //')"
+
+archive:  ## Liste les scripts archivés (démonstrations des briques 1-3)
+	@cat src/archive/README.md

@@ -1,5 +1,12 @@
 """Compare les deux stratégies de découpage côte à côte."""
 
+import sys
+from pathlib import Path
+
+# Ce script est archivé dans src/archive/ : on ajoute src/ au chemin
+# d'import pour retrouver chunk_structure et chunk_naif.
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from pathlib import Path
 
 import chunk_naif

@@ -184,6 +184,16 @@ def main() -> None:
                "retrieval": ret, "fichiers": fichiers}
 
         if not rapide:
+            # Garde-fou de domaine, identique au pipeline réel.
+            import expansion
+            if expansion.hors_domaine(cas["question"]):
+                texte = "Le contexte fourni ne contient pas cette information."
+                res["verif"] = verifier(cas, texte)
+                res["reponse"] = texte
+                with verrou:
+                    avancement["n"] += 1
+                return res
+
             contexte = "\n\n---\n\n".join(
                 f"[Source : {c['source']}/{c['fichier']} — {c['titre']}]\n{c['texte']}"
                 for c, _ in trouves
@@ -235,7 +245,8 @@ def main() -> None:
     duree = time.time() - debut
 
     # --- Affichage ---
-    print(f"\n\033[1m ÉVALUATION \033[0m  {len(cas_tests)} cas · 387 chunks · top-{rag2.TOP_K}\n")
+    n_chunks = len(rag2.charger()[0]["chunks"])
+    print(f"\n\033[1m ÉVALUATION \033[0m  {len(cas_tests)} cas · {n_chunks} chunks · top-{rag2.TOP_K}\n")
 
     par_cat = defaultdict(list)
     for r in resultats:

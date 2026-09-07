@@ -37,11 +37,12 @@ def mesurer(nom: str, chercher, k: int = 5) -> tuple[float, float]:
     return hr, mrr
 
 
-print(f"\n\033[1m ABLATION — méthodes de recherche \033[0m  ({len(CAS)} cas, top-5)\n")
+if __name__ == "__main__":
+    print(f"\n\033[1m ABLATION — méthodes de recherche \033[0m  ({len(CAS)} cas, top-5)\n")
 
-mesurer("dense (bge-m3)", rag2.chercher)
-mesurer("BM25 seul", bm25_mod.chercher)
-mesurer("hybride RRF 1:1", hybride.chercher)
+    mesurer("dense (bge-m3)", rag2.chercher)
+    mesurer("BM25 seul", bm25_mod.chercher)
+    mesurer("hybride RRF 1:1", hybride.chercher)
 
-mesurer("hybride + reranker", reranker.chercher)
-print()
+    mesurer("hybride + reranker", reranker.chercher)
+    print()
