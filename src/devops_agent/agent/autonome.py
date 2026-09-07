@@ -25,6 +25,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+from devops_agent.agent.correlation import Groupe, Tampon
 from devops_agent.agent.watcher import Evenement, Surveillance
 from devops_agent.core import config
 
@@ -133,6 +134,33 @@ QUESTION_PAR_DEFAUT = (
 )
 
 
+def _question_groupe(groupe: Groupe) -> str:
+    """Construit une question unique pour des anomalies corrélées.
+
+    Un PVC non lié produit un pod Pending, qui vide les endpoints du
+    service : trois symptômes, une cause. Les diagnostiquer séparément
+    coûte trois fois plus et donne trois rapports partiels.
+    """
+    if len(groupe.evenements) == 1:
+        return _question(groupe.evenements[0])
+
+    symptomes = "\n".join(
+        f"  - [{e.ressource}] {e.namespace}/{e.pod} : {e.etat}"
+        + (f" ({e.redemarrages} redémarrages)" if e.redemarrages else "")
+        for e in groupe.evenements
+    )
+    return (
+        f"Plusieurs anomalies sont apparues simultanément dans le namespace "
+        f"{groupe.namespace} :\n\n{symptomes}\n\n"
+        "Ces symptômes sont probablement liés. Établis la CAUSE RACINE unique "
+        "qui les explique, plutôt que de traiter chaque symptôme séparément — "
+        "un volume non lié bloque un pod, qui vide les endpoints d'un service, "
+        "qui fait échouer un déploiement.\n\n"
+        "Indique lequel de ces symptômes est la cause et lesquels sont des "
+        "conséquences, puis propose le correctif qui traite la cause."
+    )
+
+
 def _question(ev: Evenement) -> str:
     """Construit la question adaptée au symptôme observé."""
     for symptome, gabarit in QUESTIONS.items():
@@ -167,17 +195,20 @@ class Autonome:
 
     # ── Journal ──────────────────────────────────────────────────
 
-    def _consigner(self, ev: Evenement, reponse: str, cout: float,
+    def _consigner(self, groupe: Groupe, reponse: str, cout: float,
                    trace: list[dict]) -> None:
         """Écrit le diagnostic sur disque : il doit survivre au processus."""
         JOURNAL.parent.mkdir(parents=True, exist_ok=True)
         entree = {
             "date": datetime.now().isoformat(timespec="seconds"),
-            "namespace": ev.namespace,
-            "pod": ev.pod,
-            "etat": ev.etat,
-            "gravite": ev.gravite,
-            "redemarrages": ev.redemarrages,
+            "namespace": groupe.namespace,
+            "gravite": groupe.gravite,
+            "anomalies": [
+                {"ressource": e.ressource, "nom": e.pod,
+                 "namespace": e.namespace, "etat": e.etat,
+                 "redemarrages": e.redemarrages}
+                for e in groupe.evenements
+            ],
             "modele": config.LLM_API,
             "cout": round(cout, 5),
             "outils": [a["outil"] for a in trace],
@@ -188,8 +219,10 @@ class Autonome:
 
     # ── Traitement d'une anomalie ────────────────────────────────
 
-    def traiter(self, ev: Evenement) -> None:
-        question = _question(ev)
+    def traiter(self, groupe: Groupe) -> None:
+        """Diagnostique un groupe d'anomalies corrélées, en un seul appel."""
+        question = _question_groupe(groupe)
+        ev = groupe.evenements[0]
 
         if self.dry_run:
             print(f"\n\033[2m  [simulation] question qui serait posée :\033[0m")
@@ -199,20 +232,20 @@ class Autonome:
         if not self._budget_disponible():
             print(
                 f"\n\033[33m  budget quotidien de {self.budget_jour} $ atteint — "
-                f"anomalie signalée sans diagnostic :\033[0m\n  {ev}\n"
+                f"anomalie signalée sans diagnostic :\033[0m\n  {groupe.resume()}\n"
             )
             return
 
         from devops_agent.agent.loop import Agent
 
-        print(f"\n\033[1m  DIAGNOSTIC \033[0m {ev}\n")
+        print(f"\n\033[1m  DIAGNOSTIC \033[0m {groupe.resume()}\n")
         agent = Agent()
         reponse = agent.demander(question)
         cout = agent.cout()
 
         self.depenses.append((time.time(), cout))
         self.diagnostics += 1
-        self._consigner(ev, reponse, cout, agent.trace)
+        self._consigner(groupe, reponse, cout, agent.trace)
 
         print(f"\n{reponse}\n")
         print(
@@ -223,12 +256,35 @@ class Autonome:
     # ── Boucle ───────────────────────────────────────────────────
 
     def demarrer(self, duree_max: int | None = None) -> None:
+        from devops_agent.agent.correlation import FENETRE
+
         mode = "simulation" if self.dry_run else config.LLM_API
         print(f"\033[1m MODE AUTONOME \033[0m {mode}")
         print(f"\033[2m  budget {self.budget_jour} $/jour · "
-              f"journal {JOURNAL}\033[0m")
+              f"corrélation {FENETRE:.0f}s · journal {JOURNAL}\033[0m")
 
-        Surveillance().suivre(sur_evenement=self.traiter, duree_max=duree_max)
+        tampon = Tampon()
+
+        def accumuler(ev: Evenement) -> None:
+            # On n'appelle pas l'agent tout de suite : une panne se
+            # propage en quelques secondes, et les symptômes qui suivent
+            # appartiennent souvent au même incident.
+            tampon.ajouter(ev)
+
+        def livrer() -> None:
+            # Appelé à chaque seconde d'inactivité : sans cela, un groupe
+            # dont la fenêtre est écoulée attendrait le prochain
+            # événement pour être traité.
+            for groupe in tampon.prets():
+                self.traiter(groupe)
+
+        Surveillance().suivre(
+            sur_evenement=accumuler, sur_attente=livrer, duree_max=duree_max
+        )
+
+        # À l'arrêt, ne pas perdre ce qui attendait encore.
+        for groupe in tampon.vider():
+            self.traiter(groupe)
 
         if self.diagnostics:
             print(f"\033[2m  {self.diagnostics} diagnostic(s) · "

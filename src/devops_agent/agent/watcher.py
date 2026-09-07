@@ -225,7 +225,7 @@ class Surveillance:
             print(texte, flush=True)
 
     def suivre(self, sur_evenement=None, duree_max: int | None = None,
-               ressources: list[str] | None = None) -> None:
+               ressources: list[str] | None = None, sur_attente=None) -> None:
         """Ouvre un watch par ressource et traite les événements.
 
         Une seule connexion ne suffit pas : `kubectl --watch` ne surveille
@@ -235,6 +235,11 @@ class Surveillance:
         `sur_evenement` est appelé pour chaque anomalie retenue. Sans lui,
         les événements sont seulement affichés : mode observation, utile
         pour régler les seuils avant de brancher l'agent.
+
+        `sur_attente` est appelé à chaque seconde d'inactivité. C'est ce
+        qui permet au tampon de corrélation de livrer un groupe même
+        quand plus rien n'arrive — sinon il attendrait le prochain
+        événement, qui pourrait ne jamais venir.
         """
         import queue
         import threading
@@ -300,6 +305,8 @@ class Surveillance:
                 try:
                     ressource, objet = lignes.get(timeout=1.0)
                 except queue.Empty:
+                    if sur_attente:
+                        sur_attente()
                     if duree_max and time.time() - debut > duree_max:
                         break
                     intervalle = 1 if _interactif() else 300
