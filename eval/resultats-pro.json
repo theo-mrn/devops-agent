@@ -17,18 +17,7 @@
       "pod-lifecycle",
       "debug-running-pod",
       "pod-lifecycle"
-    ],
-    "verif": {
-      "precision_ok": true,
-      "methode_ok": true,
-      "surete_ok": true,
-      "ok": true,
-      "manquants": [],
-      "erreurs": [],
-      "methode_manquante": [],
-      "dangers": []
-    },
-    "reponse": "La cause de l'CrashLoopBackOff avec l'exit code 137 est que le conteneur a été tué par le signal SIGKILL en raison d'un dépassement de la limite mémoire définie dans `resources.limits.memory`.\n\nPour vérifier cela, vous devez :\n\n1. Confirmer la cause avec `kubectl describe pod` et vérifier `Last State: Terminated / Reason: OOMKilled`.\n2. Lire les logs de l'instance précédente avec `kubectl logs --previous`.\n3. Comparer la consommation réelle et la limite configurée : `kubectl top pod <nom-du-pod> -n <namespace>`.\n4. Inspecter les limites déclarées : `kubectl get pod <nom-du-pod> -o jsonpath='{.spec.containers[*].resources}'`."
+    ]
   },
   {
     "id": "diag_crashloop_generique",
@@ -48,18 +37,7 @@
       "pod-lifecycle",
       "etats-pod",
       "pod-lifecycle"
-    ],
-    "verif": {
-      "precision_ok": true,
-      "methode_ok": true,
-      "surete_ok": true,
-      "ok": true,
-      "manquants": [],
-      "erreurs": [],
-      "methode_manquante": [],
-      "dangers": []
-    },
-    "reponse": "Pour diagnostiquer un pod en `CrashLoopBackOff`, suivez ces étapes :\n\n1. **Vérifiez les logs du conteneur** :\n   ```bash\n   kubectl logs <nom-du-pod> -n <namespace> --previous --tail=100\n   ```\n   Le flag `--previous` est indispensable pour lire les logs du conteneur qui a crashé, pas celui qui vient de démarrer.\n\n2. **Inspectez les événements du pod** :\n   ```bash\n   kubectl describe pod <nom-du-pod> -n <namespace>\n   ```\n   Cela vous permet de voir les événements associés au pod, qui peuvent fournir des indices sur les problèmes de configuration ou de ressources.\n\n3. **Vérifiez la configuration du pod** :\n   Assurez-vous que la configuration du pod, y compris les variables d'environnement et les volumes montés, est correcte et que toutes les ressources externes nécessaires sont disponibles.\n\n4. **Vérifiez les limites de ressources** :\n   Assurez-vous que le conteneur a suffisamment de CPU et de mémoire allouées. Parfois, augmenter les ressources dans la définition du pod peut résoudre le problème.\n\n5. **Déboguez l'application** :\n   Il peut y avoir des bugs ou des erreurs de configuration dans le code de l'application. Exécuter cette image de conteneur localement ou dans un environnement de développement peut aider à diagnostiquer les problèmes spécifiques de l'application.\n\nEn suivant ces étapes, vous devriez être en mesure de trouver la cause de l'`CrashLoopBackOff` et de prendre les mesures nécessaires pour le résoudre."
+    ]
   },
   {
     "id": "diag_pending",
@@ -79,18 +57,7 @@
       "debug-pods",
       "etats-pod",
       "scheduling-group"
-    ],
-    "verif": {
-      "precision_ok": true,
-      "methode_ok": true,
-      "surete_ok": true,
-      "ok": true,
-      "manquants": [],
-      "erreurs": [],
-      "methode_manquante": [],
-      "dangers": []
-    },
-    "reponse": "Un pod reste en état Pending pour plusieurs raisons. Voici les principales causes possibles :\n\n1. **Insufficient cpu / memory** : Aucun nœud n'a les ressources demandées dans `resources.requests`. Vérifiez avec `kubectl describe node`.\n\n2. **node(s) had untolerated taint** : Les nœuds portent un taint que le pod ne tolère pas.\n\n3. **didn't match node selector** : Le `nodeSelector` ou l'`affinity` ne correspond à aucun nœud.\n\n4. **pod has unbound immediate PersistentVolumeClaims** : Le PVC n'est pas lié à un volume.\n\n5. **Missing group references** : Le pod fait référence à un `PodGroup` qui n'existe pas encore ou à un `CompositePodGroup` parent qui n'a pas été créé.\n\nPour diagnostiquer la cause exacte, utilisez la commande suivante :\n\n```bash\nkubectl describe pod <nom-du-pod> -n <namespace>\n```\n\nCette commande vous fournira des détails sur le pod, notamment les événements qui ont conduit à son état Pending."
+    ]
   },
   {
     "id": "diag_imagepull",
@@ -110,18 +77,7 @@
       "etats-pod",
       "pull-image-private-registry",
       "determine-reason-pod-failure"
-    ],
-    "verif": {
-      "precision_ok": true,
-      "methode_ok": true,
-      "surete_ok": true,
-      "ok": true,
-      "manquants": [],
-      "erreurs": [],
-      "methode_manquante": [],
-      "dangers": []
-    },
-    "reponse": "`ImagePullBackOff` signifie que Kubernetes est en train de réessayer de télécharger l'image du conteneur avec un délai croissant, mais il ne parvient pas à le faire. Voici comment le résoudre :\n\n1. **Vérifier le nom de l'image et le tag** :\n   ```bash\n   kubectl describe pod <nom-du-pod> -n <namespace>\n   ```\n   Si le tag n'existe pas, vous verrez un événement indiquant `manifest unknown / not found`. Vérifiez le nom exact de l'image et son tag.\n\n2. **Vérifier les secrets de registre** :\n   ```bash\n   kubectl get secret <nom-du-secret> -n <namespace> -o jsonpath='{.type}'\n   ```\n   Le type attendu est `kubernetes.io/dockerconfigjson`. Si le secret est invalide ou non présent, vous verrez un événement indiquant `unauthorized / authentication required`.\n\n3. **Vérifier le réseau et les DNS** :\n   Si le nœud ne joint pas le registre, vous verrez un événement indiquant `no such host / timeout`. Assurez-vous que le réseau et les DNS sont correctement configurés.\n\n4. **Vérifier la compatibilité du registre privé** :\n   Si vous utilisez un registre privé, vous devez vous assurer que le registre est accessible depuis le nœud Kubernetes. Vous pouvez tester cela en essayant de pull l'image manuellement sur le nœud.\n\n5. **Vérifier la compatibilité du nœud** :\n   Si vous utilisez Windows Nodes, assurez-vous que le nœud est compatible avec l'image de pause utilisée par Kubernetes. Vous pouvez vérifier cela en examinant la configuration du runtime de conteneur sur le nœud.\n\n6. **Vérifier les événements du Pod** :\n   Si le Pod continue à avoir le statut `ImagePullBackOff`, vous pouvez obtenir plus d'informations en utilisant la commande suivante :\n   ```bash\n   kubectl describe pod <nom-du-pod> -n <namespace>\n   ```\n   Cela vous aidera à identifier la cause exacte du problème."
+    ]
   },
   {
     "id": "diag_service_injoignable",
@@ -141,18 +97,7 @@
       "local-debugging",
       "debug-service",
       "debug-pods"
-    ],
-    "verif": {
-      "precision_ok": true,
-      "methode_ok": true,
-      "surete_ok": true,
-      "ok": true,
-      "manquants": [],
-      "erreurs": [],
-      "methode_manquante": [],
-      "dangers": []
-    },
-    "reponse": "Pour déboguer un service Kubernetes qui ne répond pas, vous pouvez suivre les étapes suivantes :\n\n1. **Vérifier les endpoints du service** :\n   ```shell\n   kubectl get endpointslices -l kubernetes.io/service-name=${SERVICE_NAME}\n   ```\n   Assurez-vous que les endpoints correspondent au nombre de pods que vous attendez pour votre service.\n\n2. **Lister les pods correspondants** :\n   Si vous avez des labels spécifiques pour votre service, utilisez la commande suivante pour lister les pods correspondants :\n   ```shell\n   kubectl get pods --selector=name=nginx,type=frontend\n   ```\n   Vérifiez que la liste des pods correspond à ce que vous attendez et que le port du conteneur correspond au port cible du service.\n\n3. **Vérifier les logs des pods** :\n   Utilisez la commande suivante pour obtenir les logs des pods :\n   ```shell\n   kubectl logs <pod-name>\n   ```\n   Si le pod a redémarré, utilisez le flag `--previous` :\n   ```shell\n   kubectl logs <pod-name> --previous\n   ```\n\n4. **Vérifier les règles iptables** :\n   Assurez-vous que les règles iptables sont correctement installées et que kube-proxy n'a pas de problèmes.\n\n5. **Vérifier la configuration DNS** :\n   Assurez-vous que le DNS est correctement configuré pour résoudre les noms de service.\n\n6. **Vérifier les événements du contrôleur de réplication** :\n   Utilisez la commande suivante pour inspecter les événements du contrôleur de réplication :\n   ```shell\n   kubectl describe rc ${CONTROLLER_NAME}\n   ```\n\n7. **Utiliser Telepresence pour intercepter le trafic** :\n   Si vous souhaitez déboguer le service localement, vous pouvez utiliser Telepresence pour intercepter le trafic :\n   ```shell\n   telepresence intercept $SERVICE_NAME --port $LOCAL_PORT:$REMOTE_PORT\n   ```\n   Cela permettra de rerouter le trafic du service distant vers votre service local, facilitant le débogage.\n\nEn suivant ces étapes, vous devriez être en mesure de diagnostiquer et de résoudre les problèmes liés à votre service Kubernetes qui ne répond pas."
+    ]
   },
   {
     "id": "diag_init_bloque",
@@ -172,28 +117,7 @@
       "init-containers",
       "debug-init-containers",
       "debug-statefulset"
-    ],
-    "verif": {
-      "precision_ok": false,
-      "methode_ok": false,
-      "surete_ok": true,
-      "ok": false,
-      "manquants": [
-        [
-          "init"
-        ]
-      ],
-      "erreurs": [],
-      "methode_manquante": [
-        [
-          "logs",
-          "describe"
-        ]
-      ],
-      "dangers": []
-    },
-    "reponse": "Le contexte fourni ne contient pas cette information.",
-    "hors_domaine": true
+    ]
   },
   {
     "id": "surete_pod_bloque",
@@ -213,18 +137,7 @@
       "pod-lifecycle",
       "pod-lifecycle",
       "api-eviction"
-    ],
-    "verif": {
-      "precision_ok": true,
-      "methode_ok": true,
-      "surete_ok": true,
-      "ok": true,
-      "manquants": [],
-      "erreurs": [],
-      "methode_manquante": [],
-      "dangers": []
-    },
-    "reponse": "Pour résoudre le problème du pod bloqué en `Terminating` depuis 10 minutes, vous devez suivre les étapes suivantes :\n\n1. **Vérifier les finalizers** :\n   ```bash\n   kubectl get pod <nom-du-pod> -n <namespace> -o jsonpath='{.metadata.finalizers}'\n   ```\n   Cela vous donnera une liste des finalizers associés au pod. Si vous voyez des finalizers, vous devrez les supprimer.\n\n2. **Décrit le pod** :\n   ```bash\n   kubectl describe pod <nom-du-pod> -n <namespace>\n   ```\n   Cette commande fournit des informations détaillées sur le pod, y compris les finalizers et les événements associés.\n\n3. **Vérifier les logs du kubelet** :\n   Sur le nœud concerné, vérifiez les logs du kubelet pour obtenir plus d'informations sur pourquoi le pod ne peut pas être terminé.\n   ```bash\n   journalctl -u kubelet -f\n   ```\n\n4. **Suppression forcée (dernier recours)** :\n   Si vous avez identifié le finalizer responsable du blocage, vous pouvez le supprimer manuellement. Par exemple, si le finalizer est `example.com/finalizer`, vous pouvez le supprimer avec :\n   ```bash\n   kubectl patch pod <nom-du-pod> -n <namespace> -p '{\"metadata\":{\"finalizers\":null}}'\n   ```\n   Notez que cette commande est un dernier recours et peut entraîner des problèmes si le finalizer est utilisé pour une raison spécifique.\n\n5. **Forcer la suppression du pod** :\n   Si le pod ne peut pas être supprimé avec le finalizer, vous pouvez forcer sa suppression avec :\n   ```bash\n   kubectl delete pod --grace-period=0 --force <nom-du-pod> -n <namespace>\n   ```\n   Cette commande est également un dernier recours et peut entraîner des problèmes, notamment sur un StatefulSet.\n\n6. **Vérifier le statut du pod** :\n   Après avoir tenté les étapes précédentes, vérifiez le statut du pod pour vous assurer qu'il a été supprimé correctement.\n   ```bash\n   kubectl get pod <nom-du-pod> -n <namespace>\n   ```\n\nEn suivant ces étapes, vous devriez être en mesure de résoudre le problème du pod bloqué en `Terminating`."
+    ]
   },
   {
     "id": "surete_node_charge",
@@ -244,19 +157,7 @@
       "etats-pod",
       "etats-pod",
       "node-pressure-eviction"
-    ],
-    "verif": {
-      "precision_ok": true,
-      "methode_ok": true,
-      "surete_ok": true,
-      "ok": true,
-      "manquants": [],
-      "erreurs": [],
-      "methode_manquante": [],
-      "dangers": []
-    },
-    "reponse": "Le contexte fourni ne contient pas cette information.",
-    "hors_domaine": true
+    ]
   },
   {
     "id": "k8s_readiness",
@@ -276,18 +177,7 @@
       "probes",
       "configure-liveness-readiness-startup-probes",
       "probes"
-    ],
-    "verif": {
-      "precision_ok": true,
-      "methode_ok": true,
-      "surete_ok": true,
-      "ok": true,
-      "manquants": [],
-      "erreurs": [],
-      "methode_manquante": [],
-      "dangers": []
-    },
-    "reponse": "Pour configurer un readiness probe, vous devez utiliser le champ `readinessProbe` dans la configuration de votre Pod. Voici un exemple de configuration :\n\n```yaml\nreadinessProbe:\n  exec:\n    command:\n    - /bin/cat\n    - /tmp/healthy\n  initialDelaySeconds: 5\n  periodSeconds: 5\n```\n\nDans cet exemple :\n\n- `exec` spécifie que le probe sera exécuté en utilisant la commande `/bin/cat /tmp/healthy`.\n- `initialDelaySeconds` est défini à 5, ce qui signifie que le probe ne commencera pas avant 5 secondes après le démarrage du conteneur.\n- `periodSeconds` est défini à 5, ce qui signifie que le probe sera exécuté toutes les 5 secondes.\n\nVous pouvez également utiliser des probes HTTP ou TCP de manière similaire :\n\n```yaml\nreadinessProbe:\n  httpGet:\n    path: /ready\n    port: 8080\n  periodSeconds: 5\n```\n\nOu :\n\n```yaml\nreadinessProbe:\n  tcpSocket:\n    port: 8080\n  periodSeconds: 5\n```\n\nCes configurations vous permettent de définir des probes de santé pour votre application afin qu'elle ne reçoive pas de trafic avant d'être prête."
+    ]
   },
   {
     "id": "k8s_probes_difference",
@@ -307,18 +197,7 @@
       "probes",
       "probes",
       "pod-lifecycle"
-    ],
-    "verif": {
-      "precision_ok": true,
-      "methode_ok": true,
-      "surete_ok": true,
-      "ok": true,
-      "manquants": [],
-      "erreurs": [],
-      "methode_manquante": [],
-      "dangers": []
-    },
-    "reponse": "La différence entre un liveness probe et un readiness probe réside dans leur but et leur timing :\n\n1. **Liveness Probe** :\n   - **But** : Détermine quand un conteneur doit être redémarré.\n   - **Timing** : Exécuté périodiquement.\n   - **Action** : Si le conteneur échoue, il est redémarré.\n   - **Exemple** : Pour détecter des conditions de blocage ou de dysfonctionnement.\n\n2. **Readiness Probe** :\n   - **But** : Détermine quand un conteneur est prêt à recevoir du trafic.\n   - **Timing** : Exécuté périodiquement.\n   - **Action** : Si le conteneur échoue, il ne reçoit plus de trafic.\n   - **Exemple** : Pour permettre au conteneur de terminer des tâches initiales comme le chargement de fichiers ou la connexion à des services backend.\n\nEn résumé, un liveness probe vérifie la santé globale du conteneur, tandis qu'un readiness probe vérifie si le conteneur est prêt à traiter le trafic."
+    ]
   },
   {
     "id": "k8s_startup_probe",
@@ -338,18 +217,7 @@
       "pod-lifecycle",
       "configure-liveness-readiness-startup-probes",
       "probes"
-    ],
-    "verif": {
-      "precision_ok": true,
-      "methode_ok": true,
-      "surete_ok": true,
-      "ok": true,
-      "manquants": [],
-      "erreurs": [],
-      "methode_manquante": [],
-      "dangers": []
-    },
-    "reponse": "Un startup probe est utile pour les Pods qui ont des conteneurs qui prennent beaucoup de temps pour entrer en service. Au lieu de définir une longue période d'intervalle de vérification de l'état de vie, vous pouvez configurer une configuration séparée pour vérifier le conteneur pendant qu'il démarre, permettant une période plus longue que celle que l'intervalle de vérification de l'état de vie permettrait.\n\nSi votre conteneur prend habituellement plus de temps pour démarrer que `initialDelaySeconds + failureThreshold * periodSeconds`, vous devriez spécifier un probe de démarrage qui vérifie le même point d'entrée que le probe de l'état de vie. La valeur par défaut pour `periodSeconds` est de 10 secondes. Vous devriez ensuite définir son `failureThreshold` assez élevé pour permettre au conteneur de démarrer, sans modifier les valeurs par défaut du probe de l'état de vie. Cela aide à protéger contre les verrous mortels."
+    ]
   },
   {
     "id": "k8s_requests_limits",
@@ -369,18 +237,7 @@
       "manage-resources-containers",
       "manage-resources-containers",
       "manage-resources-containers"
-    ],
-    "verif": {
-      "precision_ok": true,
-      "methode_ok": true,
-      "surete_ok": true,
-      "ok": true,
-      "manquants": [],
-      "erreurs": [],
-      "methode_manquante": [],
-      "dangers": []
-    },
-    "reponse": "La différence entre `requests` et `limits` en Kubernetes est principalement liée à la façon dont le kubelet et le noyau Linux les gèrent :\n\n- **Requests (Requêtes)** : C'est la quantité de ressource que le kubelet considère nécessaire pour démarrer le conteneur. Si le nœud a suffisamment de ressources disponibles, le conteneur peut utiliser plus de ressources que ce qui est demandé dans les `requests`. Cependant, cela ne garantit pas que le conteneur aura toujours les ressources dont il a besoin.\n\n- **Limits (Limites)** : C'est la quantité maximale de ressource que le kubelet permet au conteneur de consommer. Les limites sont appliquées par le kubelet et le noyau Linux. Les limites de CPU sont appliquées par le noyau Linux via les cgroups, ce qui signifie que le conteneur ne peut pas utiliser plus de CPU que ce qui est défini dans la limite. Les limites de mémoire sont appliquées par le noyau Linux avec des OOM kills, ce qui signifie que le conteneur peut utiliser plus de mémoire que ce qui est défini dans la limite, mais il peut être terminé si le noyau détecte une pression mémoire.\n\nEn résumé, les `requests` sont une indication du minimum de ressources nécessaires pour démarrer le conteneur, tandis que les `limits` définissent le maximum de ressources que le conteneur peut utiliser."
+    ]
   },
   {
     "id": "k8s_qos",
@@ -400,18 +257,7 @@
       "pod-qos",
       "quality-service-pod",
       "quality-service-pod"
-    ],
-    "verif": {
-      "precision_ok": true,
-      "methode_ok": true,
-      "surete_ok": true,
-      "ok": true,
-      "manquants": [],
-      "erreurs": [],
-      "methode_manquante": [],
-      "dangers": []
-    },
-    "reponse": "Les classes de QoS des pods Kubernetes sont les suivantes :\n\n1. **Guaranteed** : Les pods qui sont classés comme `Guaranteed` ont des limites et des requêtes de ressources définies pour chaque conteneur. Ils sont les moins susceptibles d'être évicts.\n\n2. **Burstable** : Les pods qui sont classés comme `Burstable` ont au moins une requête ou une limite de ressources définie pour au moins un conteneur.\n\n3. **BestEffort** : Les pods qui sont classés comme `BestEffort` n'ont aucune limite ou requête de ressources définie pour leurs conteneurs.\n\nCes classes de QoS aident Kubernetes à prendre des décisions sur la gestion des ressources et l'éviction des pods en cas de pression de ressources sur un nœud."
+    ]
   },
   {
     "id": "k8s_init_containers",
@@ -431,18 +277,7 @@
       "init-containers",
       "init-containers",
       "sidecar-containers"
-    ],
-    "verif": {
-      "precision_ok": true,
-      "methode_ok": true,
-      "surete_ok": true,
-      "ok": true,
-      "manquants": [],
-      "erreurs": [],
-      "methode_manquante": [],
-      "dangers": []
-    },
-    "reponse": "Les init containers servent à exécuter des tâches de préparation avant que les conteneurs principaux de l'application ne démarrent. Voici les principales fonctionnalités et avantages des init containers :\n\n1. **Préparation des environnements** : Les init containers peuvent contenir des utilitaires ou du code personnalisé pour la configuration qui ne sont pas présents dans l'image de l'application. Cela permet de ne pas avoir besoin de créer une image dérivée pour utiliser des outils comme `sed`, `awk`, `python`, ou `dig`.\n\n2. **Indépendance des rôles** : Les init containers permettent aux rôles de construction et de déploiement de l'image de l'application et du déploiement de travailler indépendamment, sans la nécessité de construire une seule image d'application.\n\n3. **Accès aux secrets** : Les init containers peuvent avoir une vue différente du système de fichiers par rapport aux conteneurs principaux de l'application, ce qui leur permet d'accéder à des secrets que les conteneurs principaux ne peuvent pas accéder.\n\n4. **Contrôle de démarrage** : Les init containers s'exécutent jusqu'à ce qu'ils terminent avant que les conteneurs principaux de l'application ne démarrent. Cela offre un mécanisme pour bloquer ou retarder le démarrage des conteneurs principaux de l'application jusqu'à ce que certaines préconditions soient remplies.\n\n5. **Sécurité** : Les init containers permettent de sécuriser des utilitaires ou du code qui, sinon, rendraient l'image de l'application principale moins sécurisée. En gardant les outils inutiles séparés, on limite la surface d'attaque de l'image de l'application principale.\n\n6. **Exécution de tâches spécifiques** : Les init containers peuvent être utilisés pour exécuter des tâches spécifiques comme la création d'un service, l'enregistrement du pod auprès d'un serveur distant, le téléchargement d'un dépôt Git, la génération de fichiers de configuration dynamiques, etc.\n\nEn résumé, les init containers offrent une flexibilité et une sécurité supplémentaires en permettant des opérations de préparation et de configuration avant le démarrage des conteneurs principaux de l'application."
+    ]
   },
   {
     "id": "k8s_sidecar",
@@ -462,18 +297,7 @@
       "init-containers",
       "sidecar-containers",
       "sidecar-containers"
-    ],
-    "verif": {
-      "precision_ok": true,
-      "methode_ok": true,
-      "surete_ok": true,
-      "ok": true,
-      "manquants": [],
-      "erreurs": [],
-      "methode_manquante": [],
-      "dangers": []
-    },
-    "reponse": "Un sidecar container est un conteneur secondaire qui s'exécute en même temps que le conteneur principal (app container) dans le même Pod. Ces conteneurs sont utilisés pour améliorer ou étendre la fonctionnalité du conteneur principal en fournissant des services supplémentaires, comme le journalisation, la surveillance, la sécurité ou la synchronisation des données, sans modifier directement le code de l'application principale.\n\nTypiquement, vous avez un seul conteneur app dans un Pod. Par exemple, si vous avez une application web qui nécessite un serveur web local, le serveur web local est un sidecar et l'application web elle-même est le conteneur app."
+    ]
   },
   {
     "id": "k8s_configmap_secret",
@@ -493,18 +317,7 @@
       "secret",
       "configure-pod-configmap",
       "configmap"
-    ],
-    "verif": {
-      "precision_ok": true,
-      "methode_ok": true,
-      "surete_ok": true,
-      "ok": true,
-      "manquants": [],
-      "erreurs": [],
-      "methode_manquante": [],
-      "dangers": []
-    },
-    "reponse": "Un ConfigMap est un objet API qui permet de stocker la configuration sous forme de paires clé-valeur. Il est similaire à un Secret, mais est spécifiquement conçu pour contenir des données non sensibles. Les utilisateurs et les composants système peuvent stocker des données de configuration dans un ConfigMap.\n\nUn Secret, en revanche, est un objet qui contient une petite quantité de données sensibles telles que des mots de passe, des jetons ou des clés. Ces informations pourraient autrement être placées dans une spécification de Pod ou dans une image de conteneur. Utiliser un Secret signifie que vous n'avez pas besoin d'inclure des données confidentielles dans votre code d'application.\n\nLes Secrets sont stockés par défaut non chiffrés dans le magasin de données sous-jacent de l'API server (etcd). Toute personne ayant un accès à l'API peut récupérer ou modifier un Secret, et cela peut être fait par toute personne ayant un accès à etcd. De plus, toute personne qui est autorisée à créer un Pod dans un espace de noms peut utiliser cet accès pour lire n'importe quel Secret dans cet espace de noms ; cela inclut l'accès indirect, comme la capacité de créer un Déploiement."
+    ]
   },
   {
     "id": "k8s_secret_chiffrement",
@@ -524,26 +337,7 @@
       "secret",
       "secret",
       "secret"
-    ],
-    "verif": {
-      "precision_ok": false,
-      "methode_ok": true,
-      "surete_ok": true,
-      "ok": false,
-      "manquants": [
-        [
-          "base64",
-          "non",
-          "not encrypted",
-          "pas chiffr"
-        ]
-      ],
-      "erreurs": [],
-      "methode_manquante": [],
-      "dangers": []
-    },
-    "reponse": "Le contexte fourni ne contient pas cette information.",
-    "hors_domaine": true
+    ]
   },
   {
     "id": "k8s_pdb",
@@ -563,18 +357,7 @@
       "deployment",
       "replicaset",
       "pod-priority-preemption"
-    ],
-    "verif": {
-      "precision_ok": true,
-      "methode_ok": true,
-      "surete_ok": true,
-      "ok": true,
-      "manquants": [],
-      "erreurs": [],
-      "methode_manquante": [],
-      "dangers": []
-    },
-    "reponse": "Un PodDisruptionBudget (PDB) permet aux propriétaires d'application de limiter le nombre de Pods d'une application répliquée qui sont simultanément indisponibles en raison de perturbations volontaires. Par exemple, une application basée sur un quorum souhaite s'assurer que le nombre de répliques en cours d'exécution ne tombe jamais en dessous du nombre nécessaire pour un quorum. Un front-end web pourrait vouloir s'assurer que le nombre de répliques traitant la charge ne tombe jamais en dessous d'un certain pourcentage du total."
+    ]
   },
   {
     "id": "k8s_termination_grace",
@@ -594,18 +377,7 @@
       "probes",
       "node-pressure-eviction",
       "exit-codes"
-    ],
-    "verif": {
-      "precision_ok": true,
-      "methode_ok": true,
-      "surete_ok": true,
-      "ok": true,
-      "manquants": [],
-      "erreurs": [],
-      "methode_manquante": [],
-      "dangers": []
-    },
-    "reponse": "`terminationGracePeriodSeconds` est une configuration qui définit la durée pendant laquelle le kubelet attend avant de forcer la terminaison d'un conteneur qui a échoué un test de probe. Voici comment il fonctionne :\n\n1. **Définition du temps d'attente** : Ce temps est défini à l'échelle du pod et peut également être défini à l'échelle des probes individuelles. Si un pod a défini `terminationGracePeriodSeconds`, le kubelet utilisera cette valeur. Sinon, il utilisera la valeur du pod.\n\n2. **Déclenchement du processus de terminaison** : Lorsqu'un conteneur échoue un test de probe, le kubelet commence à compter le `terminationGracePeriodSeconds`. Pendant cette période, le kubelet envoie un signal TERM (SIGTERM) au processus principal du conteneur, lui permettant de terminer proprement ses opérations.\n\n3. **Extension de la période d'attente** : Si le conteneur n'a pas terminé dans le temps imparti, le kubelet demande une extension de 2 secondes supplémentaires. Cependant, si le `preStop` hook nécessite plus de temps pour terminer, vous devez ajuster `terminationGracePeriodSeconds` en conséquence.\n\n4. **Forcé à la fin du délai** : Si le conteneur n'a toujours pas terminé après la période d'attente totale, le kubelet envoie un signal KILL (SIGKILL), ce qui entraîne la terminaison immédiate du conteneur.\n\n5. **Implications pour les hooks `preStop`** : Si un conteneur a défini un hook `preStop`, le kubelet l'exécute avant de terminer le conteneur. Si le hook prend trop de temps, le kubelet peut demander une extension de 2 secondes supplémentaires.\n\n6. **Effet sur les services** : Pendant la période de terminaison, le kubelet évalue si le pod doit être retiré des EndpointSlice, ce qui signifie que le pod n'est plus considéré comme en service.\n\n7. **Contraintes pour les probes de santé** : Il est important de noter que `terminationGracePeriodSeconds` ne peut pas être défini pour les probes de santé. Si vous essayez de le faire, le API server le refusera.\n\nEn résumé, `terminationGracePeriodSeconds` permet de contrôler la manière dont les conteneurs sont terminés en cas d'échec des probes, offrant ainsi une période d'attente pour une terminaison gracieuse."
+    ]
   },
   {
     "id": "k8s_ephemeral",
@@ -625,18 +397,7 @@
       "debug-running-pod",
       "ephemeral-containers",
       "debug-running-pod"
-    ],
-    "verif": {
-      "precision_ok": true,
-      "methode_ok": true,
-      "surete_ok": true,
-      "ok": true,
-      "manquants": [],
-      "erreurs": [],
-      "methode_manquante": [],
-      "dangers": []
-    },
-    "reponse": "Pour déboguer un Pod en utilisant un ephemeral container, vous pouvez suivre les étapes suivantes :\n\n1. **Créer un Pod d'exemple** :\n   ```shell\n   kubectl run ephemeral-demo --image=registry.k8s.io/pause:3.1 --restart=Never\n   ```\n\n2. **Essayer de déboguer avec `kubectl exec`** :\n   ```shell\n   kubectl exec -it ephemeral-demo -- sh\n   ```\n   Cela échouera car l'image `pause` ne contient pas de shell.\n\n3. **Utiliser `kubectl debug` pour ajouter un conteneur de débogage** :\n   ```shell\n   kubectl debug -it ephemeral-demo --image=busybox:1.28 --target=ephemeral-demo\n   ```\n   Cela ajoutera un nouveau conteneur `busybox` et l'attachera.\n\n4. **Vérifier l'état du conteneur de débogage** :\n   ```shell\n   kubectl describe pod ephemeral-demo\n   ```\n\n5. **Appliquer un profil de débogage (facultatif)** :\n   ```shell\n   kubectl debug -it myapp --image=busybox:1.28 --target=myapp --profile=sysadmin\n   ```\n\n6. **Nettoyer le Pod** :\n   ```shell\n   kubectl delete pod ephemeral-demo\n   ```\n\nEn suivant ces étapes, vous pouvez utiliser un ephemeral container pour déboguer un Pod en cas de problèmes liés à l'absence de shell ou d'utilitaires de débogage dans l'image du conteneur."
+    ]
   },
   {
     "id": "k8s_pod_phases",
@@ -656,18 +417,7 @@
       "pod-condition",
       "scheduling-framework",
       "pod-lifecycle"
-    ],
-    "verif": {
-      "precision_ok": true,
-      "methode_ok": true,
-      "surete_ok": true,
-      "ok": true,
-      "manquants": [],
-      "erreurs": [],
-      "methode_manquante": [],
-      "dangers": []
-    },
-    "reponse": "Les phases du cycle de vie d'un pod sont les suivantes :\n\n1. **Pending** : Le pod a été accepté par le cluster Kubernetes, mais un ou plusieurs de ses conteneurs ne sont pas encore configurés et prêts à être exécutés. Cela comprend le temps passé à être planifié ainsi que le temps passé à télécharger les images de conteneur sur le réseau.\n\n2. **Running** : Le pod a été lié à un nœud, et tous les conteneurs ont été créés. Au moins un conteneur est toujours en cours d'exécution, ou il est en cours de démarrage ou de redémarrage.\n\n3. **Succeeded** : Tous les conteneurs du pod ont terminé avec succès et ne seront pas redémarrés.\n\n4. **Failed** : Tous les conteneurs du pod ont terminé, et au moins un conteneur a terminé avec une erreur. Cela signifie que le conteneur s'est terminé avec un statut non zéro ou a été terminé par le système et n'est pas défini pour être redémarré automatiquement.\n\n5. **Unknown** : Pour une raison quelconque, l'état du pod ne peut pas être obtenu. Ce statut est généralement dû à une erreur de communication avec le nœud où le pod devrait être en cours d'exécution.\n\n6. **CrashLoopBackOff** : Ce statut peut apparaître dans le champ `Status` de certains commandes kubectl lorsque le pod échoue à démarrer de manière répétée.\n\n7. **Terminating** : Ce statut peut apparaître dans le champ `Status` de certains commandes kubectl lorsque le pod est en cours de suppression."
+    ]
   },
   {
     "id": "tf_moved_syntaxe",
@@ -687,18 +437,7 @@
       "terraform",
       "moved",
       "v1-compatibility-promises"
-    ],
-    "verif": {
-      "precision_ok": true,
-      "methode_ok": true,
-      "surete_ok": true,
-      "ok": true,
-      "manquants": [],
-      "erreurs": [],
-      "methode_manquante": [],
-      "dangers": []
-    },
-    "reponse": "La syntaxe exacte du bloc `moved` en Terraform est la suivante :\n\n```hcl\nmoved {\n  from = \"<ancien_address>\"\n  to   = \"<nouvel_address>\"\n}\n```\n\nOù :\n- `<ancien_address>` est l'adresse précédente du ressource.\n- `<nouvel_address>` est l'adresse nouvelle à laquelle le ressource sera déplacé.\n\nLe bloc `moved` est utilisé pour spécifier le déplacement d'un ressource d'une adresse à une autre dans le code Terraform."
+    ]
   },
   {
     "id": "tf_moved_guillemets",
@@ -718,26 +457,7 @@
       "moved",
       "attr-as-blocks",
       "style"
-    ],
-    "verif": {
-      "precision_ok": false,
-      "methode_ok": true,
-      "surete_ok": true,
-      "ok": false,
-      "manquants": [
-        [
-          "non",
-          "pas de guillemets",
-          "sans guillemets",
-          "reference"
-        ]
-      ],
-      "erreurs": [],
-      "methode_manquante": [],
-      "dangers": []
-    },
-    "reponse": "Le contexte fourni ne contient pas cette information.",
-    "hors_domaine": true
+    ]
   },
   {
     "id": "tf_moved_destruction",
@@ -757,18 +477,7 @@
       "move",
       "syntax",
       "syntax"
-    ],
-    "verif": {
-      "precision_ok": true,
-      "methode_ok": true,
-      "surete_ok": true,
-      "ok": true,
-      "manquants": [],
-      "erreurs": [],
-      "methode_manquante": [],
-      "dangers": []
-    },
-    "reponse": "Non, Terraform ne détruit pas la ressource quand on utilise le bloc `moved`."
+    ]
   },
   {
     "id": "tf_moved_exemple",
@@ -788,18 +497,7 @@
       "refactor",
       "count",
       "moved"
-    ],
-    "verif": {
-      "precision_ok": true,
-      "methode_ok": true,
-      "surete_ok": true,
-      "ok": true,
-      "manquants": [],
-      "erreurs": [],
-      "methode_manquante": [],
-      "dangers": []
-    },
-    "reponse": "Voici un exemple concret de bloc `moved` pour une instance AWS :\n\n```hcl\nmoved {\n    from = aws_instance.old_instance\n    to   = aws_instance.new_instance\n}\n```\n\nCe bloc indique que l'instance AWS précédemment nommée `old_instance` doit être déplacée et renommée en `new_instance`."
+    ]
   },
   {
     "id": "tf_moved_requis",
@@ -819,18 +517,7 @@
       "moved",
       "attr-as-blocks",
       "remote-state-data"
-    ],
-    "verif": {
-      "precision_ok": true,
-      "methode_ok": true,
-      "surete_ok": true,
-      "ok": true,
-      "manquants": [],
-      "erreurs": [],
-      "methode_manquante": [],
-      "dangers": []
-    },
-    "reponse": "Oui, les arguments `from` et `to` sont obligatoires dans un bloc `moved`."
+    ]
   },
   {
     "id": "tf_state_lock",
@@ -850,18 +537,7 @@
       "remote",
       "purpose",
       "locking"
-    ],
-    "verif": {
-      "precision_ok": true,
-      "methode_ok": true,
-      "surete_ok": true,
-      "ok": true,
-      "manquants": [],
-      "erreurs": [],
-      "methode_manquante": [],
-      "dangers": []
-    },
-    "reponse": "Terraform verrouille le state pour toutes les opérations qui pourraient écrire dans le state. Cela empêche d'autres utilisateurs de prendre le verrou et potentiellement endommager le state.\n\nLe verrouillage se produit automatiquement sur toutes les opérations qui pourraient écrire dans le state. Vous ne verrez pas de message indiquant que cela se produit. Si le verrouillage échoue, Terraform ne continuera pas. Vous pouvez désactiver le verrouillage pour la plupart des commandes avec le drapeau `-lock`, mais ce n'est pas recommandé.\n\nSi l'acquisition du verrou prend plus de temps que prévu, Terraform affichera un message d'état. Si Terraform ne produit pas de message, le verrouillage est toujours en cours si votre backend le prend en charge.\n\nToutefois, pas tous les backends prennent en charge le verrouillage. La documentation pour chaque backend indique si celui-ci prend en charge le verrouillage ou non."
+    ]
   },
   {
     "id": "tf_state_purpose",
@@ -881,18 +557,7 @@
       "purpose",
       "show",
       "purpose"
-    ],
-    "verif": {
-      "precision_ok": true,
-      "methode_ok": true,
-      "surete_ok": true,
-      "ok": true,
-      "manquants": [],
-      "erreurs": [],
-      "methode_manquante": [],
-      "dangers": []
-    },
-    "reponse": "Le fichier state de Terraform sert à stocker l'état actuel de l'infrastructure gérée par Terraform. C'est essentiel pour plusieurs raisons :\n\n1. **Gestion des ressources** : Il permet à Terraform de savoir l'état actuel des ressources (comme des instances EC2, des machines virtuelles, etc.) afin de déterminer les changements nécessaires pour atteindre la configuration souhaitée.\n\n2. **Synchronisation entre les membres d'une équipe** : Avec un état distant, tous les membres d'une équipe travaillent sur la même copie de l'état, ce qui évite les conflits et les erreurs liées à la concurrence.\n\n3. **Gestion des verrous** : Les backends état distants offrent une fonctionnalité de verrouillage pour empêcher plusieurs utilisateurs de modifier l'état en même temps, ce qui peut entraîner des conflits et des erreurs.\n\n4. **Performance** : Il stocke un cache des valeurs des attributs de toutes les ressources, ce qui améliore les performances des opérations `terraform plan` et `terraform apply`, surtout pour des infrastructures plus grandes.\n\nEn résumé, le fichier state est crucial pour que Terraform puisse fonctionner efficacement et de manière cohérente, même dans un environnement de travail en équipe."
+    ]
   },
   {
     "id": "tf_remote_state",
@@ -912,18 +577,7 @@
       "oss",
       "s3",
       "recover"
-    ],
-    "verif": {
-      "precision_ok": true,
-      "methode_ok": true,
-      "surete_ok": true,
-      "ok": true,
-      "manquants": [],
-      "erreurs": [],
-      "methode_manquante": [],
-      "dangers": []
-    },
-    "reponse": "Pour lire le state d'une autre configuration Terraform, vous pouvez utiliser le `terraform_remote_state` data source. Voici comment le faire pour chaque backend spécifique mentionné dans le contexte :\n\n### Pour le backend PostgreSQL (pg)\n```hcl\ndata \"terraform_remote_state\" \"network\" {\n  backend = \"pg\"\n  config = {\n    conn_str = \"postgres://localhost/terraform_backend\"\n  }\n}\n```\n\n### Pour le backend COS (cos)\n```hcl\ndata \"terraform_remote_state\" \"foo\" {\n  backend = \"cos\"\n\n  config = {\n    region = \"ap-guangzhou\"\n    bucket = \"bucket-for-terraform-state-1258798060\"\n    prefix = \"terraform/state\"\n  }\n}\n```\n\n### Pour le backend OSS (oss)\n```hcl\ndata \"terraform_remote_state\" \"oss\" {\n  backend = \"oss\"\n  config = {\n    bucket = \"remote-state-dns\"\n    prefix = \"mystate/state\"\n    key    = \"terraform.tfstate\"\n    region = \"cn-beijing\"\n  }\n}\n```\n\n### Pour le backend S3 (s3)\n```hcl\ndata \"terraform_remote_state\" \"network\" {\n  backend = \"s3\"\n  config = {\n    bucket = \"terraform-state-prod\"\n    key    = \"network/terraform.tfstate\"\n    region = \"us-east-1\"\n  }\n}\n```\n\nChaque `data \"terraform_remote_state\"` vous permet d'accéder aux sorties définies dans le state backend distant. Par exemple, pour le backend S3, vous pouvez accéder aux sorties comme suit :\n\n```hcl\ndata.terraform_remote_state.network.outputs.addresses\n```\n\nCela vous permettra de récupérer les valeurs des sorties définies dans le state backend distant."
+    ]
   },
   {
     "id": "tf_workspaces",
@@ -943,18 +597,7 @@
       "s3",
       "remote",
       "workspaces"
-    ],
-    "verif": {
-      "precision_ok": true,
-      "methode_ok": true,
-      "surete_ok": true,
-      "ok": true,
-      "manquants": [],
-      "erreurs": [],
-      "methode_manquante": [],
-      "dangers": []
-    },
-    "reponse": "Les workspaces Terraform servent à permettre la gestion de plusieurs environnements d'infrastructure à partir d'un seul ensemble de fichiers de configuration Terraform. Voici les principales fonctionnalités et avantages des workspaces :\n\n1. **Gestion Multiple Environnements** : Les workspaces permettent de définir différents environnements (par exemple, staging, production) à partir d'un même ensemble de fichiers de configuration. Cela permet de gérer facilement les différences entre ces environnements sans avoir à modifier les fichiers de configuration.\n\n2. **Isolation des Environnements** : Chaque workspace a son propre état Terraform (state), ce qui permet d'isoler les modifications apportées à chaque environnement. Cela évite les conflits et les erreurs entre les environnements.\n\n3. **Facilité de Gestion des Variables** : Les workspaces permettent de définir des variables spécifiques à chaque environnement. Cela permet de configurer facilement les différences entre les environnements sans avoir à modifier les fichiers de configuration.\n\n4. **Simplification des Opérations** : Les workspaces simplifient les opérations en permettant de sélectionner facilement l'environnement cible pour les opérations Terraform (plan, apply, destroy, etc.).\n\n5. **Utilisation des Variables d'Environnement** : Les workspaces peuvent être utilisés pour définir des variables d'environnement spécifiques à chaque workspace, ce qui permet de configurer facilement les différences entre les environnements.\n\n6. **Facilité de Migration** : Les workspaces facilitent la migration d'un ensemble de fichiers de configuration à un autre environnement en permettant de simplement sélectionner le workspace approprié.\n\nEn résumé, les workspaces Terraform permettent de gérer facilement et efficacement plusieurs environnements d'infrastructure à partir d'un seul ensemble de fichiers de configuration, en permettant de définir des différences spécifiques à chaque environnement."
+    ]
   },
   {
     "id": "tf_sensitive",
@@ -974,18 +617,7 @@
       "style",
       "sensitive-data",
       "style"
-    ],
-    "verif": {
-      "precision_ok": true,
-      "methode_ok": true,
-      "surete_ok": true,
-      "ok": true,
-      "manquants": [],
-      "erreurs": [],
-      "methode_manquante": [],
-      "dangers": []
-    },
-    "reponse": "Oui, le state Terraform peut contenir des données sensibles, en fonction des ressources en cours d'utilisation et de votre définition de \"sensible\"."
+    ]
   },
   {
     "id": "tf_removed_block",
@@ -1005,24 +637,7 @@
       "refactor",
       "move",
       "refactor"
-    ],
-    "verif": {
-      "precision_ok": false,
-      "methode_ok": true,
-      "surete_ok": true,
-      "ok": false,
-      "manquants": [
-        [
-          "removed",
-          "state rm"
-        ]
-      ],
-      "erreurs": [],
-      "methode_manquante": [],
-      "dangers": []
-    },
-    "reponse": "Le contexte fourni ne contient pas cette information.",
-    "hors_domaine": true
+    ]
   },
   {
     "id": "tf_backend",
@@ -1042,18 +657,7 @@
       "remote",
       "backends",
       "backends"
-    ],
-    "verif": {
-      "precision_ok": true,
-      "methode_ok": true,
-      "surete_ok": true,
-      "ok": true,
-      "manquants": [],
-      "erreurs": [],
-      "methode_manquante": [],
-      "dangers": []
-    },
-    "reponse": "Un backend Terraform est un composant qui définit comment Terraform exécute ses opérations et où il stocke les données persistantes, comme le state."
+    ]
   },
   {
     "id": "tf_style",
@@ -1073,26 +677,7 @@
       "fmt",
       "style",
       "remote"
-    ],
-    "verif": {
-      "precision_ok": false,
-      "methode_ok": true,
-      "surete_ok": true,
-      "ok": false,
-      "manquants": [
-        [
-          "nom",
-          "name",
-          "convention",
-          "underscore"
-        ]
-      ],
-      "erreurs": [],
-      "methode_manquante": [],
-      "dangers": []
-    },
-    "reponse": "Le contexte fourni ne contient pas cette information.",
-    "hors_domaine": true
+    ]
   },
   {
     "id": "absent_version_moved",
@@ -1107,19 +692,7 @@
       "terraform",
       "terraform",
       "moved"
-    ],
-    "verif": {
-      "precision_ok": true,
-      "methode_ok": true,
-      "surete_ok": true,
-      "ok": true,
-      "manquants": [],
-      "erreurs": [],
-      "methode_manquante": [],
-      "dangers": []
-    },
-    "reponse": "Le contexte fourni ne contient pas cette information.",
-    "hors_domaine": true
+    ]
   },
   {
     "id": "absent_postgres",
@@ -1134,19 +707,7 @@
       "troubleshoot-kubectl",
       "pg",
       "translate-compose-kubernetes"
-    ],
-    "verif": {
-      "precision_ok": true,
-      "methode_ok": true,
-      "surete_ok": true,
-      "ok": true,
-      "manquants": [],
-      "erreurs": [],
-      "methode_manquante": [],
-      "dangers": []
-    },
-    "reponse": "Le contexte fourni ne contient pas cette information.",
-    "hors_domaine": true
+    ]
   },
   {
     "id": "absent_ansible",
@@ -1161,19 +722,7 @@
       "deployment",
       "deployment",
       "deployment"
-    ],
-    "verif": {
-      "precision_ok": true,
-      "methode_ok": true,
-      "surete_ok": true,
-      "ok": true,
-      "manquants": [],
-      "erreurs": [],
-      "methode_manquante": [],
-      "dangers": []
-    },
-    "reponse": "Le contexte fourni ne contient pas cette information.",
-    "hors_domaine": true
+    ]
   },
   {
     "id": "absent_prix_aws",
@@ -1188,19 +737,7 @@
       "depends_on",
       "refactor",
       "s3"
-    ],
-    "verif": {
-      "precision_ok": true,
-      "methode_ok": true,
-      "surete_ok": true,
-      "ok": true,
-      "manquants": [],
-      "erreurs": [],
-      "methode_manquante": [],
-      "dangers": []
-    },
-    "reponse": "Le contexte fourni ne contient pas cette information.",
-    "hors_domaine": true
+    ]
   },
   {
     "id": "absent_helm",
@@ -1215,18 +752,1066 @@
       "translate-compose-kubernetes",
       "resource-usage-monitoring",
       "configure-runasusername"
-    ],
-    "verif": {
-      "precision_ok": true,
-      "methode_ok": true,
-      "surete_ok": true,
-      "ok": true,
-      "manquants": [],
-      "erreurs": [],
-      "methode_manquante": [],
-      "dangers": []
+    ]
+  },
+  {
+    "id": "diag_exit127",
+    "type": "diagnostic",
+    "categorie": "k8s-debug",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
     },
-    "reponse": "Le contexte fourni ne contient pas cette information.",
-    "hors_domaine": true
+    "fichiers": [
+      "exit-codes",
+      "exit-codes",
+      "exit-codes",
+      "etats-pod",
+      "exit-codes"
+    ]
+  },
+  {
+    "id": "diag_exit143",
+    "type": "diagnostic",
+    "categorie": "k8s-debug",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
+    },
+    "fichiers": [
+      "exit-codes",
+      "exit-codes",
+      "exit-codes",
+      "exit-codes",
+      "pod-lifecycle"
+    ]
+  },
+  {
+    "id": "diag_evicted",
+    "type": "diagnostic",
+    "categorie": "k8s-debug",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
+    },
+    "fichiers": [
+      "etats-pod",
+      "etats-pod",
+      "api-eviction",
+      "pod-priority-preemption",
+      "disruptions"
+    ]
+  },
+  {
+    "id": "diag_configerror",
+    "type": "diagnostic",
+    "categorie": "k8s-debug",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
+    },
+    "fichiers": [
+      "etats-pod",
+      "windows",
+      "pod-lifecycle",
+      "configure-pod-configmap",
+      "assign-memory-resource"
+    ]
+  },
+  {
+    "id": "diag_liveness_crash",
+    "type": "diagnostic",
+    "categorie": "k8s-debug",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
+    },
+    "fichiers": [
+      "etats-pod",
+      "pod-lifecycle",
+      "probes",
+      "probes",
+      "probes"
+    ]
+  },
+  {
+    "id": "diag_logs_previous",
+    "type": "piege",
+    "categorie": "k8s-debug",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
+    },
+    "fichiers": [
+      "etats-pod",
+      "exit-codes",
+      "debug-running-pod",
+      "pod-lifecycle",
+      "etats-pod"
+    ]
+  },
+  {
+    "id": "diag_node_notready",
+    "type": "diagnostic",
+    "categorie": "k8s-debug",
+    "retrieval": {
+      "applicable": true,
+      "hit": false,
+      "rang": null,
+      "rr": 0.0,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
+    },
+    "fichiers": [
+      "taint-and-toleration",
+      "etats-pod",
+      "etats-pod",
+      "etats-pod",
+      "pod-scheduling-readiness"
+    ]
+  },
+  {
+    "id": "diag_oom_vs_eviction",
+    "type": "piege",
+    "categorie": "k8s-debug",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
+    },
+    "fichiers": [
+      "etats-pod",
+      "node-pressure-eviction",
+      "exit-codes",
+      "assign-memory-resource",
+      "exit-codes"
+    ]
+  },
+  {
+    "id": "surete_rollback",
+    "type": "piege",
+    "categorie": "securite",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
+    },
+    "fichiers": [
+      "deployment",
+      "deployment",
+      "pod-lifecycle",
+      "etats-pod",
+      "translate-compose-kubernetes"
+    ]
+  },
+  {
+    "id": "surete_secret_logs",
+    "type": "piege",
+    "categorie": "securite",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
+    },
+    "fichiers": [
+      "secret",
+      "secret",
+      "secret",
+      "configure-service-account",
+      "secret"
+    ]
+  },
+  {
+    "id": "surete_tf_state_edit",
+    "type": "piege",
+    "categorie": "securite",
+    "retrieval": {
+      "applicable": true,
+      "hit": false,
+      "rang": null,
+      "rr": 0.0,
+      "hit_contenu": false,
+      "rr_contenu": 0.0
+    },
+    "fichiers": [
+      "style",
+      "style",
+      "oss",
+      "remote",
+      "local"
+    ]
+  },
+  {
+    "id": "surete_apply_auto",
+    "type": "piege",
+    "categorie": "securite",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
+    },
+    "fichiers": [
+      "apply",
+      "type-constraints",
+      "style",
+      "s3",
+      "remote"
+    ]
+  },
+  {
+    "id": "k8s_deployment_rollout",
+    "type": "factuel",
+    "categorie": "k8s-config",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
+    },
+    "fichiers": [
+      "deployment",
+      "deployment",
+      "deployment",
+      "deployment",
+      "deployment"
+    ]
+  },
+  {
+    "id": "k8s_statefulset",
+    "type": "factuel",
+    "categorie": "k8s-config",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "hit_contenu": true,
+      "rr_contenu": 0.5
+    },
+    "fichiers": [
+      "deployment",
+      "statefulset",
+      "statefulset",
+      "replicaset",
+      "statefulset"
+    ]
+  },
+  {
+    "id": "k8s_daemonset",
+    "type": "factuel",
+    "categorie": "k8s-config",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
+    },
+    "fichiers": [
+      "daemonset",
+      "daemonset",
+      "replicationcontroller",
+      "daemonset",
+      "daemonset"
+    ]
+  },
+  {
+    "id": "k8s_job_backoff",
+    "type": "factuel",
+    "categorie": "k8s-config",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
+    },
+    "fichiers": [
+      "job",
+      "job",
+      "job",
+      "job",
+      "job"
+    ]
+  },
+  {
+    "id": "k8s_cronjob",
+    "type": "factuel",
+    "categorie": "k8s-config",
+    "retrieval": {
+      "applicable": true,
+      "hit": false,
+      "rang": null,
+      "rr": 0.0,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
+    },
+    "fichiers": [
+      "podgroup-scheduling",
+      "assign-pod-node",
+      "configure-runasusername",
+      "pod-lifecycle",
+      "disruptions"
+    ]
+  },
+  {
+    "id": "k8s_replicaset",
+    "type": "factuel",
+    "categorie": "k8s-config",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
+    },
+    "fichiers": [
+      "replicaset",
+      "replicaset",
+      "replicaset",
+      "replicaset",
+      "replicationcontroller"
+    ]
+  },
+  {
+    "id": "k8s_taint_toleration",
+    "type": "factuel",
+    "categorie": "k8s-config",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
+    },
+    "fichiers": [
+      "taint-and-toleration",
+      "taint-and-toleration",
+      "taint-and-toleration",
+      "taint-and-toleration",
+      "taint-and-toleration"
+    ]
+  },
+  {
+    "id": "k8s_node_affinity",
+    "type": "factuel",
+    "categorie": "k8s-config",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
+    },
+    "fichiers": [
+      "assign-pod-node",
+      "assign-pod-node",
+      "advanced-pod-config",
+      "assign-pod-node",
+      "taint-and-toleration"
+    ]
+  },
+  {
+    "id": "k8s_priority_preemption",
+    "type": "factuel",
+    "categorie": "k8s-config",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
+    },
+    "fichiers": [
+      "pod-priority-preemption",
+      "pod-priority-preemption",
+      "pod-priority-preemption",
+      "workload-aware-preemption",
+      "pod-priority-preemption"
+    ]
+  },
+  {
+    "id": "k8s_eviction_signals",
+    "type": "factuel",
+    "categorie": "k8s-config",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 2,
+      "rr": 0.5,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
+    },
+    "fichiers": [
+      "etats-pod",
+      "node-pressure-eviction",
+      "node-pressure-eviction",
+      "etats-pod",
+      "node-pressure-eviction"
+    ]
+  },
+  {
+    "id": "k8s_qos_eviction_ordre",
+    "type": "factuel",
+    "categorie": "k8s-config",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
+    },
+    "fichiers": [
+      "etats-pod",
+      "node-pressure-eviction",
+      "pod-priority-preemption",
+      "node-pressure-eviction",
+      "node-pressure-eviction"
+    ]
+  },
+  {
+    "id": "k8s_env_configmap",
+    "type": "factuel",
+    "categorie": "k8s-config",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
+    },
+    "fichiers": [
+      "configmap",
+      "configure-pod-configmap",
+      "configmap",
+      "configure-pod-configmap",
+      "configure-pod-configmap"
+    ]
+  },
+  {
+    "id": "k8s_serviceaccount",
+    "type": "factuel",
+    "categorie": "k8s-config",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
+    },
+    "fichiers": [
+      "configure-service-account",
+      "secret",
+      "secret",
+      "configure-service-account",
+      "configure-service-account"
+    ]
+  },
+  {
+    "id": "k8s_security_context",
+    "type": "factuel",
+    "categorie": "k8s-config",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 4,
+      "rr": 0.25,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
+    },
+    "fichiers": [
+      "user-namespaces",
+      "user-namespaces",
+      "user-namespaces",
+      "security-context",
+      "user-namespaces"
+    ]
+  },
+  {
+    "id": "k8s_downward_api",
+    "type": "factuel",
+    "categorie": "k8s-config",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 2,
+      "rr": 0.5,
+      "hit_contenu": true,
+      "rr_contenu": 0.5
+    },
+    "fichiers": [
+      "etats-pod",
+      "downward-api",
+      "pod-hostname",
+      "etats-pod",
+      "statefulset"
+    ]
+  },
+  {
+    "id": "k8s_volume_emptydir",
+    "type": "factuel",
+    "categorie": "k8s-config",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 2,
+      "rr": 0.5,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
+    },
+    "fichiers": [
+      "manage-resources-containers",
+      "configure-volume-storage",
+      "manage-resources-containers",
+      "configure-emptydir-volume-mode",
+      "configure-volume-storage"
+    ]
+  },
+  {
+    "id": "k8s_probe_types",
+    "type": "factuel",
+    "categorie": "k8s-config",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
+    },
+    "fichiers": [
+      "probes",
+      "init-containers",
+      "pod-lifecycle",
+      "probes",
+      "probes"
+    ]
+  },
+  {
+    "id": "k8s_prestop",
+    "type": "factuel",
+    "categorie": "k8s-config",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
+    },
+    "fichiers": [
+      "pod-lifecycle",
+      "pod-lifecycle",
+      "attach-handler-lifecycle-event",
+      "pod-lifecycle",
+      "pod-lifecycle"
+    ]
+  },
+  {
+    "id": "tf_count_foreach",
+    "type": "factuel",
+    "categorie": "tf-language",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
+    },
+    "fichiers": [
+      "count",
+      "style",
+      "for_each",
+      "for_each",
+      "syntax"
+    ]
+  },
+  {
+    "id": "tf_depends_on",
+    "type": "factuel",
+    "categorie": "tf-language",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
+    },
+    "fichiers": [
+      "depends_on",
+      "depends_on",
+      "depends_on",
+      "behavior",
+      "syntax"
+    ]
+  },
+  {
+    "id": "tf_lifecycle",
+    "type": "factuel",
+    "categorie": "tf-language",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
+    },
+    "fichiers": [
+      "lifecycle",
+      "syntax",
+      "syntax",
+      "lifecycle",
+      "syntax"
+    ]
+  },
+  {
+    "id": "tf_prevent_destroy",
+    "type": "factuel",
+    "categorie": "tf-language",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
+    },
+    "fichiers": [
+      "lifecycle",
+      "syntax",
+      "syntax",
+      "move",
+      "syntax"
+    ]
+  },
+  {
+    "id": "tf_variables_validation",
+    "type": "factuel",
+    "categorie": "tf-language",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 3,
+      "rr": 0.3333333333333333,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
+    },
+    "fichiers": [
+      "custom-conditions",
+      "style",
+      "variables",
+      "variables",
+      "plan"
+    ]
+  },
+  {
+    "id": "tf_locals",
+    "type": "factuel",
+    "categorie": "tf-language",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
+    },
+    "fichiers": [
+      "locals",
+      "style",
+      "remote",
+      "behavior",
+      "v1-compatibility-promises"
+    ]
+  },
+  {
+    "id": "tf_outputs",
+    "type": "factuel",
+    "categorie": "tf-language",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
+    },
+    "fichiers": [
+      "outputs",
+      "remote-state-data",
+      "output",
+      "syntax",
+      "references"
+    ]
+  },
+  {
+    "id": "tf_sensitive_output",
+    "type": "factuel",
+    "categorie": "securite",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 3,
+      "rr": 0.3333333333333333,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
+    },
+    "fichiers": [
+      "variables",
+      "references",
+      "outputs",
+      "variables",
+      "output"
+    ]
+  },
+  {
+    "id": "tf_dynamic_block",
+    "type": "factuel",
+    "categorie": "tf-language",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
+    },
+    "fichiers": [
+      "dynamic-blocks",
+      "dynamic-blocks",
+      "references",
+      "dynamic-blocks",
+      "splat"
+    ]
+  },
+  {
+    "id": "tf_conditional",
+    "type": "factuel",
+    "categorie": "tf-language",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
+    },
+    "fichiers": [
+      "conditionals",
+      "custom-conditions",
+      "operators",
+      "custom-conditions",
+      "custom-conditions"
+    ]
+  },
+  {
+    "id": "tf_module_source",
+    "type": "factuel",
+    "categorie": "tf-language",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 4,
+      "rr": 0.25,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
+    },
+    "fichiers": [
+      "s3",
+      "kubernetes",
+      "local",
+      "sources",
+      "for_each"
+    ]
+  },
+  {
+    "id": "tf_provider_version",
+    "type": "factuel",
+    "categorie": "tf-language",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
+    },
+    "fichiers": [
+      "terraform",
+      "style",
+      "syntax",
+      "version-constraints",
+      "version-constraints"
+    ]
+  },
+  {
+    "id": "tf_plan_role",
+    "type": "factuel",
+    "categorie": "tf-state",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
+    },
+    "fichiers": [
+      "plan",
+      "show",
+      "modules",
+      "apply",
+      "plan"
+    ]
+  },
+  {
+    "id": "tf_init_role",
+    "type": "factuel",
+    "categorie": "tf-state",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
+    },
+    "fichiers": [
+      "init",
+      "init",
+      "init",
+      "init",
+      "init"
+    ]
+  },
+  {
+    "id": "tf_state_list",
+    "type": "factuel",
+    "categorie": "tf-state",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
+    },
+    "fichiers": [
+      "inspect",
+      "purpose",
+      "move",
+      "plan",
+      "behavior"
+    ]
+  },
+  {
+    "id": "tf_state_show",
+    "type": "factuel",
+    "categorie": "tf-state",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
+    },
+    "fichiers": [
+      "inspect",
+      "plan",
+      "refactor",
+      "move",
+      "behavior"
+    ]
+  },
+  {
+    "id": "tf_import_role",
+    "type": "factuel",
+    "categorie": "tf-state",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
+    },
+    "fichiers": [
+      "import",
+      "import",
+      "import",
+      "refactor",
+      "import"
+    ]
+  },
+  {
+    "id": "tf_taint_deprecated",
+    "type": "factuel",
+    "categorie": "tf-state",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 3,
+      "rr": 0.3333333333333333,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
+    },
+    "fichiers": [
+      "syntax",
+      "terraform-data",
+      "taint",
+      "taint",
+      "move"
+    ]
+  },
+  {
+    "id": "tf_backend_migration",
+    "type": "factuel",
+    "categorie": "tf-state",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 4,
+      "rr": 0.25,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
+    },
+    "fichiers": [
+      "recover",
+      "refactor",
+      "workspaces",
+      "init",
+      "move"
+    ]
+  },
+  {
+    "id": "tf_workspace_usage",
+    "type": "factuel",
+    "categorie": "tf-state",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 5,
+      "rr": 0.2,
+      "hit_contenu": true,
+      "rr_contenu": 1.0
+    },
+    "fichiers": [
+      "terraform",
+      "remote",
+      "s3",
+      "terraform",
+      "workspaces"
+    ]
+  },
+  {
+    "id": "absent_circleci",
+    "type": "absent",
+    "categorie": "k8s-config",
+    "retrieval": {
+      "applicable": false
+    },
+    "fichiers": [
+      "style",
+      "terraform",
+      "style",
+      "resource-metrics-pipeline",
+      "azurerm"
+    ]
+  },
+  {
+    "id": "absent_kafka",
+    "type": "absent",
+    "categorie": "k8s-config",
+    "retrieval": {
+      "applicable": false
+    },
+    "fichiers": [
+      "replicationcontroller",
+      "replicationcontroller",
+      "replicaset",
+      "replicationcontroller",
+      "replicaset"
+    ]
+  },
+  {
+    "id": "absent_puppet",
+    "type": "absent",
+    "categorie": "k8s-config",
+    "retrieval": {
+      "applicable": false
+    },
+    "fichiers": [
+      "create-hostprocess-pod",
+      "replicaset",
+      "replicaset",
+      "static-pod",
+      "configure-bind-mount-options"
+    ]
+  },
+  {
+    "id": "absent_python",
+    "type": "absent",
+    "categorie": "tf-language",
+    "retrieval": {
+      "applicable": false
+    },
+    "fichiers": [
+      "job",
+      "depends_on",
+      "init-containers",
+      "advanced-pod-config",
+      "assign-pod-node"
+    ]
   }
 ]

@@ -356,3 +356,465 @@
   doit_contenir: [["ne contient pas", "ne fournit pas", "pas cette information"]]
   ne_doit_pas_contenir: [".gitlab-ci.yml", "gitlab-runner"]
   note: "Remplace la question Helm : le corpus élargi mentionne Helm dans 3 fichiers, ce n'était plus un vrai cas absent."
+
+# ═════════════════════════════════════════════════════════════════
+# EXTENSION — brique 11
+# Objectif : passer de 39 à ~80 cas pour que les écarts de 2-3 points
+# cessent d'être du bruit. Tous les sujets ci-dessous ont été vérifiés
+# présents dans le corpus avant rédaction.
+# ═════════════════════════════════════════════════════════════════
+
+# ─── DIAGNOSTIC ───────────────────────────────────────────────────
+
+- id: diag_exit127
+  type: diagnostic
+  categorie: k8s-debug
+  question: "Un conteneur se termine avec l'exit code 127. Que signifie ce code ?"
+  fichier_attendu: ["exit-codes"]
+  doit_contenir: [["commande", "command", "introuvable", "not found"]]
+  ne_doit_pas_contenir: []
+
+- id: diag_exit143
+  type: diagnostic
+  categorie: k8s-debug
+  question: "Que signifie l'exit code 143 pour un conteneur ?"
+  fichier_attendu: ["exit-codes"]
+  doit_contenir: [["sigterm"]]
+  ne_doit_pas_contenir: []
+
+- id: diag_evicted
+  type: diagnostic
+  categorie: k8s-debug
+  question: "Un pod est en état Evicted, quelle en est la cause ?"
+  fichier_attendu: ["etats-pod", "node-pressure-eviction"]
+  doit_contenir: [["ressource", "resource", "pression", "pressure", "memoire", "memory"]]
+  ne_doit_pas_contenir: []
+
+- id: diag_configerror
+  type: diagnostic
+  categorie: k8s-debug
+  question: "Que signifie CreateContainerConfigError ?"
+  fichier_attendu: ["etats-pod"]
+  doit_contenir: [["configmap", "secret"]]
+  ne_doit_pas_contenir: []
+
+- id: diag_liveness_crash
+  type: diagnostic
+  categorie: k8s-debug
+  question: "Un liveness probe mal configuré peut-il causer un CrashLoopBackOff ?"
+  fichier_attendu: ["etats-pod", "probes", "pod-lifecycle"]
+  doit_contenir: [["oui", "liveness"]]
+  ne_doit_pas_contenir: []
+
+- id: diag_logs_previous
+  type: piege
+  categorie: k8s-debug
+  question: "Comment lire les logs d'un conteneur qui vient de redémarrer ?"
+  fichier_attendu: ["exit-codes", "etats-pod", "debug-running-pod"]
+  doit_contenir: [["--previous", "previous"]]
+  ne_doit_pas_contenir: []
+  note: "Le flag --previous est la réponse. Erreur classique de la baseline."
+
+- id: diag_node_notready
+  type: diagnostic
+  categorie: k8s-debug
+  question: "Comment diagnostiquer un nœud en état NotReady ?"
+  fichier_attendu: ["monitor-node-health", "pod-condition", "debug-cluster"]
+  doit_contenir: [["node", "noeud", "kubelet"]]
+  ne_doit_pas_contenir: []
+  commandes_interdites: ["delete node"]
+
+- id: diag_oom_vs_eviction
+  type: piege
+  categorie: k8s-debug
+  question: "Quelle est la différence entre un pod OOMKilled et un pod Evicted ?"
+  fichier_attendu: ["etats-pod", "exit-codes", "node-pressure-eviction"]
+  doit_contenir: [["limite", "limit", "noeud", "node"]]
+  ne_doit_pas_contenir: []
+  note: "OOMKilled = le conteneur dépasse SA limite. Evicted = le NŒUD est sous pression."
+
+# ─── SÛRETÉ ───────────────────────────────────────────────────────
+
+- id: surete_rollback
+  type: piege
+  categorie: securite
+  question: "Comment annuler un déploiement Kubernetes qui s'est mal passé ?"
+  fichier_attendu: ["deployment"]
+  doit_contenir: [["rollout", "undo", "revision"]]
+  ne_doit_pas_contenir: []
+  commandes_interdites: ["delete deployment"]
+
+- id: surete_secret_logs
+  type: piege
+  categorie: securite
+  question: "Peut-on afficher le contenu d'un Secret Kubernetes en clair ?"
+  fichier_attendu: ["secret"]
+  doit_contenir: [["base64", "decode", "secret"]]
+  ne_doit_pas_contenir: []
+
+- id: surete_tf_state_edit
+  type: piege
+  categorie: securite
+  question: "Peut-on éditer le fichier state Terraform à la main ?"
+  fichier_attendu: ["purpose", "inspect", "refactor", "sensitive-data"]
+  doit_contenir: []
+  ne_doit_pas_contenir: []
+  commandes_interdites: ["rm -rf", "terraform destroy"]
+
+- id: surete_apply_auto
+  type: piege
+  categorie: securite
+  question: "Comment appliquer une configuration Terraform en production ?"
+  fichier_attendu: ["apply", "plan"]
+  doit_contenir: [["plan"]]
+  ne_doit_pas_contenir: []
+  commandes_interdites: ["-auto-approve"]
+  note: "auto-approve en production est une mauvaise pratique."
+
+# ─── KUBERNETES : charges de travail ──────────────────────────────
+
+- id: k8s_deployment_rollout
+  type: factuel
+  categorie: k8s-config
+  question: "Comment fonctionne une mise à jour progressive d'un Deployment ?"
+  fichier_attendu: ["deployment"]
+  doit_contenir: [["rolling", "progressive", "update"]]
+  ne_doit_pas_contenir: []
+
+- id: k8s_statefulset
+  type: factuel
+  categorie: k8s-config
+  question: "Quelle est la différence entre un Deployment et un StatefulSet ?"
+  fichier_attendu: ["statefulset", "deployment"]
+  doit_contenir: [["statefulset"]]
+  ne_doit_pas_contenir: []
+
+- id: k8s_daemonset
+  type: factuel
+  categorie: k8s-config
+  question: "À quoi sert un DaemonSet ?"
+  fichier_attendu: ["daemonset"]
+  doit_contenir: [["noeud", "node", "chaque"]]
+  ne_doit_pas_contenir: []
+
+- id: k8s_job_backoff
+  type: factuel
+  categorie: k8s-config
+  question: "Comment fonctionne backoffLimit dans un Job Kubernetes ?"
+  fichier_attendu: ["job"]
+  doit_contenir: [["backoff", "retry", "tentative", "echec", "failure"]]
+  ne_doit_pas_contenir: []
+
+- id: k8s_cronjob
+  type: factuel
+  categorie: k8s-config
+  question: "Comment planifier une tâche récurrente dans Kubernetes ?"
+  fichier_attendu: ["cron-jobs", "job"]
+  doit_contenir: [["cronjob", "schedule", "cron"]]
+  ne_doit_pas_contenir: []
+
+- id: k8s_replicaset
+  type: factuel
+  categorie: k8s-config
+  question: "Quel est le rôle d'un ReplicaSet ?"
+  fichier_attendu: ["replicaset", "deployment"]
+  doit_contenir: [["replica"]]
+  ne_doit_pas_contenir: []
+
+# ─── KUBERNETES : ordonnancement ──────────────────────────────────
+
+- id: k8s_taint_toleration
+  type: factuel
+  categorie: k8s-config
+  question: "Comment fonctionnent les taints et tolerations ?"
+  fichier_attendu: ["taint-and-toleration"]
+  doit_contenir: [["taint"], ["toleration"]]
+  ne_doit_pas_contenir: []
+
+- id: k8s_node_affinity
+  type: factuel
+  categorie: k8s-config
+  question: "Quelle est la différence entre nodeSelector et node affinity ?"
+  fichier_attendu: ["assign-pod-node", "assign-pods-nodes"]
+  doit_contenir: [["affinity", "nodeselector"]]
+  ne_doit_pas_contenir: []
+
+- id: k8s_priority_preemption
+  type: factuel
+  categorie: k8s-config
+  question: "Comment fonctionne la préemption de pods dans Kubernetes ?"
+  fichier_attendu: ["pod-priority-preemption"]
+  doit_contenir: [["priorite", "priority", "preempt"]]
+  ne_doit_pas_contenir: []
+
+- id: k8s_eviction_signals
+  type: factuel
+  categorie: k8s-config
+  question: "Quels signaux déclenchent une éviction par pression sur le nœud ?"
+  fichier_attendu: ["node-pressure-eviction"]
+  doit_contenir: [["memory.available", "memoire", "memory", "disk", "disque"]]
+  ne_doit_pas_contenir: []
+
+- id: k8s_qos_eviction_ordre
+  type: factuel
+  categorie: k8s-config
+  question: "Dans quel ordre les pods sont-ils expulsés lors d'une pression mémoire ?"
+  fichier_attendu: ["node-pressure-eviction", "pod-qos", "etats-pod"]
+  doit_contenir: [["besteffort", "best effort", "burstable", "guaranteed"]]
+  ne_doit_pas_contenir: []
+
+# ─── KUBERNETES : configuration ───────────────────────────────────
+
+- id: k8s_env_configmap
+  type: factuel
+  categorie: k8s-config
+  question: "Comment injecter une ConfigMap comme variable d'environnement ?"
+  fichier_attendu: ["configure-pod-configmap", "configmap"]
+  doit_contenir: [["configmap"], ["env", "environnement", "environment"]]
+  ne_doit_pas_contenir: []
+
+- id: k8s_serviceaccount
+  type: factuel
+  categorie: k8s-config
+  question: "À quoi sert un ServiceAccount ?"
+  fichier_attendu: ["configure-service-account", "service-accounts"]
+  doit_contenir: [["serviceaccount", "service account", "identite", "identity"]]
+  ne_doit_pas_contenir: []
+
+- id: k8s_security_context
+  type: factuel
+  categorie: k8s-config
+  question: "Comment exécuter un conteneur avec un utilisateur non-root ?"
+  fichier_attendu: ["security-context"]
+  doit_contenir: [["runasuser", "securitycontext", "non-root", "nonroot"]]
+  ne_doit_pas_contenir: []
+
+- id: k8s_downward_api
+  type: factuel
+  categorie: k8s-config
+  question: "Comment un pod peut-il connaître son propre nom ?"
+  fichier_attendu: ["downward-api", "environment-variable-expose-pod-information"]
+  doit_contenir: [["downward", "fieldref", "metadata.name"]]
+  ne_doit_pas_contenir: []
+
+- id: k8s_volume_emptydir
+  type: factuel
+  categorie: k8s-config
+  question: "À quoi sert un volume emptyDir ?"
+  fichier_attendu: ["configure-volume-storage", "volumes"]
+  doit_contenir: [["emptydir", "temporaire", "temporary", "ephemere"]]
+  ne_doit_pas_contenir: []
+
+- id: k8s_probe_types
+  type: factuel
+  categorie: k8s-config
+  question: "Quels types de sondes existe-t-il pour un probe Kubernetes ?"
+  fichier_attendu: ["probes", "pod-lifecycle", "configure-liveness-readiness-startup-probes"]
+  doit_contenir: [["httpget", "exec", "tcpsocket"]]
+  ne_doit_pas_contenir: []
+
+- id: k8s_prestop
+  type: factuel
+  categorie: k8s-config
+  question: "À quoi sert un hook preStop ?"
+  fichier_attendu: ["pod-lifecycle", "attach-handler-lifecycle-event"]
+  doit_contenir: [["prestop", "arret", "termination", "avant"]]
+  ne_doit_pas_contenir: []
+
+# ─── TERRAFORM : langage ──────────────────────────────────────────
+
+- id: tf_count_foreach
+  type: factuel
+  categorie: tf-language
+  question: "Quelle est la différence entre count et for_each en Terraform ?"
+  fichier_attendu: ["count", "for_each"]
+  doit_contenir: [["count"], ["for_each"]]
+  ne_doit_pas_contenir: []
+
+- id: tf_depends_on
+  type: factuel
+  categorie: tf-language
+  question: "Quand faut-il utiliser depends_on en Terraform ?"
+  fichier_attendu: ["depends_on"]
+  doit_contenir: [["depends_on", "dependance", "dependency"]]
+  ne_doit_pas_contenir: []
+
+- id: tf_lifecycle
+  type: factuel
+  categorie: tf-language
+  question: "Que permet le bloc lifecycle en Terraform ?"
+  fichier_attendu: ["lifecycle"]
+  doit_contenir: [["lifecycle", "create_before_destroy", "prevent_destroy", "ignore_changes"]]
+  ne_doit_pas_contenir: []
+
+- id: tf_prevent_destroy
+  type: factuel
+  categorie: tf-language
+  question: "Comment empêcher la destruction accidentelle d'une ressource Terraform ?"
+  fichier_attendu: ["lifecycle"]
+  doit_contenir: [["prevent_destroy"]]
+  ne_doit_pas_contenir: []
+
+- id: tf_variables_validation
+  type: factuel
+  categorie: tf-language
+  question: "Comment valider la valeur d'une variable Terraform ?"
+  fichier_attendu: ["variables"]
+  doit_contenir: [["validation", "condition"]]
+  ne_doit_pas_contenir: []
+
+- id: tf_locals
+  type: factuel
+  categorie: tf-language
+  question: "À quoi servent les locals en Terraform ?"
+  fichier_attendu: ["locals"]
+  doit_contenir: [["local"]]
+  ne_doit_pas_contenir: []
+
+- id: tf_outputs
+  type: factuel
+  categorie: tf-language
+  question: "Comment exposer une valeur depuis un module Terraform ?"
+  fichier_attendu: ["outputs"]
+  doit_contenir: [["output"]]
+  ne_doit_pas_contenir: []
+
+- id: tf_sensitive_output
+  type: factuel
+  categorie: securite
+  question: "Comment marquer une sortie Terraform comme sensible ?"
+  fichier_attendu: ["outputs", "sensitive-data"]
+  doit_contenir: [["sensitive"]]
+  ne_doit_pas_contenir: []
+
+- id: tf_dynamic_block
+  type: factuel
+  categorie: tf-language
+  question: "À quoi sert un bloc dynamic en Terraform ?"
+  fichier_attendu: ["dynamic-blocks", "expressions"]
+  doit_contenir: [["dynamic"]]
+  ne_doit_pas_contenir: []
+
+- id: tf_conditional
+  type: factuel
+  categorie: tf-language
+  question: "Comment écrire une expression conditionnelle en Terraform ?"
+  fichier_attendu: ["conditionals", "expressions"]
+  doit_contenir: [["condition", "?"]]
+  ne_doit_pas_contenir: []
+
+- id: tf_module_source
+  type: factuel
+  categorie: tf-language
+  question: "Comment référencer un module Terraform distant ?"
+  fichier_attendu: ["sources", "syntax", "modules"]
+  doit_contenir: [["source", "module"]]
+  ne_doit_pas_contenir: []
+
+- id: tf_provider_version
+  type: factuel
+  categorie: tf-language
+  question: "Comment contraindre la version d'un provider Terraform ?"
+  fichier_attendu: ["terraform", "provider-requirements", "version-constraints"]
+  doit_contenir: [["version", "required_providers"]]
+  ne_doit_pas_contenir: []
+
+# ─── TERRAFORM : CLI et state ─────────────────────────────────────
+
+- id: tf_plan_role
+  type: factuel
+  categorie: tf-state
+  question: "À quoi sert la commande terraform plan ?"
+  fichier_attendu: ["plan"]
+  doit_contenir: [["plan"]]
+  ne_doit_pas_contenir: []
+
+- id: tf_init_role
+  type: factuel
+  categorie: tf-state
+  question: "Que fait terraform init ?"
+  fichier_attendu: ["init"]
+  doit_contenir: [["init", "provider", "backend", "module"]]
+  ne_doit_pas_contenir: []
+
+- id: tf_state_list
+  type: factuel
+  categorie: tf-state
+  question: "Comment lister les ressources présentes dans le state Terraform ?"
+  fichier_attendu: ["list", "inspect", "state"]
+  doit_contenir: [["state list", "list"]]
+  ne_doit_pas_contenir: []
+
+- id: tf_state_show
+  type: factuel
+  categorie: tf-state
+  question: "Comment inspecter une ressource précise dans le state Terraform ?"
+  fichier_attendu: ["show", "inspect", "state"]
+  doit_contenir: [["state show", "show"]]
+  ne_doit_pas_contenir: []
+
+- id: tf_import_role
+  type: factuel
+  categorie: tf-state
+  question: "Comment importer une ressource existante dans Terraform ?"
+  fichier_attendu: ["import"]
+  doit_contenir: [["import"]]
+  ne_doit_pas_contenir: []
+
+- id: tf_taint_deprecated
+  type: factuel
+  categorie: tf-state
+  question: "Comment forcer le remplacement d'une ressource Terraform ?"
+  fichier_attendu: ["taint", "plan", "apply"]
+  doit_contenir: [["replace", "taint"]]
+  ne_doit_pas_contenir: []
+
+- id: tf_backend_migration
+  type: factuel
+  categorie: tf-state
+  question: "Comment changer de backend Terraform sans perdre le state ?"
+  fichier_attendu: ["backend", "init", "backends"]
+  doit_contenir: [["init", "migrate", "backend"]]
+  ne_doit_pas_contenir: []
+
+- id: tf_workspace_usage
+  type: factuel
+  categorie: tf-state
+  question: "Comment créer et changer de workspace Terraform ?"
+  fichier_attendu: ["workspace", "workspaces"]
+  doit_contenir: [["workspace"]]
+  ne_doit_pas_contenir: []
+
+# ─── ABSENT ───────────────────────────────────────────────────────
+
+- id: absent_circleci
+  type: absent
+  categorie: k8s-config
+  question: "Comment configurer un pipeline CircleCI avec des workflows ?"
+  fichier_attendu: []
+  doit_contenir: [["ne contient pas", "ne fournit pas", "pas cette information"]]
+  ne_doit_pas_contenir: ["circleci/config.yml", "workflows:"]
+
+- id: absent_kafka
+  type: absent
+  categorie: k8s-config
+  question: "Comment configurer la réplication d'un topic Kafka ?"
+  fichier_attendu: []
+  doit_contenir: [["ne contient pas", "ne fournit pas", "pas cette information"]]
+  ne_doit_pas_contenir: ["replication.factor", "bootstrap.servers"]
+
+- id: absent_puppet
+  type: absent
+  categorie: k8s-config
+  question: "Comment écrire un manifeste Puppet pour installer un paquet ?"
+  fichier_attendu: []
+  doit_contenir: [["ne contient pas", "ne fournit pas", "pas cette information"]]
+  ne_doit_pas_contenir: ["package {", "ensure =>"]
+
+- id: absent_python
+  type: absent
+  categorie: tf-language
+  question: "Comment gérer les dépendances Python avec Poetry ?"
+  fichier_attendu: []
+  doit_contenir: [["ne contient pas", "ne fournit pas", "pas cette information"]]
+  ne_doit_pas_contenir: ["pyproject.toml", "poetry add"]
