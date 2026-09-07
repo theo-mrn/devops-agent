@@ -27,10 +27,14 @@ make index            # construit l'index vectoriel
 
 ```bash
 make ask Q="Que signifie exit code 137 ?"
+make watch                                             # surveille le cluster, gratuit
 make diagnose Q="Un pod crashe en prod, pourquoi ?"   # agent, API requise
 make test                                              # 54 tests, instantanés
 make eval-fast                                         # qualité du retrieval
 ```
+
+> Les commandes passent par `make` ou `uv run devops-agent …` : le paquet est
+> installé dans l environnement virtuel du projet, pas globalement.
 
 ## Architecture
 

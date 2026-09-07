@@ -1,7 +1,7 @@
 # devops-agent — `make` seul affiche cette aide.
 
 .DEFAULT_GOAL := help
-.PHONY: help install ask diagnose fetch index eval eval-fast eval-cat test config clean
+.PHONY: help install ask diagnose watch watch-diagnose fetch index eval eval-fast eval-cat test config clean
 
 help:  ## Affiche cette aide
 	@grep -E '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | \
@@ -17,6 +17,12 @@ ask:  ## Interroge la documentation : make ask Q="ta question"
 
 diagnose:  ## Agent outillé (API requise) : make diagnose Q="..."
 	@uv run devops-agent diagnose "$(Q)"
+
+watch:  ## Surveille le cluster (observation, ne coûte rien)
+	@uv run devops-agent watch
+
+watch-diagnose:  ## Surveille ET diagnostique (coûte de l API)
+	@uv run devops-agent watch --diagnose
 
 # ── Corpus ───────────────────────────────────────────────────────
 
