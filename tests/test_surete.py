@@ -100,6 +100,25 @@ class TestNamespaces:
         assert tools.verifier_commande("get pods --all-namespaces") is not None
 
 
+class TestFormatDeSortie:
+    """Le prompt doit imposer un correctif exploitable, pas un essai libre."""
+
+    def test_les_quatre_sections_sont_demandees(self):
+        from devops_agent.agent import loop
+        for section in ("## Diagnostic", "## Constats",
+                        "## Correctif", "## Vérification"):
+            assert section in loop.SYSTEM
+
+    def test_les_placeholders_sont_interdits(self):
+        """Un correctif avec <pod> n'est pas copiable."""
+        from devops_agent.agent import loop
+        assert "jamais de `<pod>`" in loop.SYSTEM
+
+    def test_la_lecture_seule_est_rappelee(self):
+        from devops_agent.agent import loop
+        assert "n'appliques RIEN" in loop.SYSTEM
+
+
 class TestDispatch:
     """Le routage des appels d'outils."""
 

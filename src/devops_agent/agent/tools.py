@@ -186,6 +186,37 @@ def lister_fichiers(motif: str = "**/*.yaml") -> str:
     return "\n".join(trouves) if trouves else f"aucun fichier pour « {motif} »"
 
 
+def ressources_pod(pod: str, namespace: str = "default") -> str:
+    """Limites configurées et consommation réelle d'un pod, côte à côte.
+
+    Un correctif de dimensionnement mémoire n'a de valeur que s'il part
+    des vraies valeurs. Cet outil évite à l'agent de croiser lui-même
+    trois commandes — et lui évite surtout de proposer « 1Gi » au jugé.
+    """
+    lignes = []
+
+    limites = kubectl(
+        f"get pod {pod} -n {namespace} "
+        "-o jsonpath={.spec.containers[*].resources}"
+    )
+    lignes.append(f"Configuré : {limites.strip() or '(aucune limite définie)'}")
+
+    consommation = kubectl(f"top pod {pod} -n {namespace} --no-headers")
+    if consommation.startswith(("[erreur]", "[refusé]")):
+        lignes.append("Consommation : indisponible (metrics-server absent ?)")
+    else:
+        lignes.append(f"Consommation actuelle : {consommation.strip()}")
+
+    etat = kubectl(
+        f"get pod {pod} -n {namespace} "
+        "-o jsonpath={.status.containerStatuses[*].lastState}"
+    )
+    if etat.strip() and etat.strip() != "{}":
+        lignes.append(f"État précédent : {etat.strip()}")
+
+    return "\n".join(lignes)
+
+
 def rafraichir_apercu() -> str:
     """Reprend un instantané du cluster, en ignorant le cache.
 
@@ -262,6 +293,24 @@ DEFINITIONS = [
         },
     },
     {
+        "name": "ressources_pod",
+        "description": (
+            "Donne côte à côte les limites configurées d'un pod, sa consommation "
+            "actuelle et son état de terminaison précédent. À utiliser avant de "
+            "proposer un redimensionnement mémoire ou CPU : le correctif doit "
+            "partir des valeurs réelles, pas d'une estimation."
+        ),
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "pod": {"type": "string", "description": "Nom exact du pod"},
+                "namespace": {"type": "string", "description": "Namespace du pod"},
+            },
+            "required": ["pod", "namespace"],
+            "additionalProperties": False,
+        },
+    },
+    {
         "name": "rafraichir_apercu",
         "description": (
             "Reprend un instantané de l'état du cluster (nœuds, pods en anomalie, "
@@ -302,6 +351,7 @@ IMPLEMENTATIONS = {
     "lire_fichier": lire_fichier,
     "lister_fichiers": lister_fichiers,
     "rafraichir_apercu": rafraichir_apercu,
+    "ressources_pod": ressources_pod,
 }
 
 
