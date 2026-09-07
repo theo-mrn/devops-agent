@@ -1,0 +1,188 @@
+[
+  {
+    "id": "syntaxe",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "moved",
+      "moved",
+      "attr-as-blocks"
+    ],
+    "score_max": 0.6110101342201233
+  },
+  {
+    "id": "guillemets",
+    "type": "piege",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 2,
+      "rr": 0.5
+    },
+    "fichiers": [
+      "style",
+      "moved",
+      "moved"
+    ],
+    "score_max": 0.46860018372535706
+  },
+  {
+    "id": "exemple_concret",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "moved",
+      "moved",
+      "moved"
+    ],
+    "score_max": 0.6831454038619995
+  },
+  {
+    "id": "comportement_state",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": false,
+      "rang": null,
+      "rr": 0.0
+    },
+    "fichiers": [
+      "purpose",
+      "refactor",
+      "refactor"
+    ],
+    "score_max": 0.6173297762870789
+  },
+  {
+    "id": "version",
+    "type": "absent",
+    "retrieval": {
+      "applicable": false
+    },
+    "fichiers": [
+      "moved",
+      "moved",
+      "terraform"
+    ],
+    "score_max": 0.6109284162521362
+  },
+  {
+    "id": "readiness_probe",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "probes",
+      "probes",
+      "pod-lifecycle"
+    ],
+    "score_max": 0.7360724210739136
+  },
+  {
+    "id": "exit_137",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "determine-reason-pod-failure",
+      "pod-lifecycle",
+      "manage-resources-containers"
+    ],
+    "score_max": 0.6094315052032471
+  },
+  {
+    "id": "oomkilled",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "manage-resources-containers",
+      "pod-qos",
+      "pod-lifecycle"
+    ],
+    "score_max": 0.5064372420310974
+  },
+  {
+    "id": "init_containers",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "init-containers",
+      "init-containers",
+      "init-containers"
+    ],
+    "score_max": 0.6990259885787964
+  },
+  {
+    "id": "tf_state_lock",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "locking",
+      "remote",
+      "backends"
+    ],
+    "score_max": 0.650032103061676
+  },
+  {
+    "id": "hors_sujet",
+    "type": "absent",
+    "retrieval": {
+      "applicable": false
+    },
+    "fichiers": [
+      "debug-running-pod",
+      "user-namespaces",
+      "debug-statefulset"
+    ],
+    "score_max": 0.4889923334121704
+  },
+  {
+    "id": "from_obligatoire",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "moved",
+      "moved",
+      "moved"
+    ],
+    "score_max": 0.6666293144226074
+  }
+]

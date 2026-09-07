@@ -1,0 +1,260 @@
+[
+  {
+    "id": "syntaxe",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "moved",
+      "moved",
+      "attr-as-blocks"
+    ],
+    "score_max": 0.6110101342201233,
+    "generation": {
+      "ok": true,
+      "manquants": [],
+      "interdits": []
+    },
+    "reponse": "La syntaxe exacte du bloc `moved` en Terraform est la suivante :\n\n```hcl\nmoved {\n  from = \"ancien_address\"\n  to   = \"nouvel_address\"\n}\n```\n\nOù :\n- `from` est l'adresse précédente du ressource.\n- `to` est l'adresse nouvelle à laquelle le ressource sera déplacée.\n\nCes deux arguments sont requis."
+  },
+  {
+    "id": "guillemets",
+    "type": "piege",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 2,
+      "rr": 0.5
+    },
+    "fichiers": [
+      "style",
+      "moved",
+      "moved"
+    ],
+    "score_max": 0.46860018372535706,
+    "generation": {
+      "ok": true,
+      "manquants": [],
+      "interdits": []
+    },
+    "reponse": "Non, les arguments `from` et `to` ne prennent pas de guillemets."
+  },
+  {
+    "id": "exemple_concret",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "moved",
+      "moved",
+      "moved"
+    ],
+    "score_max": 0.6831454038619995,
+    "generation": {
+      "ok": true,
+      "manquants": [],
+      "interdits": []
+    },
+    "reponse": "```hcl\nmoved {\n  from = aws_instance.old_instance\n  to   = aws_instance.new_instance\n}\n```"
+  },
+  {
+    "id": "comportement_state",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": false,
+      "rang": null,
+      "rr": 0.0
+    },
+    "fichiers": [
+      "purpose",
+      "refactor",
+      "refactor"
+    ],
+    "score_max": 0.6173297762870789,
+    "generation": {
+      "ok": true,
+      "manquants": [],
+      "interdits": []
+    },
+    "reponse": "Non, Terraform ne détruit pas la ressource quand on utilise `terraform state mv`."
+  },
+  {
+    "id": "version",
+    "type": "absent",
+    "retrieval": {
+      "applicable": false
+    },
+    "fichiers": [
+      "moved",
+      "moved",
+      "terraform"
+    ],
+    "score_max": 0.6109284162521362,
+    "generation": {
+      "ok": true,
+      "manquants": [],
+      "interdits": []
+    },
+    "reponse": "Le contexte fourni ne contient pas cette information."
+  },
+  {
+    "id": "readiness_probe",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "probes",
+      "probes",
+      "pod-lifecycle"
+    ],
+    "score_max": 0.7360724210739136,
+    "generation": {
+      "ok": true,
+      "manquants": [],
+      "interdits": []
+    },
+    "reponse": "Pour configurer un readiness probe dans Kubernetes, vous devez ajouter une section `readinessProbe` à la configuration de votre conteneur dans le fichier YAML de votre Pod. Voici un exemple de configuration :\n\n```yaml\napiVersion: v1\nkind: Pod\nmetadata:\n  name: probe-example\nspec:\n  containers:\n  - name: app\n    image: registry.k8s.io/e2e-test-images/agnhost:2.40\n    ports:\n    - containerPort: 8080\n    readinessProbe:\n      httpGet:\n        path: /ready\n        port: 8080\n      periodSeconds: 5\n      timeoutSeconds: 3\n      failureThreshold: 3\n```\n\nDans cet exemple :\n\n- `httpGet` spécifie que le kubelet devrait effectuer une requête HTTP pour vérifier le statut de santé du conteneur.\n- `path` est le chemin de la requête HTTP.\n- `port` est le port sur lequel le conteneur écoute.\n- `periodSeconds` est la fréquence à laquelle le kubelet effectue la vérification (5 secondes dans cet exemple).\n- `timeoutSeconds` est le délai d'attente avant que la vérification ne soit considérée comme échouée (3 secondes dans cet exemple).\n- `failureThreshold` est le nombre de tentatives échouées avant que le conteneur ne soit considéré comme non prêt (3 tentatives dans cet exemple).\n\nVous pouvez également utiliser d'autres types de probes comme `exec`, `tcpSocket`, ou `grpc` en fonction de vos besoins."
+  },
+  {
+    "id": "exit_137",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "determine-reason-pod-failure",
+      "pod-lifecycle",
+      "manage-resources-containers"
+    ],
+    "score_max": 0.6094315052032471,
+    "generation": {
+      "ok": true,
+      "manquants": [],
+      "interdits": []
+    },
+    "reponse": "Un exit code 137 pour un conteneur Kubernetes signifie que le conteneur a été terminé par le système d'exploitation en raison d'une erreur de dépassement de mémoire (Out of Memory, OOM)."
+  },
+  {
+    "id": "oomkilled",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "manage-resources-containers",
+      "pod-qos",
+      "pod-lifecycle"
+    ],
+    "score_max": 0.5064372420310974,
+    "generation": {
+      "ok": true,
+      "manquants": [],
+      "interdits": []
+    },
+    "reponse": "Un conteneur est OOMKilled (Out Of Memory Killed) lorsqu'il essaie d'utiliser plus de mémoire que la limite définie pour lui. Cela entraîne la terminaison du conteneur par le système d'exploitation.\n\nPour éviter les OOMKilled, vous pouvez :\n\n1. **Augmenter la limite de mémoire** : Si vous avez vérifié que l'application ne présente pas de fuite de mémoire, vous pouvez augmenter la limite de mémoire pour le conteneur.\n\n2. **Optimiser l'application** : Vérifiez si l'application peut être optimisée pour utiliser moins de mémoire.\n\n3. **Utiliser des quotas de ressources** : Configurez des quotas de ressources pour limiter la consommation de ressources par les namespaces.\n\n4. **Surveiller et analyser** : Utilisez des outils de surveillance et d'analyse pour identifier les fuites de mémoire et les problèmes de performance.\n\n5. **Mettre en place des mécanismes de gestion des erreurs** : Assurez-vous que l'application a des mécanismes de gestion des erreurs pour gérer les situations où elle est limitée par la mémoire.\n\n6. **Utiliser des cgroups** : Configurez des cgroups pour contrôler la consommation de ressources par les conteneurs.\n\nEn suivant ces étapes, vous pouvez réduire les risques de OOMKilled et assurer la stabilité des conteneurs."
+  },
+  {
+    "id": "init_containers",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "init-containers",
+      "init-containers",
+      "init-containers"
+    ],
+    "score_max": 0.6990259885787964,
+    "generation": {
+      "ok": true,
+      "manquants": [],
+      "interdits": []
+    },
+    "reponse": "Les init containers servent à exécuter des tâches de préparation avant le démarrage des conteneurs principaux d'une application. Elles offrent plusieurs avantages :\n\n1. **Utilitaires et scripts de configuration** : Les init containers peuvent contenir des outils ou des scripts de configuration qui ne sont pas présents dans l'image de l'application. Cela permet de ne pas avoir besoin de créer une image dérivée pour utiliser des outils comme `sed`, `awk`, `python`, ou `dig`.\n\n2. **Rôles indépendants** : Les rôles de construction et de déploiement de l'image de l'application et du déploiement peuvent travailler indépendamment, sans avoir besoin de construire une seule image.\n\n3. **Accès aux secrets** : Les init containers peuvent avoir une vue différente du système de fichiers par rapport aux conteneurs principaux, ce qui leur permet d'accéder aux secrets que les conteneurs principaux ne peuvent pas accéder.\n\n4. **Délais de démarrage conditionnel** : Les init containers peuvent bloquer ou retarder le démarrage des conteneurs principaux jusqu'à ce que certaines conditions soient remplies. Une fois ces conditions remplies, tous les conteneurs principaux du Pod peuvent démarrer en parallèle.\n\n5. **Sécurité** : Les init containers peuvent exécuter des utilitaires ou des scripts de configuration de manière sécurisée, en limitant ainsi la surface d'attaque de l'image du conteneur principal.\n\nEn résumé, les init containers permettent une préparation et une configuration plus flexible et sécurisée avant le démarrage des applications."
+  },
+  {
+    "id": "tf_state_lock",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "locking",
+      "remote",
+      "backends"
+    ],
+    "score_max": 0.650032103061676,
+    "generation": {
+      "ok": true,
+      "manquants": [],
+      "interdits": []
+    },
+    "reponse": "Terraform verrouille le state automatiquement pour toutes les opérations qui pourraient écrire dans le state. Cela empêche les autres de prendre le verrou et potentiellement endommager votre state."
+  },
+  {
+    "id": "hors_sujet",
+    "type": "absent",
+    "retrieval": {
+      "applicable": false
+    },
+    "fichiers": [
+      "debug-running-pod",
+      "user-namespaces",
+      "debug-statefulset"
+    ],
+    "score_max": 0.4889923334121704,
+    "generation": {
+      "ok": true,
+      "manquants": [],
+      "interdits": []
+    },
+    "reponse": "Le contexte fourni ne contient pas cette information."
+  },
+  {
+    "id": "from_obligatoire",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "moved",
+      "moved",
+      "moved"
+    ],
+    "score_max": 0.6666293144226074,
+    "generation": {
+      "ok": true,
+      "manquants": [],
+      "interdits": []
+    },
+    "reponse": "Oui, les arguments `from` et `to` sont obligatoires dans un bloc `moved`."
+  }
+]

@@ -11,6 +11,7 @@
   type: factuel
   question: "Quelle est la syntaxe exacte du bloc moved en Terraform ?"
   chunk_attendu: ["Specification", "Complete configuration", "Example"]
+  fichier_attendu: ["moved"]
   doit_contenir: ["moved", "from", "to"]
   ne_doit_pas_contenir: []
 
@@ -18,6 +19,7 @@
   type: piege
   question: "Est-ce que les arguments from et to prennent des guillemets ?"
   chunk_attendu: ["Configuration model", "Specification", "Example"]
+  fichier_attendu: ["moved"]
   doit_contenir: [["non", "pas de guillemets", "sans guillemets"]]
   ne_doit_pas_contenir: ["oui, "]
   note: "La baseline répondait faux : from = \"ancien_chemin\". Type attendu = reference."
@@ -26,6 +28,7 @@
   type: factuel
   question: "Donne un exemple concret de bloc moved pour une instance AWS"
   chunk_attendu: ["Example"]
+  fichier_attendu: ["moved"]
   doit_contenir: ["aws_instance"]
   ne_doit_pas_contenir: []
   note: "Teste si le chunk Example remonte — il ne le faisait pas en brique 4."
@@ -34,6 +37,7 @@
   type: factuel
   question: "Est-ce que Terraform détruit la ressource quand on utilise moved ?"
   chunk_attendu: ["Specification"]
+  fichier_attendu: ["moved"]
   doit_contenir: [["non", "ne detruit pas", "ne détruit pas"]]
   ne_doit_pas_contenir: []
 
@@ -45,18 +49,56 @@
   ne_doit_pas_contenir: ["0.12", "0.13", "terraform 1."]
   note: "HALLUCINATION de la baseline : inventait 0.12.13. Vraie réponse = 1.1, absente du corpus."
 
+- id: readiness_probe
+  type: factuel
+  question: "Comment configurer un readiness probe dans Kubernetes ?"
+  fichier_attendu: ["probes", "pod-lifecycle"]
+  doit_contenir: [["readiness", "readinessProbe"]]
+  ne_doit_pas_contenir: []
+  note: "Était 'absent' avant l'élargissement du corpus. Maintenant couvert."
+
+- id: exit_137
+  type: factuel
+  question: "Que signifie un exit code 137 pour un conteneur Kubernetes ?"
+  fichier_attendu: ["determine-reason-pod-failure", "manage-resources-containers", "pod-lifecycle"]
+  doit_contenir: [["137", "sigkill", "oom"]]
+  ne_doit_pas_contenir: []
+  note: "Le cas qui motivait tout le projet."
+
+- id: oomkilled
+  type: factuel
+  question: "Qu'est-ce qu'un conteneur OOMKilled et comment l'éviter ?"
+  fichier_attendu: ["manage-resources-containers", "pod-qos", "determine-reason-pod-failure"]
+  doit_contenir: [["memoire", "memory", "limit"]]
+  ne_doit_pas_contenir: []
+
+- id: init_containers
+  type: factuel
+  question: "À quoi servent les init containers ?"
+  fichier_attendu: ["init-containers"]
+  doit_contenir: [["init"]]
+  ne_doit_pas_contenir: []
+
+- id: tf_state_lock
+  type: factuel
+  question: "Comment Terraform verrouille-t-il le state ?"
+  fichier_attendu: ["locking", "backends"]
+  doit_contenir: [["lock", "verrou"]]
+  ne_doit_pas_contenir: []
+
 - id: hors_sujet
   type: absent
-  question: "Comment configurer un readiness probe dans Kubernetes ?"
+  question: "Comment installer PostgreSQL sur Debian avec apt ?"
   chunk_attendu: []
   doit_contenir: [["ne contient pas", "ne fournit pas", "pas cette information"]]
-  ne_doit_pas_contenir: ["httpGet", "initialDelaySeconds"]
-  note: "Contrôle négatif : rien à voir avec le corpus Terraform."
+  ne_doit_pas_contenir: ["apt-get install", "apt install"]
+  note: "Nouveau contrôle négatif : hors du domaine du corpus."
 
 - id: from_obligatoire
   type: factuel
   question: "Les arguments from et to sont-ils obligatoires dans un bloc moved ?"
   chunk_attendu: ["Configuration model", "Specification"]
+  fichier_attendu: ["moved"]
   doit_contenir: [["required", "obligatoire"]]
   ne_doit_pas_contenir: []
   note: "Le corpus dit 'required' en anglais, le modèle répond en français."
