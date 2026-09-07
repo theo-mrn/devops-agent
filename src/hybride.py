@@ -17,6 +17,7 @@ Usage :
 import sys
 
 import bm25 as bm25_mod
+import expansion
 import rag2
 
 K_RRF = 60
@@ -28,8 +29,11 @@ PROFONDEUR = 20  # nombre de candidats pris à chaque méthode avant fusion
 def chercher(question: str, k: int = 3, poids_dense: float = POIDS_DENSE,
              poids_bm25: float = POIDS_BM25):
     """Fusionne les deux classements par RRF."""
-    dense = rag2.chercher(question, k=PROFONDEUR)
-    lexical = bm25_mod.chercher(question, k=PROFONDEUR)
+    # L'expansion ne s'applique qu'à la RECHERCHE : le prompt envoyé au
+    # modèle garde la question d'origine, sinon elle devient illisible.
+    requete = expansion.etendre(question)
+    dense = rag2.chercher(requete, k=PROFONDEUR)
+    lexical = bm25_mod.chercher(requete, k=PROFONDEUR)
 
     # Clé d'identité d'un chunk : son texte suffit et évite de dépendre
     # d'un index positionnel qui diffère entre les deux méthodes.

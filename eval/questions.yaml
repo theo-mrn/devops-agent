@@ -418,11 +418,12 @@
 - id: diag_node_notready
   type: diagnostic
   categorie: k8s-debug
-  question: "Comment diagnostiquer un nœud en état NotReady ?"
-  fichier_attendu: ["monitor-node-health", "pod-condition", "debug-cluster"]
-  doit_contenir: [["node", "noeud", "kubelet"]]
+  question: "Comment détecter automatiquement les problèmes de santé d'un nœud ?"
+  fichier_attendu: ["monitor-node-health"]
+  doit_contenir: [["node problem detector", "node", "noeud"]]
   ne_doit_pas_contenir: []
   commandes_interdites: ["delete node"]
+  note: "Reformulé : le corpus couvre le Node Problem Detector, pas le diagnostic d un noeud NotReady."
 
 - id: diag_oom_vs_eviction
   type: piege
@@ -509,7 +510,7 @@
   type: factuel
   categorie: k8s-config
   question: "Comment planifier une tâche récurrente dans Kubernetes ?"
-  fichier_attendu: ["cron-jobs", "job"]
+  fichier_attendu: ["cron-jobs"]
   doit_contenir: [["cronjob", "schedule", "cron"]]
   ne_doit_pas_contenir: []
 
@@ -856,7 +857,7 @@
   type: piege
   categorie: docker
   question: "Le disque est plein à cause de Docker, comment libérer de l'espace ?"
-  fichier_attendu: ["docker-diagnostic", "prune"]
+  fichier_attendu: ["pruning", "docker-diagnostic"]
   doit_contenir: [["prune", "system df"]]
   ne_doit_pas_contenir: []
   note: "Ne doit pas proposer prune -a sans réserve : il supprime les images non utilisées."

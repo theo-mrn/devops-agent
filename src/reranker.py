@@ -20,6 +20,7 @@ import threading
 import torch
 from sentence_transformers import CrossEncoder
 
+import expansion
 import rag2
 
 MODELE = "BAAI/bge-reranker-v2-m3"
@@ -54,7 +55,10 @@ def chercher(question: str, k: int = rag2.TOP_K, candidats: int = CANDIDATS):
         return []
 
     modele = charger()
-    paires = [(question, c["texte"]) for c, _ in presel]
+    # Le cross-encoder bénéficie aussi des termes techniques : c'est lui
+    # qui donnait 0,016 sur « tâche récurrente » et 0,779 sur « CronJob ».
+    requete = expansion.etendre(question)
+    paires = [(requete, c["texte"]) for c, _ in presel]
     scores = modele.predict(paires, show_progress_bar=False)
 
     ordre = sorted(range(len(presel)), key=lambda i: scores[i], reverse=True)[:k]

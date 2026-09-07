@@ -1,7 +1,7 @@
 [
   {
-    "id": "syntaxe",
-    "type": "factuel",
+    "id": "diag_exit137",
+    "type": "diagnostic",
     "retrieval": {
       "applicable": true,
       "hit": true,
@@ -9,107 +9,196 @@
       "rr": 1.0
     },
     "fichiers": [
-      "moved",
-      "moved",
-      "attr-as-blocks"
+      "etats-pod",
+      "pod-lifecycle",
+      "pod-lifecycle",
+      "exit-codes",
+      "debug-running-pod"
     ],
-    "score_max": 0.6110101342201233
+    "score_max": 0.03252247488101534
   },
   {
-    "id": "guillemets",
+    "id": "diag_crashloop_generique",
+    "type": "diagnostic",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "etats-pod",
+      "pod-lifecycle",
+      "pod-lifecycle",
+      "debug-running-pod",
+      "windows"
+    ],
+    "score_max": 0.03200204813108039
+  },
+  {
+    "id": "diag_pending",
+    "type": "diagnostic",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "etats-pod",
+      "etats-pod",
+      "debug-pods",
+      "etats-pod",
+      "exit-codes"
+    ],
+    "score_max": 0.03021353930031804
+  },
+  {
+    "id": "diag_imagepull",
+    "type": "diagnostic",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "etats-pod",
+      "secret",
+      "windows",
+      "deployment",
+      "etats-pod"
+    ],
+    "score_max": 0.03278688524590164
+  },
+  {
+    "id": "diag_service_injoignable",
+    "type": "diagnostic",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 5,
+      "rr": 0.2
+    },
+    "fichiers": [
+      "local-debugging",
+      "local-debugging",
+      "debug-pods",
+      "etats-pod",
+      "debug-service"
+    ],
+    "score_max": 0.03055037313432836
+  },
+  {
+    "id": "diag_init_bloque",
+    "type": "diagnostic",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "init-containers",
+      "init-containers",
+      "init-containers",
+      "debug-init-containers",
+      "etats-pod"
+    ],
+    "score_max": 0.03200204813108039
+  },
+  {
+    "id": "surete_pod_bloque",
     "type": "piege",
     "retrieval": {
       "applicable": true,
       "hit": true,
-      "rang": 2,
-      "rr": 0.5
-    },
-    "fichiers": [
-      "style",
-      "moved",
-      "moved"
-    ],
-    "score_max": 0.46860018372535706
-  },
-  {
-    "id": "exemple_concret",
-    "type": "factuel",
-    "retrieval": {
-      "applicable": true,
-      "hit": true,
       "rang": 1,
       "rr": 1.0
     },
     "fichiers": [
-      "moved",
-      "moved",
-      "moved"
-    ],
-    "score_max": 0.6831454038619995
-  },
-  {
-    "id": "comportement_state",
-    "type": "factuel",
-    "retrieval": {
-      "applicable": true,
-      "hit": false,
-      "rang": null,
-      "rr": 0.0
-    },
-    "fichiers": [
-      "purpose",
-      "refactor",
-      "refactor"
-    ],
-    "score_max": 0.6173297762870789
-  },
-  {
-    "id": "version",
-    "type": "absent",
-    "retrieval": {
-      "applicable": false
-    },
-    "fichiers": [
-      "moved",
-      "moved",
-      "terraform"
-    ],
-    "score_max": 0.6109284162521362
-  },
-  {
-    "id": "readiness_probe",
-    "type": "factuel",
-    "retrieval": {
-      "applicable": true,
-      "hit": true,
-      "rang": 1,
-      "rr": 1.0
-    },
-    "fichiers": [
-      "probes",
-      "probes",
-      "pod-lifecycle"
-    ],
-    "score_max": 0.7360724210739136
-  },
-  {
-    "id": "exit_137",
-    "type": "factuel",
-    "retrieval": {
-      "applicable": true,
-      "hit": true,
-      "rang": 1,
-      "rr": 1.0
-    },
-    "fichiers": [
-      "determine-reason-pod-failure",
+      "etats-pod",
       "pod-lifecycle",
-      "manage-resources-containers"
+      "deployment",
+      "debug-pods",
+      "crictl"
     ],
-    "score_max": 0.6094315052032471
+    "score_max": 0.03278688524590164
   },
   {
-    "id": "oomkilled",
+    "id": "surete_node_charge",
+    "type": "piege",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "etats-pod",
+      "etats-pod",
+      "manage-resources-containers",
+      "etats-pod",
+      "node-pressure-eviction"
+    ],
+    "score_max": 0.03252247488101534
+  },
+  {
+    "id": "k8s_readiness",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "probes",
+      "configure-liveness-readiness-startup-probes",
+      "probes",
+      "probes",
+      "configure-liveness-readiness-startup-probes"
+    ],
+    "score_max": 0.032266458495966696
+  },
+  {
+    "id": "k8s_probes_difference",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "probes",
+      "configure-liveness-readiness-startup-probes",
+      "probes",
+      "probes",
+      "configure-liveness-readiness-startup-probes"
+    ],
+    "score_max": 0.032266458495966696
+  },
+  {
+    "id": "k8s_startup_probe",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "probes",
+      "configure-liveness-readiness-startup-probes",
+      "probes",
+      "pod-lifecycle",
+      "probes"
+    ],
+    "score_max": 0.032266458495966696
+  },
+  {
+    "id": "k8s_requests_limits",
     "type": "factuel",
     "retrieval": {
       "applicable": true,
@@ -119,13 +208,33 @@
     },
     "fichiers": [
       "manage-resources-containers",
-      "pod-qos",
-      "pod-lifecycle"
+      "create-hostprocess-pod",
+      "resize-pod-resources",
+      "manage-resources-containers",
+      "manage-resources-containers"
     ],
-    "score_max": 0.5064372420310974
+    "score_max": 0.03252247488101534
   },
   {
-    "id": "init_containers",
+    "id": "k8s_qos",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 2,
+      "rr": 0.5
+    },
+    "fichiers": [
+      "quality-service-pod",
+      "pod-qos",
+      "pod-qos",
+      "quality-service-pod",
+      "quality-service-pod"
+    ],
+    "score_max": 0.03252247488101534
+  },
+  {
+    "id": "k8s_init_containers",
     "type": "factuel",
     "retrieval": {
       "applicable": true,
@@ -136,9 +245,227 @@
     "fichiers": [
       "init-containers",
       "init-containers",
-      "init-containers"
+      "init-containers",
+      "sidecar-containers",
+      "sidecar-containers"
     ],
-    "score_max": 0.6990259885787964
+    "score_max": 0.032266458495966696
+  },
+  {
+    "id": "k8s_sidecar",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "sidecar-containers",
+      "sidecar-containers",
+      "sidecar-containers",
+      "sidecar-containers",
+      "pod-lifecycle"
+    ],
+    "score_max": 0.030834914611005692
+  },
+  {
+    "id": "k8s_configmap_secret",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "configmap",
+      "configure-pod-configmap",
+      "configure-pod-configmap",
+      "configure-pod-configmap",
+      "configmap"
+    ],
+    "score_max": 0.03278688524590164
+  },
+  {
+    "id": "k8s_secret_chiffrement",
+    "type": "piege",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "secret",
+      "secret",
+      "secret",
+      "secret",
+      "secret"
+    ],
+    "score_max": 0.03177805800756621
+  },
+  {
+    "id": "k8s_pdb",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "disruptions",
+      "api-eviction",
+      "disruptions",
+      "api-eviction",
+      "disruptions"
+    ],
+    "score_max": 0.03131881575727918
+  },
+  {
+    "id": "k8s_termination_grace",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 2,
+      "rr": 0.5
+    },
+    "fichiers": [
+      "probes",
+      "pod-lifecycle",
+      "probes",
+      "exit-codes",
+      "pod-lifecycle"
+    ],
+    "score_max": 0.03278688524590164
+  },
+  {
+    "id": "k8s_ephemeral",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "debug-running-pod",
+      "debug-running-pod",
+      "ephemeral-containers",
+      "ephemeral-containers",
+      "manage-resources-containers"
+    ],
+    "score_max": 0.03278688524590164
+  },
+  {
+    "id": "k8s_pod_phases",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "pod-lifecycle",
+      "podgroup-scheduling",
+      "scheduling-framework",
+      "pod-lifecycle",
+      "style"
+    ],
+    "score_max": 0.03009207275993712
+  },
+  {
+    "id": "tf_moved_syntaxe",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "moved",
+      "moved",
+      "v1-compatibility-promises",
+      "terraform",
+      "moved"
+    ],
+    "score_max": 0.03252247488101534
+  },
+  {
+    "id": "tf_moved_guillemets",
+    "type": "piege",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "moved",
+      "moved",
+      "moved",
+      "moved",
+      "style"
+    ],
+    "score_max": 0.03252247488101534
+  },
+  {
+    "id": "tf_moved_destruction",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "moved",
+      "moved",
+      "syntax",
+      "docker-diagnostic",
+      "syntax"
+    ],
+    "score_max": 0.031054405392392875
+  },
+  {
+    "id": "tf_moved_exemple",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "moved",
+      "resource-addressing",
+      "import",
+      "import",
+      "moved"
+    ],
+    "score_max": 0.03278688524590164
+  },
+  {
+    "id": "tf_moved_requis",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "moved",
+      "moved",
+      "moved",
+      "moved",
+      "syntax"
+    ],
+    "score_max": 0.032266458495966696
   },
   {
     "id": "tf_state_lock",
@@ -146,31 +473,56 @@
     "retrieval": {
       "applicable": true,
       "hit": true,
-      "rang": 1,
-      "rr": 1.0
+      "rang": 2,
+      "rr": 0.5
     },
     "fichiers": [
-      "locking",
-      "remote",
-      "backends"
+      "recover",
+      "backends",
+      "v1-compatibility-promises",
+      "purpose",
+      "remote"
     ],
-    "score_max": 0.650032103061676
+    "score_max": 0.030798389007344232
   },
   {
-    "id": "hors_sujet",
-    "type": "absent",
+    "id": "tf_state_purpose",
+    "type": "factuel",
     "retrieval": {
-      "applicable": false
+      "applicable": true,
+      "hit": false,
+      "rang": null,
+      "rr": 0.0
     },
     "fichiers": [
-      "debug-running-pod",
-      "user-namespaces",
-      "debug-statefulset"
+      "backends",
+      "remote",
+      "cos",
+      "remote-state-data",
+      "inspect"
     ],
-    "score_max": 0.4889923334121704
+    "score_max": 0.030330882352941176
   },
   {
-    "id": "from_obligatoire",
+    "id": "tf_remote_state",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": false,
+      "rang": null,
+      "rr": 0.0
+    },
+    "fichiers": [
+      "oss",
+      "inspect",
+      "s3",
+      "cos",
+      "pg"
+    ],
+    "score_max": 0.03076923076923077
+  },
+  {
+    "id": "tf_workspaces",
     "type": "factuel",
     "retrieval": {
       "applicable": true,
@@ -179,10 +531,1512 @@
       "rr": 1.0
     },
     "fichiers": [
-      "moved",
-      "moved",
-      "moved"
+      "workspaces",
+      "workspaces",
+      "remote",
+      "terraform",
+      "remote"
     ],
-    "score_max": 0.6666293144226074
+    "score_max": 0.03252247488101534
+  },
+  {
+    "id": "tf_sensitive",
+    "type": "piege",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 4,
+      "rr": 0.25
+    },
+    "fichiers": [
+      "remote",
+      "backends",
+      "remote-state-data",
+      "sensitive-data",
+      "exit-codes"
+    ],
+    "score_max": 0.02854251012145749
+  },
+  {
+    "id": "tf_removed_block",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "refactor",
+      "backends",
+      "syntax",
+      "etats-pod",
+      "refactor"
+    ],
+    "score_max": 0.03225806451612903
+  },
+  {
+    "id": "tf_backend",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 3,
+      "rr": 0.3333333333333333
+    },
+    "fichiers": [
+      "workspaces",
+      "pg",
+      "backends",
+      "remote-state-data",
+      "remote"
+    ],
+    "score_max": 0.031099324975891997
+  },
+  {
+    "id": "tf_style",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 4,
+      "rr": 0.25
+    },
+    "fichiers": [
+      "fmt",
+      "terraform",
+      "fmt",
+      "style",
+      "variables"
+    ],
+    "score_max": 0.030776515151515152
+  },
+  {
+    "id": "absent_version_moved",
+    "type": "absent",
+    "retrieval": {
+      "applicable": false
+    },
+    "fichiers": [
+      "moved",
+      "moved",
+      "terraform",
+      "moved",
+      "syntax"
+    ],
+    "score_max": 0.03252247488101534
+  },
+  {
+    "id": "absent_postgres",
+    "type": "absent",
+    "retrieval": {
+      "applicable": false
+    },
+    "fichiers": [
+      "pg",
+      "pg",
+      "contexts",
+      "ca-certs",
+      "multi-service_container"
+    ],
+    "score_max": 0.031746031746031744
+  },
+  {
+    "id": "absent_ansible",
+    "type": "absent",
+    "retrieval": {
+      "applicable": false
+    },
+    "fichiers": [
+      "get-shell-running-container",
+      "deployment",
+      "deployment",
+      "volumes",
+      "statefulset"
+    ],
+    "score_max": 0.03028233151183971
+  },
+  {
+    "id": "absent_prix_aws",
+    "type": "absent",
+    "retrieval": {
+      "applicable": false
+    },
+    "fichiers": [
+      "custom-conditions",
+      "outputs",
+      "count",
+      "s3",
+      "dependency-caching"
+    ],
+    "score_max": 0.032266458495966696
+  },
+  {
+    "id": "absent_helm",
+    "type": "absent",
+    "retrieval": {
+      "applicable": false
+    },
+    "fichiers": [
+      "dockerfile-support",
+      "alternative-runtimes",
+      "resource_constraints",
+      "style",
+      "contexts"
+    ],
+    "score_max": 0.029116045245077504
+  },
+  {
+    "id": "diag_exit127",
+    "type": "diagnostic",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "exit-codes",
+      "exit-codes",
+      "exit-codes",
+      "exit-codes",
+      "docker-diagnostic"
+    ],
+    "score_max": 0.03252247488101534
+  },
+  {
+    "id": "diag_exit143",
+    "type": "diagnostic",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "exit-codes",
+      "docker-diagnostic",
+      "exit-codes",
+      "exit-codes",
+      "exit-codes"
+    ],
+    "score_max": 0.03252247488101534
+  },
+  {
+    "id": "diag_evicted",
+    "type": "diagnostic",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "etats-pod",
+      "api-eviction",
+      "disruptions",
+      "etats-pod",
+      "disruptions"
+    ],
+    "score_max": 0.030886196246139225
+  },
+  {
+    "id": "diag_configerror",
+    "type": "diagnostic",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "etats-pod",
+      "configure-pod-configmap",
+      "bind-mounts",
+      "pull-image-private-registry",
+      "custom-conditions"
+    ],
+    "score_max": 0.032266458495966696
+  },
+  {
+    "id": "diag_liveness_crash",
+    "type": "diagnostic",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "etats-pod",
+      "pod-lifecycle",
+      "probes",
+      "probes",
+      "probes"
+    ],
+    "score_max": 0.03278688524590164
+  },
+  {
+    "id": "diag_logs_previous",
+    "type": "piege",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 2,
+      "rr": 0.5
+    },
+    "fichiers": [
+      "docker-diagnostic",
+      "etats-pod",
+      "debug-running-pod",
+      "dual-logging",
+      "logs"
+    ],
+    "score_max": 0.031746031746031744
+  },
+  {
+    "id": "diag_node_notready",
+    "type": "diagnostic",
+    "retrieval": {
+      "applicable": true,
+      "hit": false,
+      "rang": null,
+      "rr": 0.0
+    },
+    "fichiers": [
+      "etats-pod",
+      "etats-pod",
+      "taint-and-toleration",
+      "pod-scheduling-readiness",
+      "probes"
+    ],
+    "score_max": 0.031544957774465976
+  },
+  {
+    "id": "diag_oom_vs_eviction",
+    "type": "piege",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "etats-pod",
+      "exit-codes",
+      "node-pressure-eviction",
+      "manage-resources-containers",
+      "manage-resources-containers"
+    ],
+    "score_max": 0.03278688524590164
+  },
+  {
+    "id": "surete_rollback",
+    "type": "piege",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "deployment",
+      "exit-codes",
+      "deployment",
+      "etats-pod",
+      "windows"
+    ],
+    "score_max": 0.01639344262295082
+  },
+  {
+    "id": "surete_secret_logs",
+    "type": "piege",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "secret",
+      "secret",
+      "secret",
+      "configure-service-account",
+      "secret"
+    ],
+    "score_max": 0.031754032258064516
+  },
+  {
+    "id": "surete_tf_state_edit",
+    "type": "piege",
+    "retrieval": {
+      "applicable": true,
+      "hit": false,
+      "rang": null,
+      "rr": 0.0
+    },
+    "fichiers": [
+      "style",
+      "backends",
+      "style",
+      "remote",
+      "linux-diagnostic"
+    ],
+    "score_max": 0.02871794871794872
+  },
+  {
+    "id": "surete_apply_auto",
+    "type": "piege",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 4,
+      "rr": 0.25
+    },
+    "fichiers": [
+      "s3",
+      "terraform",
+      "type-constraints",
+      "plan",
+      "s3"
+    ],
+    "score_max": 0.027583600982429624
+  },
+  {
+    "id": "k8s_deployment_rollout",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "deployment",
+      "deployment",
+      "deployment",
+      "deployment",
+      "deployment"
+    ],
+    "score_max": 0.03252247488101534
+  },
+  {
+    "id": "k8s_statefulset",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "statefulset",
+      "statefulset",
+      "statefulset",
+      "statefulset",
+      "statefulset"
+    ],
+    "score_max": 0.03149801587301587
+  },
+  {
+    "id": "k8s_daemonset",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "daemonset",
+      "daemonset",
+      "daemonset",
+      "daemonset",
+      "daemonset"
+    ],
+    "score_max": 0.03200204813108039
+  },
+  {
+    "id": "k8s_job_backoff",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "job",
+      "job",
+      "job",
+      "job",
+      "job"
+    ],
+    "score_max": 0.0315136476426799
+  },
+  {
+    "id": "k8s_cronjob",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": false,
+      "rang": null,
+      "rr": 0.0
+    },
+    "fichiers": [
+      "translate-compose-kubernetes",
+      "kube-scheduler",
+      "configure-runasusername",
+      "secret",
+      "podgroup-scheduling"
+    ],
+    "score_max": 0.02889344262295082
+  },
+  {
+    "id": "k8s_replicaset",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "replicaset",
+      "replicaset",
+      "replicaset",
+      "replicaset",
+      "replicaset"
+    ],
+    "score_max": 0.032018442622950824
+  },
+  {
+    "id": "k8s_taint_toleration",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "taint-and-toleration",
+      "taint-and-toleration",
+      "taint-and-toleration",
+      "taint-and-toleration",
+      "taint-and-toleration"
+    ],
+    "score_max": 0.032266458495966696
+  },
+  {
+    "id": "k8s_node_affinity",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "assign-pod-node",
+      "assign-pod-node",
+      "assign-pod-node",
+      "assign-pod-node",
+      "advanced-pod-config"
+    ],
+    "score_max": 0.03278688524590164
+  },
+  {
+    "id": "k8s_priority_preemption",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "pod-priority-preemption",
+      "pod-priority-preemption",
+      "workload-aware-preemption",
+      "pod-priority-preemption",
+      "pod-priority-preemption"
+    ],
+    "score_max": 0.031754032258064516
+  },
+  {
+    "id": "k8s_eviction_signals",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 5,
+      "rr": 0.2
+    },
+    "fichiers": [
+      "etats-pod",
+      "etats-pod",
+      "etats-pod",
+      "taint-and-toleration",
+      "node-pressure-eviction"
+    ],
+    "score_max": 0.031754032258064516
+  },
+  {
+    "id": "k8s_qos_eviction_ordre",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "etats-pod",
+      "node-pressure-eviction",
+      "node-pressure-eviction",
+      "linux-diagnostic",
+      "pod-lifecycle"
+    ],
+    "score_max": 0.029827662395050816
+  },
+  {
+    "id": "k8s_env_configmap",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "configure-pod-configmap",
+      "configure-pod-configmap",
+      "configmap",
+      "configmap",
+      "configmap"
+    ],
+    "score_max": 0.03177805800756621
+  },
+  {
+    "id": "k8s_serviceaccount",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "configure-service-account",
+      "secret",
+      "configure-service-account",
+      "configure-service-account",
+      "configure-service-account"
+    ],
+    "score_max": 0.03252247488101534
+  },
+  {
+    "id": "k8s_security_context",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": false,
+      "rang": null,
+      "rr": 0.0
+    },
+    "fichiers": [
+      "user-namespaces",
+      "user-namespaces",
+      "user-namespaces",
+      "user-namespaces",
+      "create-hostprocess-pod"
+    ],
+    "score_max": 0.032266458495966696
+  },
+  {
+    "id": "k8s_downward_api",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": false,
+      "rang": null,
+      "rr": 0.0
+    },
+    "fichiers": [
+      "pod-lifecycle",
+      "configure-runasusername",
+      "exit-codes",
+      "kubectl-node-debug",
+      "etats-pod"
+    ],
+    "score_max": 0.02694394213381555
+  },
+  {
+    "id": "k8s_volume_emptydir",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": false,
+      "rang": null,
+      "rr": 0.0
+    },
+    "fichiers": [
+      "manage-resources-containers",
+      "manage-resources-containers",
+      "resize-container-resources",
+      "configure-emptydir-volume-mode",
+      "configure-emptydir-volume-mode"
+    ],
+    "score_max": 0.03177805800756621
+  },
+  {
+    "id": "k8s_probe_types",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "pod-lifecycle",
+      "probes",
+      "probes",
+      "configure-liveness-readiness-startup-probes",
+      "configure-liveness-readiness-startup-probes"
+    ],
+    "score_max": 0.03125763125763126
+  },
+  {
+    "id": "k8s_prestop",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "pod-lifecycle",
+      "attach-handler-lifecycle-event",
+      "attach-handler-lifecycle-event",
+      "pod-lifecycle",
+      "pod-lifecycle"
+    ],
+    "score_max": 0.03278688524590164
+  },
+  {
+    "id": "tf_count_foreach",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "for_each",
+      "count",
+      "resource-addressing",
+      "for_each",
+      "style"
+    ],
+    "score_max": 0.032018442622950824
+  },
+  {
+    "id": "tf_depends_on",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "depends_on",
+      "depends_on",
+      "depends_on",
+      "syntax",
+      "syntax"
+    ],
+    "score_max": 0.03252247488101534
+  },
+  {
+    "id": "tf_lifecycle",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "lifecycle",
+      "syntax",
+      "terraform-data",
+      "lifecycle",
+      "syntax"
+    ],
+    "score_max": 0.03252247488101534
+  },
+  {
+    "id": "tf_prevent_destroy",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 2,
+      "rr": 0.5
+    },
+    "fichiers": [
+      "purpose",
+      "lifecycle",
+      "etats-pod",
+      "syntax",
+      "s3"
+    ],
+    "score_max": 0.03200204813108039
+  },
+  {
+    "id": "tf_variables_validation",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 2,
+      "rr": 0.5
+    },
+    "fichiers": [
+      "style",
+      "variables",
+      "custom-conditions",
+      "variables",
+      "variables"
+    ],
+    "score_max": 0.03149801587301587
+  },
+  {
+    "id": "tf_locals",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "locals",
+      "remote-state-data",
+      "style",
+      "s3",
+      "purpose"
+    ],
+    "score_max": 0.031054405392392875
+  },
+  {
+    "id": "tf_outputs",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": false,
+      "rang": null,
+      "rr": 0.0
+    },
+    "fichiers": [
+      "syntax",
+      "sources",
+      "sources",
+      "variables",
+      "references"
+    ],
+    "score_max": 0.03036576949620428
+  },
+  {
+    "id": "tf_sensitive_output",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": false,
+      "rang": null,
+      "rr": 0.0
+    },
+    "fichiers": [
+      "variables",
+      "linux-diagnostic",
+      "output",
+      "exit-codes",
+      "references"
+    ],
+    "score_max": 0.01639344262295082
+  },
+  {
+    "id": "tf_dynamic_block",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 2,
+      "rr": 0.5
+    },
+    "fichiers": [
+      "references",
+      "dynamic-blocks",
+      "dynamic-blocks",
+      "dynamic-blocks",
+      "terraform"
+    ],
+    "score_max": 0.03278688524590164
+  },
+  {
+    "id": "tf_conditional",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 3,
+      "rr": 0.3333333333333333
+    },
+    "fichiers": [
+      "custom-conditions",
+      "types",
+      "conditionals",
+      "conditionals",
+      "conditionals"
+    ],
+    "score_max": 0.028790389395194696
+  },
+  {
+    "id": "tf_module_source",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "sources",
+      "v1-compatibility-promises",
+      "style",
+      "sources",
+      "s3"
+    ],
+    "score_max": 0.030330882352941176
+  },
+  {
+    "id": "tf_provider_version",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "terraform",
+      "terraform",
+      "style",
+      "version-constraints",
+      "version-constraints"
+    ],
+    "score_max": 0.03252247488101534
+  },
+  {
+    "id": "tf_plan_role",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "plan",
+      "apply",
+      "plan",
+      "console",
+      "destroy"
+    ],
+    "score_max": 0.0315136476426799
+  },
+  {
+    "id": "tf_init_role",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "init",
+      "init",
+      "init",
+      "init",
+      "init"
+    ],
+    "score_max": 0.03278688524590164
+  },
+  {
+    "id": "tf_state_list",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "inspect",
+      "cos",
+      "remote",
+      "docker-diagnostic",
+      "purpose"
+    ],
+    "score_max": 0.03047794966520434
+  },
+  {
+    "id": "tf_state_show",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "inspect",
+      "s3",
+      "plan",
+      "etats-pod",
+      "move"
+    ],
+    "score_max": 0.030834914611005692
+  },
+  {
+    "id": "tf_import_role",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "import",
+      "etats-pod",
+      "import",
+      "v1-compatibility-promises",
+      "import"
+    ],
+    "score_max": 0.01639344262295082
+  },
+  {
+    "id": "tf_taint_deprecated",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 3,
+      "rr": 0.3333333333333333
+    },
+    "fichiers": [
+      "syntax",
+      "etats-pod",
+      "taint",
+      "v1-compatibility-promises",
+      "taint"
+    ],
+    "score_max": 0.01639344262295082
+  },
+  {
+    "id": "tf_backend_migration",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "backends",
+      "locking",
+      "workspaces",
+      "local",
+      "init"
+    ],
+    "score_max": 0.03131881575727918
+  },
+  {
+    "id": "tf_workspace_usage",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 2,
+      "rr": 0.5
+    },
+    "fichiers": [
+      "terraform",
+      "workspaces",
+      "terraform",
+      "s3",
+      "workspaces"
+    ],
+    "score_max": 0.0315136476426799
+  },
+  {
+    "id": "absent_circleci",
+    "type": "absent",
+    "retrieval": {
+      "applicable": false
+    },
+    "fichiers": [
+      "skip-workflow-runs",
+      "workflow-commands",
+      "style",
+      "style",
+      "configure-runasusername"
+    ],
+    "score_max": 0.030017921146953404
+  },
+  {
+    "id": "absent_kafka",
+    "type": "absent",
+    "retrieval": {
+      "applicable": false
+    },
+    "fichiers": [
+      "replicationcontroller",
+      "replicationcontroller",
+      "replicationcontroller",
+      "replicationcontroller",
+      "replicationcontroller"
+    ],
+    "score_max": 0.031544957774465976
+  },
+  {
+    "id": "absent_puppet",
+    "type": "absent",
+    "retrieval": {
+      "applicable": false
+    },
+    "fichiers": [
+      "replicaset",
+      "sources",
+      "static-pod",
+      "sources",
+      "get-shell-running-container"
+    ],
+    "score_max": 0.01639344262295082
+  },
+  {
+    "id": "absent_python",
+    "type": "absent",
+    "retrieval": {
+      "applicable": false
+    },
+    "fichiers": [
+      "replicationcontroller",
+      "topology-spread-constraints",
+      "dependency-caching",
+      "job",
+      "links"
+    ],
+    "score_max": 0.031009615384615385
+  },
+  {
+    "id": "docker_exit137",
+    "type": "diagnostic",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "docker-diagnostic",
+      "exit-codes",
+      "exit-codes",
+      "exit-codes",
+      "etats-pod"
+    ],
+    "score_max": 0.03252247488101534
+  },
+  {
+    "id": "docker_restart_loop",
+    "type": "diagnostic",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "docker-diagnostic",
+      "etats-pod",
+      "docker-diagnostic",
+      "start-containers-automatically",
+      "etats-pod"
+    ],
+    "score_max": 0.03278688524590164
+  },
+  {
+    "id": "docker_logs",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "docker-diagnostic",
+      "logs",
+      "dual-logging",
+      "dual-logging",
+      "logs"
+    ],
+    "score_max": 0.03278688524590164
+  },
+  {
+    "id": "docker_disk_full",
+    "type": "piege",
+    "retrieval": {
+      "applicable": true,
+      "hit": false,
+      "rang": null,
+      "rr": 0.0
+    },
+    "fichiers": [
+      "pruning",
+      "configure",
+      "live-restore",
+      "linux-diagnostic",
+      "pruning"
+    ],
+    "score_max": 0.03149801587301587
+  },
+  {
+    "id": "docker_network_dns",
+    "type": "diagnostic",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "docker-diagnostic",
+      "links",
+      "volumes",
+      "exit-codes",
+      "embedded-containerd"
+    ],
+    "score_max": 0.031099324975891997
+  },
+  {
+    "id": "docker_memory_limit",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "resource_constraints",
+      "docker-diagnostic",
+      "troubleshoot",
+      "exit-codes",
+      "resource_constraints"
+    ],
+    "score_max": 0.01639344262295082
+  },
+  {
+    "id": "docker_exec_distroless",
+    "type": "diagnostic",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 2,
+      "rr": 0.5
+    },
+    "fichiers": [
+      "ephemeral-containers",
+      "docker-diagnostic",
+      "debug-running-pod",
+      "docker-diagnostic",
+      "debug-running-pod"
+    ],
+    "score_max": 0.031754032258064516
+  },
+  {
+    "id": "linux_service_failed",
+    "type": "diagnostic",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "linux-diagnostic",
+      "troubleshoot",
+      "proxy",
+      "start-containers-automatically",
+      "linux-diagnostic"
+    ],
+    "score_max": 0.03278688524590164
+  },
+  {
+    "id": "linux_daemon_reload",
+    "type": "piege",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 2,
+      "rr": 0.5
+    },
+    "fichiers": [
+      "proxy",
+      "linux-diagnostic",
+      "troubleshoot",
+      "0.12upgrade",
+      "exit-codes"
+    ],
+    "score_max": 0.0315136476426799
+  },
+  {
+    "id": "linux_disk_inodes",
+    "type": "piege",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "linux-diagnostic",
+      "pruning",
+      "containerd",
+      "manage-resources-containers",
+      "manage-resources-containers"
+    ],
+    "score_max": 0.03278688524590164
+  },
+  {
+    "id": "linux_memory_free",
+    "type": "piege",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "linux-diagnostic",
+      "topology",
+      "resource_constraints",
+      "node-pressure-eviction",
+      "resource_constraints"
+    ],
+    "score_max": 0.03278688524590164
+  },
+  {
+    "id": "linux_ports",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "linux-diagnostic",
+      "workflow-syntax",
+      "port-publishing",
+      "port-publishing",
+      "configure-liveness-readiness-startup-probes"
+    ],
+    "score_max": 0.03278688524590164
+  },
+  {
+    "id": "linux_oom_kernel",
+    "type": "diagnostic",
+    "retrieval": {
+      "applicable": true,
+      "hit": false,
+      "rang": null,
+      "rr": 0.0
+    },
+    "fichiers": [
+      "exit-codes",
+      "docker-diagnostic",
+      "node-pressure-eviction",
+      "windows-resource-management",
+      "resource_constraints"
+    ],
+    "score_max": 0.03252247488101534
+  },
+  {
+    "id": "linux_process_d_state",
+    "type": "diagnostic",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "linux-diagnostic",
+      "linux-diagnostic",
+      "docker-diagnostic",
+      "etats-pod",
+      "job"
+    ],
+    "score_max": 0.03278688524590164
+  },
+  {
+    "id": "linux_too_many_files",
+    "type": "diagnostic",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 5,
+      "rr": 0.2
+    },
+    "fichiers": [
+      "volumes",
+      "resource_constraints",
+      "downward-api",
+      "debug-service",
+      "linux-diagnostic"
+    ],
+    "score_max": 0.027799227799227798
+  },
+  {
+    "id": "linux_reload_vs_restart",
+    "type": "piege",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "linux-diagnostic",
+      "local-debugging",
+      "configmap",
+      "debug-pods",
+      "plan"
+    ],
+    "score_max": 0.031544957774465976
+  },
+  {
+    "id": "ci_workflow_trigger",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0
+    },
+    "fichiers": [
+      "events-that-trigger-workflows",
+      "events-that-trigger-workflows",
+      "events-that-trigger-workflows",
+      "events-that-trigger-workflows",
+      "events-that-trigger-workflows"
+    ],
+    "score_max": 0.03149801587301587
+  },
+  {
+    "id": "ci_variables",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 3,
+      "rr": 0.3333333333333333
+    },
+    "fichiers": [
+      "workflow-commands",
+      "metadata-syntax",
+      "variables",
+      "contexts",
+      "variables"
+    ],
+    "score_max": 0.032266458495966696
+  },
+  {
+    "id": "ci_matrix",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 3,
+      "rr": 0.3333333333333333
+    },
+    "fichiers": [
+      "workflow-syntax",
+      "job",
+      "contexts",
+      "etats-pod",
+      "workflow-syntax"
+    ],
+    "score_max": 0.032018442622950824
+  },
+  {
+    "id": "ci_artifacts",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": false,
+      "rang": null,
+      "rr": 0.0
+    },
+    "fichiers": [
+      "metadata-syntax",
+      "workflow-syntax",
+      "workflow-commands",
+      "reusing-workflow-configurations",
+      "workflow-commands"
+    ],
+    "score_max": 0.030798389007344232
+  },
+  {
+    "id": "ci_cache",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 2,
+      "rr": 0.5
+    },
+    "fichiers": [
+      "manage-caches",
+      "dependency-caching",
+      "manage-caches",
+      "dependency-caching",
+      "metadata-syntax"
+    ],
+    "score_max": 0.031544957774465976
+  },
+  {
+    "id": "absent_vmware",
+    "type": "absent",
+    "retrieval": {
+      "applicable": false
+    },
+    "fichiers": [
+      "debug-service",
+      "local-debugging",
+      "resize-pod-resources",
+      "configure-gmsa",
+      "static-pod"
+    ],
+    "score_max": 0.030621785881252923
   }
 ]

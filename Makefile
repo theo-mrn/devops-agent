@@ -29,10 +29,10 @@ embed:  ## Matrice de similarité entre phrases témoins
 	@uv run python src/embeddings.py
 
 eval:  ## Score complet, 115 cas (~30 min) - a reserver aux fins de chantier
-	@uv run python src/evaluer2.py 2>/dev/null
+	@uv run python src/evaluer3.py 2>/dev/null
 
 eval-fast:  ## Retrieval seul, 115 cas (~3 min) - suffit pour 80% des decisions
-	@uv run python src/evaluer2.py --retrieval-seul 2>/dev/null
+	@uv run python src/evaluer3.py --retrieval-seul 2>/dev/null
 
 eval-cat:  ## Une seule categorie (~2 min) : make eval-cat C=docker
 	@uv run python src/evaluer3.py --categorie $(C) 2>/dev/null
