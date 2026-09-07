@@ -110,9 +110,10 @@ class TestFormatDeSortie:
             assert section in loop.SYSTEM
 
     def test_les_placeholders_sont_interdits(self):
-        """Un correctif avec <pod> n'est pas copiable."""
+        """Un correctif avec <pod> n'est pas copiable tel quel."""
         from devops_agent.agent import loop
-        assert "jamais de `<pod>`" in loop.SYSTEM
+        assert "<pod>" in loop.SYSTEM      # la consigne les cite pour les bannir
+        assert "valeurs réelles" in loop.SYSTEM
 
     def test_la_lecture_seule_est_rappelee(self):
         from devops_agent.agent import loop
