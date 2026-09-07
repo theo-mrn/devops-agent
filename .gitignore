@@ -1,0 +1,20 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.python-version
+
+# Données lourdes : jamais dans git
+data/raw/
+data/index/
+*.gguf
+*.safetensors
+
+# Modèles HuggingFace mis en cache
+.cache/
+
+# Secrets
+.env
+
+# macOS
+.DS_Store
