@@ -5,12 +5,18 @@ import time
 import pytest
 
 from devops_agent.agent.autonome import Autonome, _question
+from devops_agent.agent.correlation import Groupe
 from devops_agent.agent.watcher import Evenement
 
 
 def evenement(etat="OOMKilled", pod="web-1", ns="prod", n=3):
     return Evenement(pod=pod, namespace=ns, etat=etat,
                      gravite="critique", redemarrages=n)
+
+
+def groupe(*evenements):
+    """`traiter()` reçoit un groupe depuis l'ajout de la corrélation."""
+    return Groupe(evenements=list(evenements) or [evenement()])
 
 
 class TestQuestions:
@@ -74,7 +80,7 @@ class TestBudget:
     def test_budget_epuise_ne_lance_pas_de_diagnostic(self, capsys):
         a = Autonome(budget_jour=0.01)
         a.depenses = [(time.time(), 1.0)]
-        a.traiter(evenement())      # ne doit pas appeler l'API
+        a.traiter(groupe())         # ne doit pas appeler l'API
         sortie = capsys.readouterr().out
         assert "budget quotidien" in sortie
         assert a.diagnostics == 0
@@ -83,7 +89,7 @@ class TestBudget:
 class TestSimulation:
     def test_dry_run_ne_depense_rien(self, capsys):
         a = Autonome(dry_run=True)
-        a.traiter(evenement())
+        a.traiter(groupe())
         assert "simulation" in capsys.readouterr().out
         assert a.diagnostics == 0
         assert a.depenses == []
