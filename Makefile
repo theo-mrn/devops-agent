@@ -1,7 +1,7 @@
 # Commandes du projet. `make` seul affiche cette aide.
 
 .DEFAULT_GOAL := help
-.PHONY: help baseline rag ask chunks embed eval eval-fast ablation methodes corpus index check
+.PHONY: help baseline rag ask chunks embed eval eval-fast eval-cat ablation methodes corpus index check
 
 help:  ## Affiche cette aide
 	@grep -E '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | \
@@ -28,11 +28,14 @@ chunks:  ## Compare découpage naïf et structurel
 embed:  ## Matrice de similarité entre phrases témoins
 	@uv run python src/embeddings.py
 
-eval:  ## Score du pipeline sur le corpus (93 cas, ~34 min)
+eval:  ## Score complet, 115 cas (~30 min) - a reserver aux fins de chantier
 	@uv run python src/evaluer2.py 2>/dev/null
 
-eval-fast:  ## Score du retrieval seul, sans LLM (~3 min)
+eval-fast:  ## Retrieval seul, 115 cas (~3 min) - suffit pour 80% des decisions
 	@uv run python src/evaluer2.py --retrieval-seul 2>/dev/null
+
+eval-cat:  ## Une seule categorie (~2 min) : make eval-cat C=docker
+	@uv run python src/evaluer3.py --categorie $(C) 2>/dev/null
 
 ablation:  ## Compare les stratégies de chunking
 	@uv run python src/ablation.py 2>/dev/null

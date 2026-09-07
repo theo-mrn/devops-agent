@@ -15,6 +15,7 @@ Usage :
 """
 
 import sys
+import threading
 
 import torch
 from sentence_transformers import CrossEncoder
@@ -35,12 +36,14 @@ CANDIDATS = 20  # nombre de chunks à faire réordonner
 # sauver 2. C'est le prompt, pas un seuil, qui gère le hors-domaine.
 
 _cache = {}
+_verrou = threading.Lock()
 
 
 def charger() -> CrossEncoder:
-    if "modele" not in _cache:
-        device = "mps" if torch.backends.mps.is_available() else "cpu"
-        _cache["modele"] = CrossEncoder(MODELE, device=device, max_length=512)
+    with _verrou:
+        if "modele" not in _cache:
+            device = "mps" if torch.backends.mps.is_available() else "cpu"
+            _cache["modele"] = CrossEncoder(MODELE, device=device, max_length=512)
     return _cache["modele"]
 
 

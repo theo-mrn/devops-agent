@@ -17,9 +17,11 @@ Usage :
     uv run python src/evaluer3.py --categorie k8s-debug
 """
 
+import concurrent.futures as cf
 import json
 import re
 import sys
+import threading
 import time
 import unicodedata
 from collections import defaultdict
@@ -29,6 +31,18 @@ import ollama
 import yaml
 
 import rag2
+
+# Doit rester <= OLLAMA_NUM_PARALLEL (défini dans le plist du service).
+# Chaque requête parallèle alloue son propre cache KV : au-delà de 3, la
+# mémoire devient le facteur limitant sur 16 Go.
+PARALLELISME = 3
+
+# Metal (MPS) ne supporte PAS les appels concurrents : deux threads qui
+# encodent en même temps font échouer le pilote avec
+#   « A command encoder is already encoding to this command buffer ».
+# Tout ce qui touche au GPU (embeddings, reranker) passe par ce verrou ;
+# seuls les appels Ollama — qui dominent le temps — sont parallélisés.
+_verrou_gpu = threading.Lock()
 
 CAS = Path("eval/questions.yaml")
 SORTIE = Path("eval/resultats-pro.json")
@@ -132,23 +146,19 @@ def main() -> None:
     if filtre:
         cas_tests = [c for c in cas_tests if c.get("categorie") == filtre]
 
-    resultats = []
     debut = time.time()
+    verrou = threading.Lock()
+    avancement = {"n": 0}
 
-    for n_cas, cas in enumerate(cas_tests, start=1):
-        if not rapide:
-            print(f"\033[2m  [{n_cas}/{len(cas_tests)}] {cas['id']}...\033[0m", flush=True)
-        trouves = rag2.chercher_rerank(cas["question"], k=rag2.TOP_K)
+    def traiter(cas: dict) -> dict:
+        with _verrou_gpu:
+            trouves = rag2.chercher_rerank(cas["question"], k=rag2.TOP_K)
         fichiers = [c["fichier"] for c, _ in trouves]
 
         attendus = cas.get("fichier_attendu") or []
         if attendus:
-            # Rang par FICHIER (métrique historique, conservée pour comparaison).
             rang = next((i + 1 for i, f in enumerate(fichiers) if f in attendus), None)
 
-            # Rang par CONTENU : le chunk contient-il vraiment de quoi répondre ?
-            # C'est la métrique honnête — un bon fichier au mauvais chunk ne
-            # permet pas au modèle de répondre.
             requis = cas.get("doit_contenir") or []
             rang_contenu = None
             for i, (chunk, _) in enumerate(trouves, start=1):
@@ -178,9 +188,6 @@ def main() -> None:
                 f"[Source : {c['source']}/{c['fichier']} — {c['titre']}]\n{c['texte']}"
                 for c, _ in trouves
             )
-            # Ollama peut se figer sur une longue série de requêtes : un
-            # timeout explicite et une reprise évitent de bloquer toute
-            # l'évaluation sur un cas.
             texte = None
             for tentative in range(3):
                 try:
@@ -196,16 +203,34 @@ def main() -> None:
                     texte = rep["message"]["content"]
                     break
                 except Exception as e:
-                    print(f"  \033[33m⟳\033[0m {cas['id']} : {type(e).__name__}, tentative {tentative + 2}/3",
-                          flush=True)
+                    print(f"  \033[33m⟳\033[0m {cas['id']} : {type(e).__name__}", flush=True)
                     time.sleep(3)
 
             if texte is None:
                 texte = "[ÉCHEC : pas de réponse du modèle]"
+
             res["verif"] = verifier(cas, texte)
             res["reponse"] = texte
 
-        resultats.append(res)
+        with verrou:
+            avancement["n"] += 1
+            if not rapide:
+                print(f"\033[2m  [{avancement['n']}/{len(cas_tests)}] {cas['id']}\033[0m", flush=True)
+        return res
+
+    # Préchargement AVANT de lancer les threads : sinon trois threads
+    # déclenchent trois chargements concurrents des modèles.
+    rag2.chercher_rerank("préchauffage", k=1)
+
+    if rapide:
+        resultats = [traiter(c) for c in cas_tests]
+    else:
+        with cf.ThreadPoolExecutor(max_workers=PARALLELISME) as ex:
+            resultats = list(ex.map(traiter, cas_tests))
+
+    # L'ordre du jeu de test est rétabli pour l'affichage.
+    ordre = {c["id"]: i for i, c in enumerate(cas_tests)}
+    resultats.sort(key=lambda r: ordre[r["id"]])
 
     duree = time.time() - debut
 

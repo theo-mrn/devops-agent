@@ -13,6 +13,7 @@ Usage :
 import os
 import pickle
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -74,14 +75,19 @@ QUESTIONS = [
 ]
 
 _cache = {}
+# Le chargement doit être protégé : l'évaluateur appelle chercher() depuis
+# plusieurs threads, et sans verrou chaque thread charge son propre modèle
+# — trois copies de bge-m3 en mémoire, saturation immédiate.
+_verrou = threading.Lock()
 
 
 def charger():
-    if "index" not in _cache:
-        with INDEX.open("rb") as f:
-            _cache["index"] = pickle.load(f)
-        device = "mps" if torch.backends.mps.is_available() else "cpu"
-        _cache["enc"] = SentenceTransformer(MODELE_EMB, device=device)
+    with _verrou:
+        if "index" not in _cache:
+            with INDEX.open("rb") as f:
+                _cache["index"] = pickle.load(f)
+            device = "mps" if torch.backends.mps.is_available() else "cpu"
+            _cache["enc"] = SentenceTransformer(MODELE_EMB, device=device)
     return _cache["index"], _cache["enc"]
 
 

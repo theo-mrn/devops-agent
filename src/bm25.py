@@ -16,6 +16,7 @@ Usage :
 import pickle
 import re
 import sys
+import threading
 import unicodedata
 from pathlib import Path
 
@@ -74,15 +75,17 @@ def tokeniser_casse(texte: str) -> list[str]:
 
 
 _cache = {}
+_verrou = threading.Lock()
 
 
 def charger():
-    if "bm25" not in _cache:
-        with INDEX.open("rb") as f:
-            index = pickle.load(f)
-        corpus_tokens = [tokeniser_casse(c["texte"]) for c in index["chunks"]]
-        _cache["bm25"] = BM25Okapi(corpus_tokens)
-        _cache["chunks"] = index["chunks"]
+    with _verrou:
+        if "bm25" not in _cache:
+            with INDEX.open("rb") as f:
+                index = pickle.load(f)
+            corpus_tokens = [tokeniser_casse(c["texte"]) for c in index["chunks"]]
+            _cache["bm25"] = BM25Okapi(corpus_tokens)
+            _cache["chunks"] = index["chunks"]
     return _cache["bm25"], _cache["chunks"]
 
 
