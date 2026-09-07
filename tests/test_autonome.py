@@ -18,7 +18,8 @@ class TestQuestions:
 
     def test_oom_interroge_limite_ou_fuite(self):
         q = _question(evenement("OOMKilled"))
-        assert "limite" in q and "fuite" in q
+        assert "limite" in q
+        assert "fuit" in q      # « l application fuit-elle ? »
 
     def test_crashloop_oriente_vers_les_logs(self):
         q = _question(evenement("CrashLoopBackOff"))
