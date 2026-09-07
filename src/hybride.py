@@ -20,10 +20,12 @@ import bm25 as bm25_mod
 import expansion
 import rag2
 
-K_RRF = 60
+import config
+
+K_RRF = config.K_RRF
 POIDS_DENSE = 1.0
 POIDS_BM25 = 1.0
-PROFONDEUR = 20  # nombre de candidats pris à chaque méthode avant fusion
+PROFONDEUR = config.CANDIDATS_RERANK
 
 
 def chercher(question: str, k: int = 3, poids_dense: float = POIDS_DENSE,

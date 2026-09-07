@@ -22,7 +22,9 @@ from pathlib import Path
 
 from rank_bm25 import BM25Okapi
 
-INDEX = Path("data/index/corpus.pkl")
+import config
+
+INDEX = config.INDEX
 
 # Mots vides : trop fréquents pour discriminer quoi que ce soit.
 VIDES = {

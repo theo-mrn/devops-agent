@@ -25,12 +25,14 @@ import chunk_structure
 # Deux sources : la documentation téléchargée, et les documents internes
 # rédigés pour combler ce que la doc officielle ne couvre pas (table des
 # codes de sortie, procédures de diagnostic).
-SOURCES = [Path("data/raw"), Path("data/interne")]
-INDEX = Path("data/index/corpus.pkl")
-MODELE_EMB = "BAAI/bge-m3"
+import config
 
-TAILLE_MAX = 2000   # au-delà, on redécoupe
-TAILLE_MIN = 100    # en deçà, on écarte (titre seul, ligne de nav)
+SOURCES = config.SOURCES
+INDEX = config.INDEX
+MODELE_EMB = config.EMBEDDING
+
+TAILLE_MAX = config.TAILLE_MAX_CHUNK
+TAILLE_MIN = config.TAILLE_MIN_CHUNK
 
 
 def redecouper_long(chunk: dict) -> list[dict]:
@@ -142,7 +144,12 @@ def main() -> None:
 
     INDEX.parent.mkdir(parents=True, exist_ok=True)
     with INDEX.open("wb") as f:
-        pickle.dump({"chunks": chunks, "vecteurs": vecteurs}, f)
+        pickle.dump({
+            "chunks": chunks,
+            "vecteurs": vecteurs,
+            # Permet de détecter un index encodé par un autre modèle.
+            "meta": {"embedding": MODELE_EMB, "n_chunks": len(chunks)},
+        }, f)
 
     taille_mo = INDEX.stat().st_size / 1024 / 1024
     print(f"\n  \033[32m✓\033[0m {len(chunks)} chunks encodés en {duree:.1f}s "

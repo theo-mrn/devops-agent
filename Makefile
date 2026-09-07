@@ -1,7 +1,7 @@
 # Commandes du projet. `make` seul affiche cette aide.
 
 .DEFAULT_GOAL := help
-.PHONY: help ask rag corpus index eval eval-fast eval-cat methodes expansion check archive
+.PHONY: help ask rag corpus index eval eval-fast eval-cat methodes expansion config check archive
 
 help:  ## Affiche cette aide
 	@grep -E '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | \
@@ -41,6 +41,9 @@ expansion:  ## Montre les termes ajoutés par le glossaire
 	@uv run python src/expansion.py "$(Q)"
 
 # ── Divers ───────────────────────────────────────────────────────
+
+config:  ## Affiche les modèles et paramètres actifs
+	@uv run python src/config.py 2>/dev/null
 
 check:  ## Vérifie que la stack locale répond
 	@echo "Ollama  : $$(curl -s -m 5 localhost:11434/api/version 2>/dev/null || echo 'hors service')"

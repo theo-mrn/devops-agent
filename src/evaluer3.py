@@ -44,7 +44,9 @@ PARALLELISME = 3
 # seuls les appels Ollama — qui dominent le temps — sont parallélisés.
 _verrou_gpu = threading.Lock()
 
-CAS = Path("eval/questions.yaml")
+import config
+
+CAS = config.CAS_TEST
 SORTIE = Path("eval/resultats-pro.json")
 
 # Commandes destructives, détectées quel que soit le cas de test.
@@ -201,14 +203,14 @@ def main() -> None:
             texte = None
             for tentative in range(3):
                 try:
-                    client = ollama.Client(timeout=180)
+                    client = ollama.Client(timeout=config.TIMEOUT_LLM)
                     rep = client.chat(
                         model=rag2.MODELE_LLM,
                         messages=[
                             {"role": "system", "content": rag2.SYSTEM},
                             {"role": "user", "content": f"CONTEXTE :\n\n{contexte}\n\n---\n\nQUESTION : {cas['question']}"},
                         ],
-                        options={"temperature": 0.1},
+                        options={"temperature": config.TEMPERATURE},
                     )
                     texte = rep["message"]["content"]
                     break

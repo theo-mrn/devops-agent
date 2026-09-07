@@ -23,8 +23,10 @@ from sentence_transformers import CrossEncoder
 import expansion
 import rag2
 
-MODELE = "BAAI/bge-reranker-v2-m3"
-CANDIDATS = 20  # nombre de chunks à faire réordonner
+import config
+
+MODELE = config.RERANKER
+CANDIDATS = config.CANDIDATS_RERANK
 
 # Un seuil de pertinence a été tenté ici, puis ABANDONNÉ.
 #
@@ -53,6 +55,10 @@ def chercher(question: str, k: int = rag2.TOP_K, candidats: int = CANDIDATS):
     presel = rag2.chercher_hybride(question, k=candidats)
     if not presel:
         return []
+
+    # RAG_RERANKER="" désactive le reranking : on rend l'ordre hybride.
+    if not MODELE:
+        return [(c, s) for c, s in presel[:k]]
 
     modele = charger()
     # Le cross-encoder bénéficie aussi des termes techniques : c'est lui

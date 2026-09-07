@@ -30,12 +30,14 @@ from sentence_transformers import SentenceTransformer
 # Import différé dans chercher() pour éviter une boucle : hybride
 # importe rag2 pour la partie dense.
 
-MODELE_LLM = "qwen2.5-coder:7b-instruct-q4_K_M"
-MODELE_EMB = "BAAI/bge-m3"
-INDEX = Path("data/index/corpus.pkl")
-# Mesuré en brique 9 sur 1028 chunks : passer de 3 à 5 fait monter le
-# Hit Rate de 91 % à 97 %. Au-delà (8), aucun gain supplémentaire.
-TOP_K = 5
+import config
+
+# Les modèles et paramètres vivent dans config.py, surchargeables par
+# variables d'environnement. Ces alias gardent le code lisible.
+MODELE_LLM = config.LLM
+MODELE_EMB = config.EMBEDDING
+INDEX = config.INDEX
+TOP_K = config.TOP_K
 
 SYSTEM = """Tu es un ingénieur SRE/DevOps expert.
 
@@ -98,6 +100,9 @@ def charger():
         if "index" not in _cache:
             with INDEX.open("rb") as f:
                 _cache["index"] = pickle.load(f)
+            # Refuse un index encodé par un autre modèle : sans ce
+            # contrôle, l'incohérence est silencieuse.
+            config.verifier_index(_cache["index"].get("meta"))
             device = "mps" if torch.backends.mps.is_available() else "cpu"
             _cache["enc"] = SentenceTransformer(MODELE_EMB, device=device)
     return _cache["index"], _cache["enc"]
@@ -168,13 +173,13 @@ def repondre(question: str) -> None:
     )
 
     debut = time.time()
-    rep = ollama.chat(
+    rep = ollama.Client(timeout=config.TIMEOUT_LLM).chat(
         model=MODELE_LLM,
         messages=[
             {"role": "system", "content": SYSTEM},
             {"role": "user", "content": f"CONTEXTE :\n\n{contexte}\n\n---\n\nQUESTION : {question}"},
         ],
-        options={"temperature": 0.1},
+        options={"temperature": config.TEMPERATURE},
     )
     t_gen = time.time() - debut
 
