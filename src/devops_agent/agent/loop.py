@@ -171,12 +171,18 @@ class Agent:
         Sans lui, l'agent gaspille trois ou quatre tours à découvrir ce
         qui existe avant d'attaquer le problème posé.
         """
+        # La boucle exige un modèle capable d'orchestrer plusieurs outils :
+        # un 7B local n'y arrive pas de façon fiable. Dès qu'une clé est
+        # disponible, on bascule sans que l'utilisateur ait à le demander.
         if config.PROVIDER != "anthropic":
-            raise RuntimeError(
-                "La boucle d'agent exige un modèle capable d'orchestrer plusieurs "
-                "outils. Un 7B local n'y arrive pas de façon fiable.\n"
-                "  → RAG_PROVIDER=anthropic"
-            )
+            if not config.cle_api_disponible():
+                raise RuntimeError(
+                    "Le diagnostic outillé demande un modèle capable d'orchestrer "
+                    "plusieurs outils.\n"
+                    "  → renseigner ANTHROPIC_API_KEY dans .env"
+                )
+            config.PROVIDER = "anthropic"
+            self._log(f"\033[2m  bascule sur {config.LLM_API}\033[0m")
 
         import anthropic
 

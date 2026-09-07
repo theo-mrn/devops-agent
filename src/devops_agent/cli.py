@@ -25,6 +25,8 @@ def main() -> int:
     p = sous.add_parser("diagnose", help="lance l'agent outillé (API requise)")
     p.add_argument("question", nargs="+")
     p.add_argument("--tours", type=int, default=12, help="limite de tours")
+    p.add_argument("--modele", help="modèle API, ex. claude-sonnet-5")
+    p.add_argument("--budget", type=float, help="plafond de dépense en dollars")
 
     p = sous.add_parser("watch", help="surveille le cluster par événements")
     p.add_argument("--diagnose", action="store_true",
@@ -49,8 +51,15 @@ def main() -> int:
         pipeline.repondre(" ".join(args.question))
 
     elif args.commande == "diagnose":
-        from devops_agent.agent.loop import Agent
-        agent = Agent(tours_max=args.tours)
+        from devops_agent.agent import loop
+        from devops_agent.core import config
+
+        if args.modele:
+            config.LLM_API = args.modele
+        if args.budget:
+            loop.BUDGET_MAX = args.budget
+
+        agent = loop.Agent(tours_max=args.tours)
         print(f"\n{agent.demander(' '.join(args.question))}\n")
 
     elif args.commande == "watch":
