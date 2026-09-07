@@ -30,7 +30,11 @@ import chunk_structure
 import rag
 
 CAS = Path("eval/questions.yaml")
+# Deux fichiers distincts : eval-fast ne doit pas écraser les réponses
+# générées par une évaluation complète — ce sont elles qu'on relit
+# quand un cas échoue.
 RESULTATS = Path("eval/resultats.json")
+RESULTATS_RAPIDE = Path("eval/resultats-retrieval.json")
 
 
 def normaliser(texte: str) -> str:
@@ -174,8 +178,9 @@ def main() -> None:
 
     print(f"\n\033[2m  {duree:.1f}s\033[0m")
 
-    RESULTATS.write_text(json.dumps(resultats, indent=2, ensure_ascii=False))
-    print(f"\033[2m  → {RESULTATS}\033[0m\n")
+    sortie = RESULTATS_RAPIDE if retrieval_seul else RESULTATS
+    sortie.write_text(json.dumps(resultats, indent=2, ensure_ascii=False))
+    print(f"\033[2m  → {sortie}\033[0m\n")
 
 
 if __name__ == "__main__":

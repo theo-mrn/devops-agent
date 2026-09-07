@@ -1,0 +1,98 @@
+[
+  {
+    "id": "syntaxe",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "top": [
+        "Specification",
+        "`moved` block reference",
+        "Complete configuration"
+      ]
+    },
+    "score_max": 0.6110101342201233
+  },
+  {
+    "id": "guillemets",
+    "type": "piege",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "top": [
+        "Configuration model",
+        "Specification",
+        "Complete configuration"
+      ]
+    },
+    "score_max": 0.45489299297332764
+  },
+  {
+    "id": "exemple_concret",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "top": [
+        "Example",
+        "Complete configuration",
+        "Specification"
+      ]
+    },
+    "score_max": 0.6831453442573547
+  },
+  {
+    "id": "comportement_state",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "top": [
+        "Specification",
+        "`moved` block reference",
+        "Complete configuration"
+      ]
+    },
+    "score_max": 0.5577110648155212
+  },
+  {
+    "id": "version",
+    "type": "absent",
+    "retrieval": {
+      "applicable": false
+    },
+    "score_max": 0.6109283566474915
+  },
+  {
+    "id": "hors_sujet",
+    "type": "absent",
+    "retrieval": {
+      "applicable": false
+    },
+    "score_max": 0.4243818521499634
+  },
+  {
+    "id": "from_obligatoire",
+    "type": "factuel",
+    "retrieval": {
+      "applicable": true,
+      "hit": true,
+      "rang": 1,
+      "rr": 1.0,
+      "top": [
+        "Configuration model",
+        "Specification",
+        "Complete configuration"
+      ]
+    },
+    "score_max": 0.6666293144226074
+  }
+]

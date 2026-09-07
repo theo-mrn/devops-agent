@@ -19,7 +19,7 @@
       "manquants": [],
       "interdits": []
     },
-    "reponse": "La syntaxe exacte du bloc `moved` en Terraform est la suivante :\n\n```hcl\nmoved {\n    from = <ancien chemin de la ressource>\n    to = <nouveau chemin de la ressource>\n}\n```\n\nCette syntaxe permet de spécifier le chemin de la ressource avant et après le déplacement."
+    "reponse": "Le bloc `moved` en Terraform est défini comme suit :\n\n```hcl\nmoved {\n    from = <ancien emplacement du ressource>\n    to = <nouvel emplacement du ressource>\n}\n```\n\nIl est important de noter que les arguments `from` et `to` sont requis et doivent être spécifiés sous forme de chaîne de caractères."
   },
   {
     "id": "guillemets",
@@ -63,7 +63,7 @@
       "manquants": [],
       "interdits": []
     },
-    "reponse": "```hcl\nmoved {\n  from = aws_instance.old_instance\n  to   = aws_instance.new_instance\n}\n```"
+    "reponse": "```hcl\nmoved {\n  from = aws_instance.a\n  to   = aws_instance.b\n}\n```"
   },
   {
     "id": "comportement_state",
