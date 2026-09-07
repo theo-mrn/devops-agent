@@ -18,6 +18,34 @@ Changer RAG_LLM ou RAG_RERANKER ne demande aucune ré-indexation.
 import os
 from pathlib import Path
 
+
+def _charger_env() -> None:
+    """Lit le fichier .env à la racine, sans écraser l'environnement.
+
+    Une variable déjà définie dans le shell l'emporte : c'est la
+    convention habituelle, et elle permet de surcharger ponctuellement
+    sans éditer le fichier.
+
+    Écrit à la main plutôt qu'avec python-dotenv : une dépendance de moins
+    pour une vingtaine de lignes.
+    """
+    fichier = Path(__file__).resolve().parents[3] / ".env"
+    if not fichier.exists():
+        return
+
+    for ligne in fichier.read_text().splitlines():
+        ligne = ligne.strip()
+        if not ligne or ligne.startswith("#") or "=" not in ligne:
+            continue
+        cle, _, valeur = ligne.partition("=")
+        cle = cle.strip()
+        valeur = valeur.strip().strip("\"'")
+        if cle and cle not in os.environ:
+            os.environ[cle] = valeur
+
+
+_charger_env()
+
 # ── Fournisseur de génération ────────────────────────────────────
 
 # « ollama » : modèle local, gratuit, hors ligne.
@@ -101,6 +129,12 @@ def verifier_index(meta: dict | None) -> None:
         )
 
 
+def cle_api_disponible() -> bool:
+    """Une clé Anthropic est-elle utilisable ?"""
+    return bool(os.environ.get("ANTHROPIC_API_KEY")
+                or os.environ.get("ANTHROPIC_AUTH_TOKEN"))
+
+
 def resume() -> str:
     modele = LLM_API if PROVIDER == "anthropic" else LLM
     return (
@@ -108,7 +142,8 @@ def resume() -> str:
         f"  LLM        {modele}\n"
         f"  embedding  {EMBEDDING}\n"
         f"  reranker   {RERANKER or '(désactivé)'}\n"
-        f"  top-k      {TOP_K}  ·  candidats {CANDIDATS_RERANK}  ·  T° {TEMPERATURE}"
+        f"  top-k      {TOP_K}  ·  candidats {CANDIDATS_RERANK}  ·  T° {TEMPERATURE}\n"
+        f"  clé API    {'présente' if cle_api_disponible() else 'absente'}"
     )
 
 
