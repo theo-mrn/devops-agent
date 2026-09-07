@@ -216,8 +216,39 @@ class Surveillance:
         tampon = ""
         profondeur = 0
 
+        # `for ligne in stdout` bloque tant qu'aucune ligne n'arrive : sur
+        # un cluster stable, la boucle ne reprendrait jamais la main et
+        # `duree_max` ne serait jamais évalué. On lit donc dans un thread
+        # et on consomme via une file.
+        import queue
+        import threading
+
+        lignes = queue.Queue()
+
+        def lire():
+            for l in processus.stdout:
+                lignes.put(l)
+            lignes.put(None)
+
+        threading.Thread(target=lire, daemon=True).start()
+        dernier_signe = time.time()
+
         try:
-            for ligne in processus.stdout:
+            while True:
+                try:
+                    ligne = lignes.get(timeout=1.0)
+                except queue.Empty:
+                    # Rien reçu : c'est le cas normal sur un cluster sain.
+                    if duree_max and time.time() - debut > duree_max:
+                        break
+                    if time.time() - dernier_signe > 30:
+                        self._log(f"\033[2m  … {int(time.time() - debut)}s, "
+                                  f"{self.vus} événements, rien à signaler\033[0m")
+                        dernier_signe = time.time()
+                    continue
+
+                if ligne is None:      # le processus s'est terminé
+                    break
                 # `kubectl --watch -o json` produit des objets JSON
                 # concaténés, pas un tableau : il faut les découper en
                 # suivant l'équilibre des accolades.

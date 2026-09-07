@@ -36,6 +36,11 @@ ETATS_SAINS = {"Running", "Succeeded", "Completed"}
 # Au-delà, on ne liste plus les anomalies une par une : on agrège.
 MAX_ANOMALIES = 15
 
+# Redémarrages par jour au-delà desquels un pod est jugé instable.
+# En dessous, c'est du bruit de fond : un pod peut cumuler des centaines
+# de redémarrages sur plusieurs mois sans que ce soit un incident.
+SEUIL_PAR_JOUR = float(os.environ.get("RAG_SEUIL_PAR_JOUR", "2.0"))
+
 _cache: dict = {}
 
 
@@ -60,6 +65,19 @@ def _kubectl_json(commande: str) -> dict | None:
         return json.loads(r.stdout)
     except (subprocess.TimeoutExpired, json.JSONDecodeError):
         return None
+
+
+def _age_heures(pod: dict) -> float:
+    """Âge du pod en heures, 0 si la date est illisible."""
+    from datetime import datetime, timezone
+    debut = pod.get("status", {}).get("startTime")
+    if not debut:
+        return 0.0
+    try:
+        d = datetime.fromisoformat(debut.replace("Z", "+00:00"))
+        return (datetime.now(timezone.utc) - d).total_seconds() / 3600
+    except ValueError:
+        return 0.0
 
 
 def _etat_pod(pod: dict) -> tuple[str, int]:
@@ -128,12 +146,20 @@ def _collecter_pods() -> list[dict]:
     resultat = []
     for p in pods:
         etat, redemarrages = _etat_pod(p)
+        age = _age_heures(p)
+
+        # 124 redémarrages en 108 jours est un bruit de fond ; 124 en une
+        # heure est une urgence. Seule la fréquence distingue les deux.
+        par_jour = redemarrages / max(age / 24, 0.04) if redemarrages else 0.0
+
         resultat.append({
             "nom": p["metadata"]["name"],
             "namespace": p["metadata"]["namespace"],
             "etat": etat,
             "redemarrages": redemarrages,
-            "sain": etat in ETATS_SAINS and redemarrages < 5,
+            "par_jour": par_jour,
+            "age_h": age,
+            "sain": etat in ETATS_SAINS and par_jour < SEUIL_PAR_JOUR,
         })
     return resultat
 
@@ -172,8 +198,13 @@ def _formater(noeuds: list[dict], pods: list[dict], version: str) -> str:
         lignes.append(f"\n✓ Les {len(pods)} pods sont sains.")
     else:
         lignes.append(f"\n⚠ {len(malades)} pod(s) en anomalie sur {len(pods)} :")
-        for p in sorted(malades, key=lambda x: -x["redemarrages"])[:MAX_ANOMALIES]:
-            suffixe = f"  ({p['redemarrages']} redémarrages)" if p["redemarrages"] else ""
+        for p in sorted(malades, key=lambda x: -x.get("par_jour", 0))[:MAX_ANOMALIES]:
+            suffixe = ""
+            if p["redemarrages"]:
+                suffixe = (
+                    f"  ({p['redemarrages']} redémarrages, "
+                    f"{p.get('par_jour', 0):.1f}/jour)"
+                )
             lignes.append(f"  {p['namespace']}/{p['nom']}  {p['etat']}{suffixe}")
 
         if len(malades) > MAX_ANOMALIES:
@@ -181,6 +212,19 @@ def _formater(noeuds: list[dict], pods: list[dict], version: str) -> str:
             restants = Counter(p["etat"] for p in malades[MAX_ANOMALIES:])
             detail = ", ".join(f"{n}× {e}" for e, n in restants.most_common())
             lignes.append(f"  [... et {len(malades) - MAX_ANOMALIES} autres : {detail}]")
+
+    # Les pods qui cumulent des redémarrages depuis longtemps sans être
+    # instables aujourd'hui : à surveiller, pas à diagnostiquer.
+    chroniques = [
+        p for p in pods
+        if p.get("sain") and p.get("redemarrages", 0) >= 20
+    ]
+    if chroniques:
+        noms = ", ".join(
+            f"{p['namespace']}/{p['nom']} ({p['redemarrages']})"
+            for p in sorted(chroniques, key=lambda x: -x["redemarrages"])[:5]
+        )
+        lignes.append(f"\nRedémarrages cumulés (stables actuellement) : {noms}")
 
     return "\n".join(lignes)
 

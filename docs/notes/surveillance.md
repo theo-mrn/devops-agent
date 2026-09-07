@@ -78,3 +78,40 @@ RAG_PENDING_TOLERE=600     # 10 min avant de signaler un Pending
 `RAG_NAMESPACES` configuré sur plusieurs valeurs, seul le premier est surveillé
 et un avertissement s'affiche. Un vrai multi-namespace demanderait plusieurs
 processus, ou le client Python de Kubernetes.
+
+
+## Premier passage sur un cluster réel
+
+k3s, 3 nœuds, 57 pods, 108 jours d'"'"'uptime.
+
+```
+57 événements reçus · 1 retenu (1,8 %)
+⚠ sonarqube/sonarqube-sonarqube-0  OOMKilled (précédent)
+```
+
+**98 % du bruit écarté**, et le signal retenu est le bon.
+
+### Correction : fréquence plutôt que cumul
+
+L'"'"'aperçu signalait 8 anomalies dont `sealed-secrets-controller` avec
+**124 redémarrages**. Mais sur 108 jours, cela fait un redémarrage tous les
+deux jours — du bruit de fond, pas un incident.
+
+Le compteur `restartCount` est **cumulatif sur la vie du pod**. Rapporté à
+l'"'"'âge, il devient exploitable :
+
+| pod | cumul | par jour | verdict |
+|---|---:|---:|---|
+| sealed-secrets-controller | 124 | 1,1 | bruit de fond |
+| node-exporter | 7 | **3,1** | instable |
+| sonarqube-0 | 1 | 0,4 | OOMKilled récent |
+
+Après correction : **3 anomalies réelles** au lieu de 8, et les cumuls anciens
+listés séparément sous « Redémarrages cumulés (stables actuellement) ».
+
+### Correction : lecture non bloquante
+
+`for ligne in processus.stdout` bloque tant qu'"'"'aucune ligne n'"'"'arrive. Sur un
+cluster stable, la boucle ne reprenait jamais la main et `--duree` n'"'"'était
+jamais évalué. La lecture se fait désormais dans un thread, avec une file :
+la boucle principale garde la main et affiche un signe de vie toutes les 30 s.

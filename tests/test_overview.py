@@ -10,10 +10,13 @@ def _noeud(nom="node-1", pret=True, pressions=None):
             "pressions": pressions or []}
 
 
-def _pod(nom, ns="prod", etat="Running", redemarrages=0):
+def _pod(nom, ns="prod", etat="Running", redemarrages=0, par_jour=None):
+    # Par défaut on suppose un pod d'un jour : la fréquence égale le cumul.
+    if par_jour is None:
+        par_jour = float(redemarrages)
     return {"nom": nom, "namespace": ns, "etat": etat,
-            "redemarrages": redemarrages,
-            "sain": etat in overview.ETATS_SAINS and redemarrages < 5}
+            "redemarrages": redemarrages, "par_jour": par_jour, "age_h": 24.0,
+            "sain": etat in overview.ETATS_SAINS and par_jour < overview.SEUIL_PAR_JOUR}
 
 
 class TestFormatage:
@@ -36,14 +39,21 @@ class TestFormatage:
         )
         assert "pression" in texte and "Memory" in texte
 
-    def test_anomalies_triees_par_gravite(self):
+    def test_anomalies_triees_par_frequence(self):
         pods = [
-            _pod("peu", etat="CrashLoopBackOff", redemarrages=2),
-            _pod("beaucoup", etat="CrashLoopBackOff", redemarrages=30),
+            _pod("lent", etat="CrashLoopBackOff", redemarrages=2, par_jour=0.5),
+            _pod("rapide", etat="CrashLoopBackOff", redemarrages=30, par_jour=12.0),
         ]
         texte = overview._formater([_noeud()], pods, "v1.29.4")
-        # Le plus dégradé doit apparaître en premier.
-        assert texte.index("beaucoup") < texte.index("peu")
+        # C'est la fréquence qui prime, pas le cumul.
+        assert texte.index("rapide") < texte.index("lent")
+
+    def test_cumul_ancien_nest_pas_une_anomalie(self):
+        """124 redémarrages sur 108 jours est un bruit de fond, pas un incident."""
+        pods = [_pod("vieux", redemarrages=124, par_jour=1.1)]
+        texte = overview._formater([_noeud()], pods, "v1.29.4")
+        assert "en anomalie" not in texte
+        assert "Redémarrages cumulés" in texte
 
     def test_agregation_au_dela_du_seuil(self):
         pods = [
