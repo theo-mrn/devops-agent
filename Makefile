@@ -28,10 +28,10 @@ chunks:  ## Compare découpage naïf et structurel
 embed:  ## Matrice de similarité entre phrases témoins
 	@uv run python src/embeddings.py
 
-eval:  ## Score du pipeline sur le corpus (12 cas)
+eval:  ## Score du pipeline sur le corpus (93 cas, ~34 min)
 	@uv run python src/evaluer2.py 2>/dev/null
 
-eval-fast:  ## Score du retrieval seul, sans appeler le LLM
+eval-fast:  ## Score du retrieval seul, sans LLM (~3 min)
 	@uv run python src/evaluer2.py --retrieval-seul 2>/dev/null
 
 ablation:  ## Compare les stratégies de chunking

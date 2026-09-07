@@ -58,3 +58,54 @@ Trois `fichier_attendu` avaient été écrits sans vérifier l'existence du fich
 plutôt que de mesurer un échec inventé.
 
 → **Écrire un cas de test suppose de connaître le corpus.**
+
+
+## Score final sur 93 cas
+
+```
+RETRIEVAL
+  par fichier   Hit Rate 95%   MRR 0.814
+  par contenu   Hit Rate 96%   MRR 0.943
+
+GÉNÉRATION
+  Précision     89/93  (96%)
+  Méthode       93/93  (100%)
+  Sûreté        93/93  (100%)
+  GLOBAL        89/93  (96%)
+  dont refus     7/9
+```
+
+Durée : **2012 s** (~34 min) — le reranker score 20 paires par question.
+
+## Les 4 échecs, analysés
+
+| cas | nature | verdict |
+|---|---|---|
+| `absent_version_moved` | **hallucination** — « version 0.12.0 » inventée | vrai défaut |
+| `absent_ansible` | **hallucination** — playbook fabriqué depuis des chunks K8s | vrai défaut |
+| `k8s_cronjob` | retrieval raté, le modèle refuse correctement | vrai défaut |
+| `k8s_probe_types` | **question ambiguë** de ma part | faux échec, corrigé |
+
+`k8s_probe_types` demandait « les types de sondes » : le modèle a répondu
+startup/liveness/readiness (les trois *probes*) là où j attendais
+httpGet/exec/tcpSocket (les *mécanismes*). Question reformulée, cas validé.
+
+→ Score effectif : **90/93 (97%)**.
+
+## Ce qui résiste : les hallucinations sur cas absents
+
+7 refus corrects sur 9. Les deux échecs sont les mêmes qu en brique 10 :
+
+- `absent_version_moved` — le corpus parle abondamment du bloc `moved`, sans
+  jamais donner sa version d introduction. Le modèle comble ce trou précis.
+- `absent_ansible` — les chunks `deployment` parlent de déploiement, le modèle
+  transpose vers Ansible.
+
+Les deux ont en commun un contexte **thématiquement proche mais factuellement
+muet**. C est le cas le plus difficile : ni le prompt (renforcé en brique 9) ni
+un seuil de score (invalidé en brique 10) ne le traitent.
+
+→ Piste restante : le **fine-tuning**, pour apprendre au modèle à refuser
+lorsque le contexte est proche sans être précis. C est exactement ce que le
+README annonçait comme rôle du fine-tuning : le comportement, pas la
+connaissance.

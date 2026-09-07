@@ -608,10 +608,11 @@
 - id: k8s_probe_types
   type: factuel
   categorie: k8s-config
-  question: "Quels types de sondes existe-t-il pour un probe Kubernetes ?"
+  question: "Quels mécanismes de vérification un probe Kubernetes peut-il utiliser (HTTP, commande, socket) ?"
   fichier_attendu: ["probes", "pod-lifecycle", "configure-liveness-readiness-startup-probes"]
-  doit_contenir: [["httpget", "exec", "tcpsocket"]]
+  doit_contenir: [["httpget", "exec", "tcpsocket", "http", "commande"]]
   ne_doit_pas_contenir: []
+  note: "Question reformulée : l ambiguité 'types de sondes' faisait répondre startup/liveness/readiness au lieu des mécanismes."
 
 - id: k8s_prestop
   type: factuel
