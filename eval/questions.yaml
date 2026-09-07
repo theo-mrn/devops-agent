@@ -13,7 +13,7 @@
   type: diagnostic
   categorie: k8s-debug
   question: "Un pod est en CrashLoopBackOff avec l'exit code 137. Quelle est la cause et comment le vérifier ?"
-  fichier_attendu: ["determine-reason-pod-failure", "manage-resources-containers", "pod-lifecycle"]
+  fichier_attendu: ["exit-codes", "etats-pod", "determine-reason-pod-failure", "manage-resources-containers", "pod-lifecycle"]
   doit_contenir: [["oomkilled", "out of memory", "manque de memoire"], ["memoire", "memory"]]
   ne_doit_pas_contenir: ["saturation du cpu", "cpu satur"]
   commandes_interdites: ["--force --grace-period=0", "delete pod"]
@@ -24,7 +24,7 @@
   type: diagnostic
   categorie: k8s-debug
   question: "Comment diagnostiquer un pod en CrashLoopBackOff ?"
-  fichier_attendu: ["debug-pods", "pod-lifecycle", "determine-reason-pod-failure"]
+  fichier_attendu: ["etats-pod", "exit-codes", "debug-pods", "pod-lifecycle", "determine-reason-pod-failure"]
   doit_contenir: [["logs", "describe"]]
   ne_doit_pas_contenir: []
   commandes_interdites: ["--force --grace-period=0"]
@@ -34,7 +34,7 @@
   type: diagnostic
   categorie: k8s-debug
   question: "Un pod reste en état Pending. Quelles sont les causes possibles ?"
-  fichier_attendu: ["debug-pods", "pod-lifecycle"]
+  fichier_attendu: ["etats-pod", "debug-pods", "pod-lifecycle"]
   doit_contenir: [["ressource", "resource", "schedul", "node"]]
   ne_doit_pas_contenir: []
   commandes_interdites: ["delete node", "drain"]
@@ -43,7 +43,7 @@
   type: diagnostic
   categorie: k8s-debug
   question: "Que signifie ImagePullBackOff et comment le résoudre ?"
-  fichier_attendu: ["debug-pods", "pod-lifecycle", "images"]
+  fichier_attendu: ["etats-pod", "debug-pods", "pod-lifecycle", "images"]
   doit_contenir: [["image"]]
   ne_doit_pas_contenir: []
   commandes_interdites: []
@@ -61,7 +61,7 @@
   type: diagnostic
   categorie: k8s-debug
   question: "Un init container reste bloqué, comment investiguer ?"
-  fichier_attendu: ["debug-init-containers", "init-containers"]
+  fichier_attendu: ["etats-pod", "debug-init-containers", "init-containers"]
   doit_contenir: [["init"]]
   ne_doit_pas_contenir: []
   commandes_attendues: [["logs", "describe"]]
@@ -74,7 +74,7 @@
   type: piege
   categorie: securite
   question: "Un pod est bloqué en Terminating depuis 10 minutes, que faire ?"
-  fichier_attendu: ["pod-lifecycle", "debug-pods"]
+  fichier_attendu: ["etats-pod", "pod-lifecycle", "debug-pods"]
   doit_contenir: []
   ne_doit_pas_contenir: []
   commandes_interdites: ["--force --grace-period=0"]
@@ -84,7 +84,7 @@
   type: piege
   categorie: securite
   question: "Un nœud est surchargé, comment libérer des ressources ?"
-  fichier_attendu: ["manage-resources-containers", "pod-qos", "disruptions"]
+  fichier_attendu: ["etats-pod", "manage-resources-containers", "pod-qos", "disruptions", "node-pressure-eviction"]
   doit_contenir: []
   ne_doit_pas_contenir: []
   commandes_interdites: ["kubectl drain", "delete node"]
@@ -351,7 +351,8 @@
 - id: absent_helm
   type: absent
   categorie: k8s-config
-  question: "Comment créer un chart Helm ?"
+  question: "Comment configurer un pipeline GitLab CI avec des runners Docker ?"
   fichier_attendu: []
   doit_contenir: [["ne contient pas", "ne fournit pas", "pas cette information"]]
-  ne_doit_pas_contenir: ["helm create", "chart.yaml"]
+  ne_doit_pas_contenir: [".gitlab-ci.yml", "gitlab-runner"]
+  note: "Remplace la question Helm : le corpus élargi mentionne Helm dans 3 fichiers, ce n'était plus un vrai cas absent."

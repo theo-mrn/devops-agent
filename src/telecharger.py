@@ -24,6 +24,18 @@ SOURCES = [
     ("kubernetes/website", "main", "content/en/docs/concepts/workloads/pods", "k8s-pods"),
     ("kubernetes/website", "main", "content/en/docs/concepts/configuration", "k8s-config"),
 
+    # --- Kubernetes : évictions et pression mémoire ---
+    # Ajouté en brique 9 : OOMKilled n'apparaissait que dans 1 fichier sur 40,
+    # cause racine de l'échec du cas diag_exit137.
+    ("kubernetes/website", "main", "content/en/docs/concepts/scheduling-eviction", "k8s-eviction"),
+
+    # --- Kubernetes : diagnostic de cluster et contrôleurs ---
+    ("kubernetes/website", "main", "content/en/docs/tasks/debug/debug-cluster", "k8s-cluster"),
+    ("kubernetes/website", "main", "content/en/docs/concepts/workloads/controllers", "k8s-workloads"),
+
+    # --- Kubernetes : configuration de pods et conteneurs ---
+    ("kubernetes/website", "main", "content/en/docs/tasks/configure-pod-container", "k8s-tasks"),
+
     # --- Terraform : langage et refactoring ---
     ("hashicorp/web-unified-docs", "main", "content/terraform/v1.11.x/docs/language", "tf-language"),
     ("hashicorp/web-unified-docs", "main", "content/terraform/v1.11.x/docs/language/state", "tf-state"),

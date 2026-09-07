@@ -22,7 +22,10 @@ from sentence_transformers import SentenceTransformer
 
 import chunk_structure
 
-SOURCE = Path("data/raw")
+# Deux sources : la documentation téléchargée, et les documents internes
+# rédigés pour combler ce que la doc officielle ne couvre pas (table des
+# codes de sortie, procédures de diagnostic).
+SOURCES = [Path("data/raw"), Path("data/interne")]
 INDEX = Path("data/index/corpus.pkl")
 MODELE_EMB = "BAAI/bge-m3"
 
@@ -68,12 +71,20 @@ def redecouper_long(chunk: dict) -> list[dict]:
 
 
 def construire_chunks() -> list[dict]:
-    fichiers = sorted(f for f in SOURCE.iterdir() if f.suffix in {".md", ".mdx"})
+    fichiers = []
+    for racine in SOURCES:
+        if racine.exists():
+            fichiers.extend(sorted(f for f in racine.iterdir() if f.suffix in {".md", ".mdx"}))
+
     chunks: list[dict] = []
 
     for fichier in fichiers:
-        # Le préfixe encode la source : "k8s-debug__debug-pods.md"
-        source, _, nom = fichier.stem.partition("__")
+        # Le préfixe encode la source : "k8s-debug__debug-pods.md".
+        # Les documents internes n'en ont pas : ils prennent "interne".
+        if "__" in fichier.stem:
+            source, _, nom = fichier.stem.partition("__")
+        else:
+            source, nom = "interne", fichier.stem
 
         for c in chunk_structure.decouper(fichier.read_text(errors="replace")):
             for morceau in redecouper_long(c):
