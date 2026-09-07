@@ -29,7 +29,7 @@ import sys
 import time
 from dataclasses import dataclass, field
 
-from devops_agent.agent import overview, tools
+from devops_agent.agent import detecteurs, overview, tools
 
 # Un pod doit redémarrer au moins ce nombre de fois avant d'être signalé.
 # Un redémarrage isolé est souvent transitoire (rolling update, sonde
@@ -84,23 +84,32 @@ def _gravite(etat: str) -> str | None:
 @dataclass
 class Evenement:
     """Une transition vers un état anormal, digne d'attention."""
-    pod: str
+    pod: str                      # nom de la ressource
     namespace: str
     etat: str
     gravite: str
-    redemarrages: int
+    redemarrages: int = 0
     etat_precedent: str | None = None
+    ressource: str = "pod"        # pod, service, deployment, pvc, node…
     date: float = field(default_factory=time.time)
 
     @property
+    def nom(self) -> str:
+        """Alias lisible : `pod` porte en fait n'importe quelle ressource."""
+        return self.pod
+
+    @property
     def cle(self) -> str:
-        """Identité pour la déduplication : même pod, même problème."""
-        return f"{self.namespace}/{self.pod}:{self.etat}"
+        """Identité pour la déduplication : même objet, même problème."""
+        return f"{self.ressource}:{self.namespace}/{self.pod}:{self.etat}"
 
     def __str__(self) -> str:
         transition = f"{self.etat_precedent} → " if self.etat_precedent else ""
         suffixe = f" ({self.redemarrages} redémarrages)" if self.redemarrages else ""
-        return f"{self.namespace}/{self.pod}  {transition}{self.etat}{suffixe}"
+        emplacement = (
+            f"{self.namespace}/{self.pod}" if self.namespace != "-" else self.pod
+        )
+        return f"[{self.ressource}] {emplacement}  {transition}{self.etat}{suffixe}"
 
 
 class Surveillance:
@@ -138,17 +147,30 @@ class Surveillance:
 
         return True
 
-    def traiter(self, pod_json: dict) -> Evenement | None:
-        """Analyse un objet pod reçu du watch. Renvoie un événement ou None."""
+    def traiter(self, pod_json: dict, ressource: str = "pods") -> Evenement | None:
+        """Analyse un objet reçu du watch. Renvoie un événement ou None.
+
+        Le détecteur appliqué dépend du type de ressource : un pod ne se
+        juge pas comme un service ou un volume.
+        """
         self.vus += 1
 
         meta = pod_json.get("metadata", {})
-        nom, ns = meta.get("name"), meta.get("namespace")
-        if not nom or not ns:
+        nom = meta.get("name")
+        ns = meta.get("namespace", "-")     # les nœuds n'en ont pas
+        if not nom:
             return None
 
-        identite = f"{ns}/{nom}"
-        etat, redemarrages = overview._etat_pod(pod_json)
+        detecteur, libelle = detecteurs.DETECTEURS.get(ressource, (None, ressource))
+        if detecteur is None:
+            return None
+
+        identite = f"{ressource}:{ns}/{nom}"
+        verdict = detecteur(pod_json)
+        etat = verdict[0] if verdict else "Sain"
+        redemarrages = (
+            overview._etat_pod(pod_json)[1] if ressource == "pods" else 0
+        )
         precedent = self.etats.get(identite)
 
         # `kubectl --watch` envoie d'abord l'état de tous les pods, puis
@@ -168,18 +190,25 @@ class Surveillance:
 
         self.etats[identite] = (etat, redemarrages)
 
-        gravite = _gravite(etat)
-        if gravite is None:
+        if verdict is None:
             # Retour à la normale : utile à savoir, mais rien à diagnostiquer.
-            if precedent and _gravite(precedent[0]):
-                self._log(f"  \033[32m✓\033[0m {identite} rétabli ({precedent[0]} → {etat})")
-                self.derniere_alerte.pop(f"{identite}:{precedent[0]}", None)
+            if precedent and precedent[0] != "Sain":
+                horodatage = time.strftime("%H:%M:%S")
+                self._log(f"  \033[2m{horodatage}\033[0m  \033[32m✓ "
+                          f"[{libelle}] {ns}/{nom} rétabli\033[0m")
+                # La clé stockée utilise le LIBELLÉ (« pod »), pas le nom
+                # kubectl (« pods ») : les deux doivent correspondre, sinon
+                # la déduplication n'est jamais purgée et un objet réparé
+                # puis recassé ne redéclenche pas.
+                self.derniere_alerte.pop(
+                    f"{libelle}:{ns}/{nom}:{precedent[0]}", None
+                )
             return None
 
         ev = Evenement(
-            pod=nom, namespace=ns, etat=etat, gravite=gravite,
-            redemarrages=redemarrages,
-            etat_precedent=precedent[0] if precedent else None,
+            pod=nom, namespace=ns, etat=etat, gravite=verdict[1],
+            redemarrages=redemarrages, ressource=libelle,
+            etat_precedent=precedent[0] if precedent and precedent[0] != "Sain" else None,
         )
 
         if not self._digne_interet(ev):
@@ -195,122 +224,103 @@ class Surveillance:
         if self.verbeux:
             print(texte, flush=True)
 
-    def suivre(self, sur_evenement=None, duree_max: int | None = None) -> None:
-        """Ouvre le watch et traite les événements jusqu'à interruption.
+    def suivre(self, sur_evenement=None, duree_max: int | None = None,
+               ressources: list[str] | None = None) -> None:
+        """Ouvre un watch par ressource et traite les événements.
 
-        `sur_evenement` est appelé pour chaque événement retenu. Sans lui,
-        les événements sont seulement affichés — mode observation, utile
+        Une seule connexion ne suffit pas : `kubectl --watch` ne surveille
+        qu'un type de ressource à la fois. Un pod sain ne garantit pas un
+        service joignable ni un volume lié — chaque type a ses pannes.
+
+        `sur_evenement` est appelé pour chaque anomalie retenue. Sans lui,
+        les événements sont seulement affichés : mode observation, utile
         pour régler les seuils avant de brancher l'agent.
         """
+        import queue
+        import threading
+
         if not shutil.which("kubectl"):
             print("[kubectl absent — impossible de surveiller]", file=sys.stderr)
             return
 
-        commande = "get pods"
+        ressources = ressources or detecteurs.PAR_DEFAUT
+        portee = ""
         if tools.NAMESPACES_AUTORISES:
-            # Le watch ne prend qu'un namespace à la fois ; avec une
-            # restriction on surveille le premier et on avertit.
             ns = sorted(tools.NAMESPACES_AUTORISES)
-            commande += f" -n {ns[0]}"
+            portee = f" -n {ns[0]}"
             if len(ns) > 1:
-                self._log(f"\033[33m  surveillance limitée à « {ns[0] }» "
+                self._log(f"\033[33m  surveillance limitée à « {ns[0]} » "
                           f"(watch mono-namespace)\033[0m")
         else:
-            commande += " --all-namespaces"
+            portee = " --all-namespaces"
 
-        if tools.verifier_commande(commande) is not None:
-            print("[commande refusée par les garde-fous]", file=sys.stderr)
-            return
-
-        self._log(f"\033[1m SURVEILLANCE \033[0m {commande}")
+        self._log(f"\033[1m SURVEILLANCE \033[0m {', '.join(ressources)}")
         self._log(f"\033[2m  seuil {SEUIL_REDEMARRAGES} redémarrages/jour · "
                   f"dédup {FENETRE_DEDUP // 60} min · Ctrl+C pour arrêter\033[0m")
 
-        processus = subprocess.Popen(
-            ["kubectl", *commande.split(), "--watch", "-o", "json"],
-            stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, bufsize=1,
-        )
+        # Une file partagée reçoit (ressource, ligne) depuis tous les
+        # watchs ; la boucle principale garde ainsi la main et peut
+        # s'arrêter proprement même si le cluster est muet.
+        lignes: queue.Queue = queue.Queue()
+        processus: list[subprocess.Popen] = []
+
+        def surveiller(ressource: str) -> None:
+            # Les nœuds ne vivent pas dans un namespace.
+            cible = "" if ressource == "nodes" else portee
+            commande = f"get {ressource}{cible}"
+            if tools.verifier_commande(commande) is not None:
+                return
+            proc = subprocess.Popen(
+                ["kubectl", *commande.split(), "--watch", "-o", "json"],
+                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
+                text=True, bufsize=1,
+            )
+            processus.append(proc)
+            tampon, profondeur = "", 0
+            for ligne in proc.stdout:
+                tampon += ligne
+                profondeur += ligne.count("{") - ligne.count("}")
+                if profondeur > 0 or not tampon.strip():
+                    continue
+                try:
+                    lignes.put((ressource, json.loads(tampon)))
+                except json.JSONDecodeError:
+                    pass
+                tampon = ""
+
+        for ressource in ressources:
+            threading.Thread(target=surveiller, args=(ressource,),
+                             daemon=True).start()
 
         debut = time.time()
-        tampon = ""
-        profondeur = 0
-
-        # `for ligne in stdout` bloque tant qu'aucune ligne n'arrive : sur
-        # un cluster stable, la boucle ne reprendrait jamais la main et
-        # `duree_max` ne serait jamais évalué. On lit donc dans un thread
-        # et on consomme via une file.
-        import queue
-        import threading
-
-        lignes = queue.Queue()
-
-        def lire():
-            for l in processus.stdout:
-                lignes.put(l)
-            lignes.put(None)
-
-        threading.Thread(target=lire, daemon=True).start()
         dernier_signe = 0.0
-        inventaire_annonce = False
 
         try:
             while True:
                 try:
-                    ligne = lignes.get(timeout=1.0)
+                    ressource, objet = lignes.get(timeout=1.0)
                 except queue.Empty:
-                    # Rien reçu : c'est le cas normal sur un cluster sain.
                     if duree_max and time.time() - debut > duree_max:
                         break
-                    # Ligne d'attente réécrite sur place (retour chariot,
-                    # sans saut de ligne) : le journal des événements
-                    # défile proprement au-dessus.
-                    #
-                    # Hors terminal (redirection, service, conteneur), la
-                    # réécriture n'a pas de sens : chaque ligne s'empile.
-                    # On l'espace alors très largement.
                     intervalle = 1 if _interactif() else 300
                     if self.verbeux and time.time() - dernier_signe > intervalle:
                         ecoule = int(time.time() - debut)
                         h, m, s = ecoule // 3600, (ecoule % 3600) // 60, ecoule % 60
                         duree = f"{h}h{m:02d}m" if h else f"{m}m{s:02d}s"
                         if _interactif():
-                            print(
-                                f"\r\033[2m  en attente d'événement… ({duree})"
-                                f"\033[K\033[0m",
-                                end="", flush=True,
-                            )
+                            print(f"\r\033[2m  en attente d'événement… ({duree})"
+                                  f"\033[K\033[0m", end="", flush=True)
                         else:
                             print(f"  en attente d'événement… ({duree})", flush=True)
                         dernier_signe = time.time()
                     continue
 
-                if ligne is None:      # le processus s'est terminé
-                    break
-
-                # Une fois l'inventaire passé, on bascule en mode
-                # « changements » : ce qui arrive ensuite est réel.
-                if not inventaire_annonce and self.initial > 0:
-                    inventaire_annonce = True
-                # `kubectl --watch -o json` produit des objets JSON
-                # concaténés, pas un tableau : il faut les découper en
-                # suivant l'équilibre des accolades.
-                tampon += ligne
-                profondeur += ligne.count("{") - ligne.count("}")
-                if profondeur > 0 or not tampon.strip():
-                    continue
-
-                try:
-                    objet = json.loads(tampon)
-                except json.JSONDecodeError:
-                    tampon = ""
-                    continue
-                tampon = ""
-
-                evenement = self.traiter(objet)
+                evenement = self.traiter(objet, ressource)
                 if evenement:
                     if self.verbeux and _interactif():
-                        print("\r\033[K", end="")   # efface la ligne d'attente
-                    couleur = "\033[31m" if evenement.gravite == "critique" else "\033[33m"
+                        print("\r\033[K", end="")
+                    couleur = ("\033[31m" if evenement.gravite == "critique"
+                               else "\033[33m")
                     horodatage = time.strftime("%H:%M:%S")
                     self._log(f"  \033[2m{horodatage}\033[0m  "
                               f"{couleur}{evenement}\033[0m")
@@ -323,12 +333,13 @@ class Surveillance:
         except KeyboardInterrupt:
             pass
         finally:
-            processus.terminate()
+            for proc in processus:
+                proc.terminate()
             if self.verbeux and _interactif():
                 print("\r\033[K", end="")
             changements = self.vus - self.initial
             self._log(
-                f"\n\033[2m  {self.initial} pods inventoriés au démarrage · "
+                f"\n\033[2m  {self.initial} objets inventoriés au démarrage · "
                 f"{changements} changement(s) ensuite · "
                 f"{self.retenus} anomalie(s) retenue(s)\033[0m"
             )

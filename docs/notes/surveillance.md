@@ -115,3 +115,62 @@ listés séparément sous « Redémarrages cumulés (stables actuellement) ».
 cluster stable, la boucle ne reprenait jamais la main et `--duree` n'"'"'était
 jamais évalué. La lecture se fait désormais dans un thread, avec une file :
 la boucle principale garde la main et affiche un signe de vie toutes les 30 s.
+
+
+## Surveillance multi-ressources
+
+Surveiller les pods seuls laisse des pannes invisibles : un service sans
+endpoint route vers le vide alors que tous ses pods tournent.
+
+### Détecteurs, un par type
+
+| ressource | panne détectée |
+|---|---|
+| pods | CrashLoopBackOff, OOMKilled, ImagePullBackOff, Pending, Evicted |
+| endpoints | `SansEndpoint` — le service ne route vers rien |
+| deployments | `RolloutBloque`, `AucunReplicaPret`, replicas incomplets |
+| statefulsets | idem deployments |
+| pvc | `VolumeNonLie`, `VolumePerdu` |
+| nodes | `NoeudNotReady`, pression mémoire / disque / PID |
+| jobs | `JobEchoue` |
+
+Chaque détecteur est une fonction pure : objet Kubernetes en entrée,
+`(état, gravité)` ou `None` en sortie. **Aucun appel au modèle** — ce sont
+des règles déterministes, testables et instantanées.
+
+Un délai de grâce de 2 minutes épargne les objets fraîchement créés, qui
+traversent normalement des états transitoires.
+
+### Un watch par ressource
+
+`kubectl --watch` ne surveille qu'un type à la fois. Un thread par
+ressource alimente une file partagée ; la boucle principale garde la main
+et s'arrête proprement même sur un cluster muet.
+
+### Validé sur le cluster réel
+
+```
+163 objets inventoriés · 2 anomalies retenues
+
+23:25:02  [service] n8n/n8n-postgres-ro  SansEndpoint
+23:25:02  [pod] sonarqube/sonarqube-0    OOMKilled (1 redémarrages)
+```
+
+**Le service sans endpoint était totalement invisible** avant cette
+extension. Aucun faux positif sur 163 objets.
+
+### Bug trouvé par les tests
+
+La clé de déduplication est stockée avec le libellé (`pod`) mais était
+purgée avec le nom kubectl (`pods`). Les deux ne correspondaient pas :
+**un objet réparé puis recassé n'aurait jamais redéclenché de diagnostic.**
+
+### Questions du mode autonome
+
+18 symptômes couverts, chacun avec une question orientée. Pour un service
+sans endpoint :
+
+> Le service n8n/n8n-postgres-ro n'"'"'a aucun endpoint : il ne route vers aucun
+> pod, donc l'"'"'application est injoignable même si les pods tournent. Compare
+> le sélecteur du Service aux labels des pods du namespace, et vérifie que ces
+> pods passent bien leur readiness probe.

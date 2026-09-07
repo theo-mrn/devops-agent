@@ -69,6 +69,57 @@ QUESTIONS = {
         "l'empêche : ressources insuffisantes sur les nœuds, taint non toléré, "
         "sélecteur sans correspondance, ou volume non lié."
     ),
+    "SansEndpoint": (
+        "Le service {ns}/{pod} n'a aucun endpoint : il ne route vers aucun pod, "
+        "donc l'application est injoignable même si les pods tournent. Compare "
+        "le sélecteur du Service aux labels des pods du namespace, et vérifie "
+        "que ces pods passent bien leur readiness probe."
+    ),
+    "EndpointsNonPrets": (
+        "Le service {ns}/{pod} a des endpoints, mais aucun n'est prêt : les pods "
+        "existent et échouent leur readiness probe. Identifie pourquoi la sonde "
+        "échoue."
+    ),
+    "RolloutBloque": (
+        "Le déploiement {ns}/{pod} a un rollout bloqué (ProgressDeadlineExceeded). "
+        "Détermine ce qui empêche les nouveaux pods de devenir prêts."
+    ),
+    "AucunReplicaPret": (
+        "Le déploiement {ns}/{pod} n'a aucun replica prêt : le service est "
+        "totalement indisponible. Trouve ce qui empêche les pods de démarrer."
+    ),
+    "ReplicasIncomplets": (
+        "Le déploiement {ns}/{pod} n'atteint pas le nombre de replicas voulu. "
+        "Détermine ce qui bloque les pods manquants : ressources insuffisantes, "
+        "contrainte de planification, ou échec de démarrage."
+    ),
+    "VolumeNonLie": (
+        "Le PersistentVolumeClaim {ns}/{pod} reste en attente : aucun volume ne "
+        "lui a été attribué. Vérifie la StorageClass demandée, sa disponibilité, "
+        "et si le provisionnement dynamique est actif."
+    ),
+    "VolumePerdu": (
+        "Le PersistentVolumeClaim {ns}/{pod} a perdu son volume. Évalue "
+        "l'étendue de la perte de données et les options de restauration."
+    ),
+    "NoeudNotReady": (
+        "Le nœud {pod} est NotReady : tout ce qu'il porte est en danger. "
+        "Identifie la cause — kubelet arrêté, perte réseau, ou épuisement de "
+        "ressources — et liste les charges affectées."
+    ),
+    "PressionMemoire": (
+        "Le nœud {pod} est sous pression mémoire et va commencer à expulser des "
+        "pods. Identifie ce qui consomme la mémoire et quels pods sont menacés "
+        "en premier selon leur classe QoS."
+    ),
+    "PressionDisque": (
+        "Le nœud {pod} est sous pression disque. Identifie ce qui remplit le "
+        "disque — images non nettoyées, logs, volumes éphémères."
+    ),
+    "JobEchoue": (
+        "Le Job {ns}/{pod} a définitivement échoué. Lis les logs de ses pods "
+        "pour établir la cause."
+    ),
     "Evicted": (
         "Le pod {ns}/{pod} a été expulsé de son nœud. Détermine quelle "
         "ressource manquait sur le nœud et si la classe QoS du pod l'a rendu "

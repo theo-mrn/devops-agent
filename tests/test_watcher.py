@@ -105,8 +105,9 @@ class TestDeduplication:
     def test_retablissement_libere_la_dedup(self):
         """Un pod réparé puis recassé doit redéclencher."""
         s = Surveillance(verbeux=False)
-        s.traiter(pod(raison="CrashLoopBackOff", redemarrages=5))
+        assert s.traiter(pod(raison="CrashLoopBackOff", redemarrages=5)) is not None
         s.traiter(pod(redemarrages=5))                       # rétabli
+        # Le rétablissement a purgé la déduplication du problème précédent.
         assert s.traiter(pod(raison="CrashLoopBackOff", redemarrages=6)) is not None
 
 
@@ -133,10 +134,16 @@ class TestVolume:
 
 
 class TestEvenement:
-    def test_cle_identifie_pod_et_probleme(self):
+    def test_cle_identifie_ressource_objet_et_probleme(self):
+        """La clé inclut le type : un service et un pod homonymes sont distincts."""
         ev = Evenement(pod="web", namespace="prod", etat="CrashLoopBackOff",
-                       gravite="critique", redemarrages=5)
-        assert ev.cle == "prod/web:CrashLoopBackOff"
+                       gravite="critique", redemarrages=5, ressource="pod")
+        assert ev.cle == "pod:prod/web:CrashLoopBackOff"
+
+    def test_cle_distingue_les_types_de_ressource(self):
+        commun = dict(pod="api", namespace="prod", etat="Panne", gravite="grave")
+        assert (Evenement(**commun, ressource="pod").cle
+                != Evenement(**commun, ressource="service").cle)
 
     def test_affichage_montre_la_transition(self):
         ev = Evenement(pod="web", namespace="prod", etat="CrashLoopBackOff",
