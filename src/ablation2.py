@@ -12,12 +12,13 @@ import yaml
 import bm25 as bm25_mod
 import hybride
 import rag2
+import reranker
 
 CAS = [c for c in yaml.safe_load(Path("eval/questions.yaml").read_text())
        if c.get("fichier_attendu")]
 
 
-def mesurer(nom: str, chercher, k: int = 3) -> tuple[float, float]:
+def mesurer(nom: str, chercher, k: int = 5) -> tuple[float, float]:
     hits, rrs = 0, 0.0
     echecs = []
     for cas in CAS:
@@ -36,16 +37,11 @@ def mesurer(nom: str, chercher, k: int = 3) -> tuple[float, float]:
     return hr, mrr
 
 
-print(f"\n\033[1m ABLATION — méthodes de recherche \033[0m  ({len(CAS)} cas, top-3)\n")
+print(f"\n\033[1m ABLATION — méthodes de recherche \033[0m  ({len(CAS)} cas, top-5)\n")
 
 mesurer("dense (bge-m3)", rag2.chercher)
 mesurer("BM25 seul", bm25_mod.chercher)
 mesurer("hybride RRF 1:1", hybride.chercher)
 
-print()
-for pd, pb in [(2.0, 1.0), (1.0, 2.0), (3.0, 1.0), (1.0, 3.0)]:
-    mesurer(
-        f"hybride dense×{pd:.0f} bm25×{pb:.0f}",
-        lambda q, k=3, pd=pd, pb=pb: hybride.chercher(q, k=k, poids_dense=pd, poids_bm25=pb),
-    )
+mesurer("hybride + reranker", reranker.chercher)
 print()

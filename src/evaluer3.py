@@ -138,7 +138,7 @@ def main() -> None:
     for n_cas, cas in enumerate(cas_tests, start=1):
         if not rapide:
             print(f"\033[2m  [{n_cas}/{len(cas_tests)}] {cas['id']}...\033[0m", flush=True)
-        trouves = rag2.chercher_hybride(cas["question"], k=rag2.TOP_K)
+        trouves = rag2.chercher_rerank(cas["question"], k=rag2.TOP_K)
         fichiers = [c["fichier"] for c, _ in trouves]
 
         attendus = cas.get("fichier_attendu") or []
@@ -181,6 +181,17 @@ def main() -> None:
             # Ollama peut se figer sur une longue série de requêtes : un
             # timeout explicite et une reprise évitent de bloquer toute
             # l'évaluation sur un cas.
+            # Garde-fou hors-domaine : court-circuite la génération, comme
+            # le fait le pipeline réel.
+            import reranker
+            if trouves and trouves[0][1] < reranker.SEUIL_PERTINENCE:
+                texte = "Le contexte fourni ne contient pas cette information."
+                res["verif"] = verifier(cas, texte)
+                res["reponse"] = texte
+                res["hors_domaine"] = True
+                resultats.append(res)
+                continue
+
             texte = None
             for tentative in range(3):
                 try:

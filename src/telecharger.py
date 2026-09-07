@@ -39,6 +39,21 @@ SOURCES = [
     # --- Terraform : langage et refactoring ---
     ("hashicorp/web-unified-docs", "main", "content/terraform/v1.11.x/docs/language", "tf-language"),
     ("hashicorp/web-unified-docs", "main", "content/terraform/v1.11.x/docs/language/state", "tf-state"),
+
+    # --- Terraform : ajouté en brique 10 ---
+    # Le corpus Terraform était 7x plus petit que le Kubernetes (122 chunks
+    # contre ~900). On équilibre avec les sections structurantes du langage
+    # et la CLI, absente jusqu'ici alors que c'est l'usage quotidien.
+    # `functions` (126 fichiers d'une fonction chacun) est délibérément
+    # écarté : trop de bruit pour un usage de diagnostic.
+    ("hashicorp/web-unified-docs", "main", "content/terraform/v1.11.x/docs/language/expressions", "tf-expressions"),
+    ("hashicorp/web-unified-docs", "main", "content/terraform/v1.11.x/docs/language/resources", "tf-resources"),
+    ("hashicorp/web-unified-docs", "main", "content/terraform/v1.11.x/docs/language/meta-arguments", "tf-meta"),
+    ("hashicorp/web-unified-docs", "main", "content/terraform/v1.11.x/docs/language/values", "tf-values"),
+    ("hashicorp/web-unified-docs", "main", "content/terraform/v1.11.x/docs/language/modules", "tf-modules"),
+    ("hashicorp/web-unified-docs", "main", "content/terraform/v1.11.x/docs/language/backend", "tf-backend"),
+    ("hashicorp/web-unified-docs", "main", "content/terraform/v1.11.x/docs/cli/commands", "tf-cli"),
+    ("hashicorp/web-unified-docs", "main", "content/terraform/v1.11.x/docs/cli/state", "tf-cli-state"),
 ]
 
 EXTENSIONS = {".md", ".mdx"}

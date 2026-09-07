@@ -99,18 +99,43 @@ chercher = chercher_dense
 
 
 def chercher_hybride(question: str, k: int = TOP_K):
-    """Recherche hybride RRF — le mode par défaut du pipeline.
-
-    Mesuré en brique 7 : Hit Rate 100 % / MRR 0,933,
-    contre 90 % / 0,850 pour le dense seul.
-    """
+    """Recherche hybride RRF : dense + BM25 fusionnés par rangs."""
     import hybride
     return [(c, s) for c, s, _ in hybride.chercher(question, k=k)]
 
 
+def hors_domaine(question: str) -> bool:
+    """Relais vers le garde-fou du reranker."""
+    import reranker
+    return reranker.hors_domaine(question)
+
+
+def chercher_rerank(question: str, k: int = TOP_K):
+    """Hybride puis reranking par cross-encoder — mode par défaut.
+
+    Mesuré en brique 10 sur 1427 chunks : Hit Rate 97 % contre 94 % pour
+    l'hybride seul. Le cross-encoder lit la question ET le document
+    ensemble, là où dense et BM25 comparent des représentations calculées
+    séparément.
+    """
+    import reranker
+    return reranker.chercher(question, k=k)
+
+
 def repondre(question: str) -> None:
     debut = time.time()
-    resultats = chercher_hybride(question)
+    resultats = chercher_rerank(question)
+
+    # Garde-fou : sous le seuil de pertinence du reranker, aucun chunk ne
+    # traite du sujet. Répondre reviendrait à extrapoler.
+    import reranker
+    if resultats and resultats[0][1] < reranker.SEUIL_PERTINENCE:
+        print(f"\n\033[1m QUESTION \033[0m {question}\n")
+        print(f"\033[2mmeilleur score {resultats[0][1]:.3f} < seuil "
+              f"{reranker.SEUIL_PERTINENCE} — hors domaine du corpus\033[0m\n")
+        print("Le contexte fourni ne contient pas cette information.")
+        print("\033[2m" + "─" * 70 + "\033[0m")
+        return
     t_recherche = time.time() - debut
 
     print(f"\n\033[1m QUESTION \033[0m {question}\n")
