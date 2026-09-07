@@ -10,10 +10,17 @@ Usage :
     uv run python src/rag2.py            # questions de démonstration
 """
 
+import os
 import pickle
 import sys
 import time
 from pathlib import Path
+
+# Le modèle d'embedding est déjà en cache local : inutile d'interroger le
+# Hub HuggingFace à chaque lancement. Sans cela, une requête réseau lente
+# ou bloquée fige le démarrage.
+os.environ.setdefault("HF_HUB_OFFLINE", "1")
+os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
 
 import ollama
 import torch

@@ -135,7 +135,9 @@ def main() -> None:
     resultats = []
     debut = time.time()
 
-    for cas in cas_tests:
+    for n_cas, cas in enumerate(cas_tests, start=1):
+        if not rapide:
+            print(f"\033[2m  [{n_cas}/{len(cas_tests)}] {cas['id']}...\033[0m", flush=True)
         trouves = rag2.chercher_hybride(cas["question"], k=rag2.TOP_K)
         fichiers = [c["fichier"] for c, _ in trouves]
 
@@ -176,15 +178,30 @@ def main() -> None:
                 f"[Source : {c['source']}/{c['fichier']} — {c['titre']}]\n{c['texte']}"
                 for c, _ in trouves
             )
-            rep = ollama.chat(
-                model=rag2.MODELE_LLM,
-                messages=[
-                    {"role": "system", "content": rag2.SYSTEM},
-                    {"role": "user", "content": f"CONTEXTE :\n\n{contexte}\n\n---\n\nQUESTION : {cas['question']}"},
-                ],
-                options={"temperature": 0.1},
-            )
-            texte = rep["message"]["content"]
+            # Ollama peut se figer sur une longue série de requêtes : un
+            # timeout explicite et une reprise évitent de bloquer toute
+            # l'évaluation sur un cas.
+            texte = None
+            for tentative in range(3):
+                try:
+                    client = ollama.Client(timeout=180)
+                    rep = client.chat(
+                        model=rag2.MODELE_LLM,
+                        messages=[
+                            {"role": "system", "content": rag2.SYSTEM},
+                            {"role": "user", "content": f"CONTEXTE :\n\n{contexte}\n\n---\n\nQUESTION : {cas['question']}"},
+                        ],
+                        options={"temperature": 0.1},
+                    )
+                    texte = rep["message"]["content"]
+                    break
+                except Exception as e:
+                    print(f"  \033[33m⟳\033[0m {cas['id']} : {type(e).__name__}, tentative {tentative + 2}/3",
+                          flush=True)
+                    time.sleep(3)
+
+            if texte is None:
+                texte = "[ÉCHEC : pas de réponse du modèle]"
             res["verif"] = verifier(cas, texte)
             res["reponse"] = texte
 

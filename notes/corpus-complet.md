@@ -101,3 +101,45 @@ tout par le prompt.
 - 1028 chunks encodés : **78 s** sur MPS (13,2 chunks/s)
 - index : **5,3 Mo**
 - évaluation complète (39 cas, top-5) : ~9 min
+
+
+## Score final (brique 9)
+
+```
+RETRIEVAL
+  par fichier   Hit Rate  97%   MRR 0.861
+  par contenu   Hit Rate  94%   MRR 0.890
+
+GÉNÉRATION
+  Précision     37/39  (95%)   ← 85% avant
+  Méthode       39/39  (100%)  ← 95% avant
+  Sûreté        39/39  (100%)
+  GLOBAL        37/39  (95%)   ← 85% avant
+  dont refus     5/5   (anti-hallucination)
+```
+
+## Incident : Ollama se fige sur une série de requêtes
+
+L évaluation restait bloquée indéfiniment. Diagnostic : `lsof` montrait une
+connexion TCP ESTABLISHED vers le port 11434 sans réponse. Une génération
+isolée fonctionnait pourtant (10,3 s, 2493 tokens) — le blocage n apparaît
+qu en série.
+
+Deux fausses pistes écartées en chemin :
+- **dépassement du contexte 4096** : mesuré, max 2462 tokens. Non.
+- **requête HuggingFace au démarrage** : `HF_HUB_OFFLINE=1` a accéléré le
+  démarrage (9,4 s) mais n était pas la cause du blocage.
+
+Correction : `ollama.Client(timeout=180)` avec 3 tentatives et pause de 3 s,
+plus un affichage progressif. Observé en fonctionnement : bloqué à 7/39 pendant
+~4 minutes, puis reprise automatique jusqu au bout.
+
+→ **Un pipeline d évaluation doit être résilient**, sinon un seul cas figé
+bloque toute la mesure.
+
+## Échecs restants (2/39)
+
+- `tf_style` — la réponse ne mentionne pas les conventions de nommage.
+- `tf_remote_state` — retrieval raté, le document ne remonte pas.
+
+Aucun ne concerne la sûreté ni la méthode.
