@@ -1,7 +1,7 @@
 # Commandes du projet. `make` seul affiche cette aide.
 
 .DEFAULT_GOAL := help
-.PHONY: help baseline rag ask chunks embed eval eval-fast ablation check
+.PHONY: help baseline rag ask chunks embed eval eval-fast ablation corpus index check
 
 help:  ## Affiche cette aide
 	@grep -E '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | \
@@ -10,11 +10,17 @@ help:  ## Affiche cette aide
 baseline:  ## Questions de référence sur le modèle NU (sans RAG)
 	@uv run python src/baseline.py
 
-rag:  ## Mêmes questions AVEC le RAG
-	@uv run python src/rag.py
+rag:  ## Questions de démonstration sur le corpus complet
+	@uv run python src/rag2.py 2>/dev/null
 
-ask:  ## Question libre avec RAG : make ask Q="ta question"
-	@uv run python src/rag.py "$(Q)"
+ask:  ## Question libre : make ask Q="ta question"
+	@uv run python src/rag2.py "$(Q)" 2>/dev/null
+
+corpus:  ## Télécharge les documents sources
+	@uv run python src/telecharger.py
+
+index:  ## Reconstruit l'index vectoriel (387 chunks, ~30s)
+	@uv run python src/corpus.py 2>/dev/null
 
 chunks:  ## Compare découpage naïf et structurel
 	@uv run python src/comparer.py
@@ -22,11 +28,11 @@ chunks:  ## Compare découpage naïf et structurel
 embed:  ## Matrice de similarité entre phrases témoins
 	@uv run python src/embeddings.py
 
-eval:  ## Score du pipeline sur le jeu de test (7 cas)
-	@uv run python src/evaluer.py 2>/dev/null
+eval:  ## Score du pipeline sur le corpus (12 cas)
+	@uv run python src/evaluer2.py 2>/dev/null
 
 eval-fast:  ## Score du retrieval seul, sans appeler le LLM
-	@uv run python src/evaluer.py --retrieval-seul 2>/dev/null
+	@uv run python src/evaluer2.py --retrieval-seul 2>/dev/null
 
 ablation:  ## Compare les stratégies de chunking
 	@uv run python src/ablation.py 2>/dev/null
