@@ -1,7 +1,7 @@
 # Commandes du projet. `make` seul affiche cette aide.
 
 .DEFAULT_GOAL := help
-.PHONY: help baseline rag ask chunks embed check
+.PHONY: help baseline rag ask chunks embed eval eval-fast ablation check
 
 help:  ## Affiche cette aide
 	@grep -E '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | \
@@ -21,6 +21,15 @@ chunks:  ## Compare découpage naïf et structurel
 
 embed:  ## Matrice de similarité entre phrases témoins
 	@uv run python src/embeddings.py
+
+eval:  ## Score du pipeline sur le jeu de test (7 cas)
+	@uv run python src/evaluer.py 2>/dev/null
+
+eval-fast:  ## Score du retrieval seul, sans appeler le LLM
+	@uv run python src/evaluer.py --retrieval-seul 2>/dev/null
+
+ablation:  ## Compare les stratégies de chunking
+	@uv run python src/ablation.py 2>/dev/null
 
 check:  ## Vérifie que la stack locale répond
 	@echo "Ollama  : $$(curl -s localhost:11434/api/version 2>/dev/null || echo 'hors service')"
