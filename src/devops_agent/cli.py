@@ -33,6 +33,14 @@ def main() -> int:
                    help="déclenche l'agent sur chaque anomalie (coûte de l'API)")
     p.add_argument("--duree", type=int, help="arrêt automatique après N secondes")
 
+    p = sous.add_parser("auto", help="surveille ET diagnostique en autonomie")
+    p.add_argument("--budget-jour", type=float, default=None,
+                   help="plafond de dépense sur 24 h (défaut 5 $)")
+    p.add_argument("--modele", help="modèle API, ex. claude-sonnet-5")
+    p.add_argument("--dry-run", action="store_true",
+                   help="montre les diagnostics qui seraient lancés, sans dépenser")
+    p.add_argument("--duree", type=int, help="arrêt automatique après N secondes")
+
     sous.add_parser("index", help="reconstruit l'index vectoriel")
     sous.add_parser("fetch", help="télécharge les sources documentaires")
     sous.add_parser("config", help="affiche la configuration active")
@@ -61,6 +69,15 @@ def main() -> int:
 
         agent = loop.Agent(tours_max=args.tours)
         print(f"\n{agent.demander(' '.join(args.question))}\n")
+
+    elif args.commande == "auto":
+        from devops_agent.agent.autonome import Autonome, BUDGET_JOUR
+
+        Autonome(
+            budget_jour=args.budget_jour or BUDGET_JOUR,
+            dry_run=args.dry_run,
+            modele=args.modele,
+        ).demarrer(duree_max=args.duree)
 
     elif args.commande == "watch":
         from devops_agent.agent.watcher import Surveillance

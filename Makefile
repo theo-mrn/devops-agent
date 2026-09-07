@@ -1,7 +1,7 @@
 # devops-agent — `make` seul affiche cette aide.
 
 .DEFAULT_GOAL := help
-.PHONY: help install ask diagnose diag watch watch-diagnose fetch index eval eval-fast eval-cat test config clean
+.PHONY: help install ask diagnose diag auto auto-dry watch watch-diagnose fetch index eval eval-fast eval-cat test config clean
 
 help:  ## Affiche cette aide
 	@grep -E '^[a-z-]+:.*?## ' $(MAKEFILE_LIST) | \
@@ -22,6 +22,12 @@ diagnose:  ## Diagnostic outillé : make diagnose Q="..."  [M=modele] [B=budget]
 diag:  ## Alias court de diagnose
 	@uv run devops-agent diagnose "$(Q)" \
 		$(if $(M),--modele $(M)) $(if $(B),--budget $(B))
+
+auto:  ## Surveille ET diagnostique tout seul  [B=budget/jour] [M=modele]
+	@uv run devops-agent auto $(if $(B),--budget-jour $(B)) $(if $(M),--modele $(M))
+
+auto-dry:  ## Montre ce qui serait diagnostiqué, sans dépenser
+	@uv run devops-agent auto --dry-run
 
 watch:  ## Surveille le cluster (observation, ne coûte rien)
 	@uv run devops-agent watch
