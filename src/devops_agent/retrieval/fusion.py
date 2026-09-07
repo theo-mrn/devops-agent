@@ -10,17 +10,17 @@ k=60 est la valeur de la littérature : elle amortit l'écart entre les
 premiers rangs sans écraser la queue de liste.
 
 Usage :
-    uv run python src/hybride.py "ta question"
-    uv run python src/hybride.py --comparer   # dense vs bm25 vs hybride
+    uv run python src/fusion.py "ta question"
+    uv run python src/fusion.py --comparer   # dense vs bm25 vs hybride
 """
 
 import sys
 
-import bm25 as bm25_mod
-import expansion
-import rag2
+import devops_agent.retrieval.lexical as bm25_mod
+import devops_agent.retrieval.expansion as expansion
+import devops_agent.retrieval.pipeline as pipeline
 
-import config
+import devops_agent.core.config as config
 
 K_RRF = config.K_RRF
 POIDS_DENSE = 1.0
@@ -34,7 +34,7 @@ def chercher(question: str, k: int = 3, poids_dense: float = POIDS_DENSE,
     # L'expansion ne s'applique qu'à la RECHERCHE : le prompt envoyé au
     # modèle garde la question d'origine, sinon elle devient illisible.
     requete = expansion.etendre(question)
-    dense = rag2.chercher(requete, k=PROFONDEUR)
+    dense = pipeline.chercher(requete, k=PROFONDEUR)
     lexical = bm25_mod.chercher(requete, k=PROFONDEUR)
 
     # Clé d'identité d'un chunk : son texte suffit et évite de dépendre
@@ -66,7 +66,7 @@ def comparer(question: str) -> None:
         return f"    {chunk['source']}/{chunk['fichier']} — {chunk['titre'][:40]}{extra}"
 
     print("  \033[1mdense\033[0m")
-    for c, s in rag2.chercher(question, k=3):
+    for c, s in pipeline.chercher(question, k=3):
         print(ligne(c, f"  \033[2m{s:.3f}\033[0m"))
 
     print("  \033[1mBM25\033[0m")

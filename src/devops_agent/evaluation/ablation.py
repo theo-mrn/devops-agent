@@ -9,10 +9,10 @@ from pathlib import Path
 
 import yaml
 
-import bm25 as bm25_mod
-import hybride
-import rag2
-import reranker
+import devops_agent.retrieval.lexical as bm25_mod
+import devops_agent.retrieval.fusion as fusion
+import devops_agent.retrieval.pipeline as pipeline
+import devops_agent.retrieval.rerank as rerank
 
 CAS = [c for c in yaml.safe_load(Path("eval/questions.yaml").read_text())
        if c.get("fichier_attendu")]
@@ -40,9 +40,9 @@ def mesurer(nom: str, chercher, k: int = 5) -> tuple[float, float]:
 if __name__ == "__main__":
     print(f"\n\033[1m ABLATION — méthodes de recherche \033[0m  ({len(CAS)} cas, top-5)\n")
 
-    mesurer("dense (bge-m3)", rag2.chercher)
+    mesurer("dense (bge-m3)", pipeline.chercher)
     mesurer("BM25 seul", bm25_mod.chercher)
-    mesurer("hybride RRF 1:1", hybride.chercher)
+    mesurer("hybride RRF 1:1", fusion.chercher)
 
-    mesurer("hybride + reranker", reranker.chercher)
+    mesurer("hybride + reranker", rerank.chercher)
     print()

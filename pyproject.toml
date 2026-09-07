@@ -1,15 +1,37 @@
 [project]
-name = "devops-copilot"
+name = "devops-agent"
 version = "0.1.0"
-description = "Assistant DevOps local : RAG hybride sur documentation Kubernetes et Terraform"
+description = "Agent DevOps : RAG et diagnostic d'infrastructure en lecture seule"
 requires-python = ">=3.12"
 dependencies = [
-    "anthropic>=1.4.0",
+    "anthropic>=0.40",
     "ollama>=0.4",
-    "pyyaml>=6.0.3",
-    "rank-bm25>=0.2.2",
-    "sentence-transformers>=6.0.1",
+    "pyyaml>=6",
+    "rank-bm25>=0.2",
+    "sentence-transformers>=3",
 ]
 
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-cov>=5"]
+
+[project.scripts]
+devops-agent = "devops_agent.cli:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/devops_agent"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
 [tool.uv]
-package = false
+package = true
+
+[dependency-groups]
+dev = [
+    "pytest>=9.1.1",
+]

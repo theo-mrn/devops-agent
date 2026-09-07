@@ -83,6 +83,19 @@ def _verifier_kubectl(args: list[str]) -> None:
             raise OutilRefuse("--all-namespaces interdit quand une liste est configurée")
 
 
+def verifier_commande(commande: str) -> str | None:
+    """Renvoie le motif de refus, ou None si la commande est autorisée.
+
+    Séparé de `kubectl()` pour que les garde-fous soient testables sans
+    cluster : la vérification est pure, l'exécution ne l'est pas.
+    """
+    try:
+        _verifier_kubectl(commande.split())
+        return None
+    except OutilRefuse as e:
+        return str(e)
+
+
 def kubectl(commande: str) -> str:
     """Exécute une commande kubectl en lecture seule.
 
@@ -94,12 +107,11 @@ def kubectl(commande: str) -> str:
     if not shutil.which("kubectl"):
         return "[erreur] kubectl n'est pas installé ou absent du PATH"
 
-    args = commande.split()
-    try:
-        _verifier_kubectl(args)
-    except OutilRefuse as e:
-        return f"[refusé] {e}"
+    motif = verifier_commande(commande)
+    if motif:
+        return f"[refusé] {motif}"
 
+    args = commande.split()
     try:
         r = subprocess.run(
             ["kubectl", *args],
@@ -118,9 +130,9 @@ def chercher_documentation(question: str) -> str:
     """Recherche dans la documentation indexée (le pipeline RAG)."""
     import sys
     sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-    import rag2
+    import devops_agent.retrieval.pipeline as pipeline
 
-    resultats = rag2.chercher_rerank(question, k=3)
+    resultats = pipeline.chercher_rerank(question, k=3)
     if not resultats:
         return "Aucun résultat dans la documentation indexée."
 

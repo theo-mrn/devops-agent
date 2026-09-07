@@ -75,7 +75,8 @@ TIMEOUT_LLM = int(os.environ.get("RAG_TIMEOUT", "180"))
 
 # ── Chemins ──────────────────────────────────────────────────────
 
-RACINE = Path(__file__).resolve().parent.parent
+# core/ → devops_agent/ → src/ → racine du projet
+RACINE = Path(__file__).resolve().parents[3]
 SOURCES = [RACINE / "data/raw", RACINE / "data/interne"]
 INDEX = RACINE / "data/index/corpus.pkl"
 CAS_TEST = RACINE / "eval/questions.yaml"

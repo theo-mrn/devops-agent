@@ -5,7 +5,7 @@ noie le signal et rend l'inspection manuelle impossible. On prend des
 sections ciblées, sur les sujets que le système doit couvrir.
 
 Usage :
-    uv run python src/telecharger.py
+    uv run python src/sources.py
 """
 
 import json

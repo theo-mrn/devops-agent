@@ -10,7 +10,7 @@ La tokenisation est le point délicat en DevOps : `ImagePullBackOff`,
 ordinaire.
 
 Usage :
-    uv run python src/bm25.py "ta question"
+    uv run python src/lexical.py "ta question"
 """
 
 import pickle
@@ -22,7 +22,7 @@ from pathlib import Path
 
 from rank_bm25 import BM25Okapi
 
-import config
+import devops_agent.core.config as config
 
 INDEX = config.INDEX
 
@@ -92,8 +92,8 @@ def charger():
 
 
 def chercher(question: str, k: int = 3):
-    bm25, chunks = charger()
-    scores = bm25.get_scores(tokeniser_casse(question))
+    moteur, chunks = charger()
+    scores = moteur.get_scores(tokeniser_casse(question))
     ordre = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:k]
     return [(chunks[i], float(scores[i])) for i in ordre]
 

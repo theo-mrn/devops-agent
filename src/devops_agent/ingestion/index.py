@@ -7,8 +7,8 @@ Différences avec la brique 2, qui ne traitait qu'un fichier :
   - les chunks trop courts sont écartés (titres orphelins, bruit).
 
 Usage :
-    uv run python src/corpus.py          # construit et sauvegarde l'index
-    uv run python src/corpus.py --stats  # statistiques seulement
+    devops-agent index          # construit et sauvegarde l'index
+    devops-agent index --stats  # statistiques seulement
 """
 
 import pickle
@@ -20,12 +20,12 @@ from pathlib import Path
 import torch
 from sentence_transformers import SentenceTransformer
 
-import chunk_structure
+import devops_agent.ingestion.chunking as chunking
 
 # Deux sources : la documentation téléchargée, et les documents internes
 # rédigés pour combler ce que la doc officielle ne couvre pas (table des
 # codes de sortie, procédures de diagnostic).
-import config
+import devops_agent.core.config as config
 
 SOURCES = config.SOURCES
 INDEX = config.INDEX
@@ -42,7 +42,7 @@ def redecouper_long(chunk: dict) -> list[dict]:
     if len(texte) <= TAILLE_MAX:
         return [chunk]
 
-    texte_masque, blocs = chunk_structure.masquer_blocs_code(texte)
+    texte_masque, blocs = chunking.masquer_blocs_code(texte)
 
     def assembler(unites: list[str], separateur: str) -> list[str]:
         morceaux, courant = [], ""
@@ -66,7 +66,7 @@ def redecouper_long(chunk: dict) -> list[dict]:
         morceaux = raffines
 
     return [
-        {**chunk, "texte": chunk_structure.restaurer_blocs_code(m, blocs).strip(),
+        {**chunk, "texte": chunking.restaurer_blocs_code(m, blocs).strip(),
          "titre": f"{chunk['titre']} ({i + 1}/{len(morceaux)})" if len(morceaux) > 1 else chunk["titre"]}
         for i, m in enumerate(morceaux)
     ]
@@ -88,7 +88,7 @@ def construire_chunks() -> list[dict]:
         else:
             source, nom = "interne", fichier.stem
 
-        for c in chunk_structure.decouper(fichier.read_text(errors="replace")):
+        for c in chunking.decouper(fichier.read_text(errors="replace")):
             for morceau in redecouper_long(c):
                 if len(morceau["texte"]) < TAILLE_MIN:
                     continue

@@ -15,7 +15,7 @@ confidentielle.
 
 import os
 
-import config
+import devops_agent.core.config as config
 
 
 class Reponse:

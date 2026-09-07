@@ -22,8 +22,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import config
-from agent import outils
+import devops_agent.core.config as config
+from devops_agent.agent import tools as outils
 
 TOURS_MAX = 12  # au-delà, l'agent boucle probablement pour rien
 

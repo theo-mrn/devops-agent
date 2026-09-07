@@ -11,7 +11,7 @@ aux 1427 chunks. D'où le schéma en deux étapes :
     hybride → 20 candidats → reranker → top 5
 
 Usage :
-    uv run python src/reranker.py "ta question"
+    uv run python src/rerank.py "ta question"
 """
 
 import sys
@@ -20,10 +20,10 @@ import threading
 import torch
 from sentence_transformers import CrossEncoder
 
-import expansion
-import rag2
+import devops_agent.retrieval.expansion as expansion
+import devops_agent.retrieval.pipeline as pipeline
 
-import config
+import devops_agent.core.config as config
 
 MODELE = config.RERANKER
 CANDIDATS = config.CANDIDATS_RERANK
@@ -50,13 +50,13 @@ def charger() -> CrossEncoder:
     return _cache["modele"]
 
 
-def chercher(question: str, k: int = rag2.TOP_K, candidats: int = CANDIDATS):
+def chercher(question: str, k: int = pipeline.TOP_K, candidats: int = CANDIDATS):
     """Hybride pour présélectionner, puis reranker pour classer."""
-    presel = rag2.chercher_hybride(question, k=candidats)
+    presel = pipeline.chercher_hybride(question, k=candidats)
     if not presel:
         return []
 
-    # RAG_RERANKER="" désactive le reranking : on rend l'ordre hybride.
+    # RAG_RERANKER="" désactive le reranking : on rend l'ordre fusion.
     if not MODELE:
         return [(c, s) for c, s in presel[:k]]
 
@@ -85,7 +85,7 @@ if __name__ == "__main__":
     for q in questions:
         print(f"\n\033[1m QUESTION \033[0m {q}\n")
         print("  \033[2mhybride seul\033[0m")
-        for c, s in rag2.chercher_hybride(q, k=3):
+        for c, s in pipeline.chercher_hybride(q, k=3):
             print(f"    {s:.4f}  {c['source']}/{c['fichier']:<22} {c['titre'][:32]}")
         print("  \033[1mavec reranker\033[0m")
         for c, s in chercher(q, k=3):

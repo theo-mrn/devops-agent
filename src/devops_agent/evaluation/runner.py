@@ -12,9 +12,9 @@ La sûreté est éliminatoire : une réponse qui propose
 `kubectl delete pod --force` est un échec, quelle que soit sa justesse.
 
 Usage :
-    uv run python src/evaluer3.py
-    uv run python src/evaluer3.py --retrieval-seul
-    uv run python src/evaluer3.py --categorie k8s-debug
+    uv run python src/runner.py
+    uv run python src/runner.py --retrieval-seul
+    uv run python src/runner.py --categorie k8s-debug
 """
 
 import concurrent.futures as cf
@@ -29,7 +29,7 @@ from pathlib import Path
 
 import yaml
 
-import rag2
+import devops_agent.retrieval.pipeline as pipeline
 
 # Doit rester <= OLLAMA_NUM_PARALLEL (défini dans le plist du service).
 # Chaque requête parallèle alloue son propre cache KV : au-delà de 3, la
@@ -43,8 +43,8 @@ PARALLELISME = 3
 # seuls les appels Ollama — qui dominent le temps — sont parallélisés.
 _verrou_gpu = threading.Lock()
 
-import config
-import generateur
+import devops_agent.core.config as config
+import devops_agent.generation.provider as provider
 
 CAS = config.CAS_TEST
 SORTIE = Path("eval/resultats-pro.json")
@@ -154,7 +154,7 @@ def main() -> None:
 
     def traiter(cas: dict) -> dict:
         with _verrou_gpu:
-            trouves = rag2.chercher_rerank(cas["question"], k=rag2.TOP_K)
+            trouves = pipeline.chercher_rerank(cas["question"], k=pipeline.TOP_K)
         fichiers = [c["fichier"] for c, _ in trouves]
 
         attendus = cas.get("fichier_attendu") or []
@@ -187,7 +187,7 @@ def main() -> None:
 
         if not rapide:
             # Garde-fou de domaine, identique au pipeline réel.
-            import expansion
+            import devops_agent.retrieval.expansion as expansion
             if expansion.hors_domaine(cas["question"]):
                 texte = "Le contexte fourni ne contient pas cette information."
                 res["verif"] = verifier(cas, texte)
@@ -203,8 +203,8 @@ def main() -> None:
             texte = None
             for tentative in range(3):
                 try:
-                    rep = generateur.generer(
-                        rag2.SYSTEM,
+                    rep = provider.generer(
+                        pipeline.SYSTEM,
                         f"CONTEXTE :\n\n{contexte}\n\n---\n\nQUESTION : {cas['question']}",
                     )
                     texte = rep.texte
@@ -227,7 +227,7 @@ def main() -> None:
 
     # Préchargement AVANT de lancer les threads : sinon trois threads
     # déclenchent trois chargements concurrents des modèles.
-    rag2.chercher_rerank("préchauffage", k=1)
+    pipeline.chercher_rerank("préchauffage", k=1)
 
     if rapide:
         resultats = [traiter(c) for c in cas_tests]
@@ -242,8 +242,8 @@ def main() -> None:
     duree = time.time() - debut
 
     # --- Affichage ---
-    n_chunks = len(rag2.charger()[0]["chunks"])
-    print(f"\n\033[1m ÉVALUATION \033[0m  {len(cas_tests)} cas · {n_chunks} chunks · top-{rag2.TOP_K}\n")
+    n_chunks = len(pipeline.charger()[0]["chunks"])
+    print(f"\n\033[1m ÉVALUATION \033[0m  {len(cas_tests)} cas · {n_chunks} chunks · top-{pipeline.TOP_K}\n")
 
     par_cat = defaultdict(list)
     for r in resultats:

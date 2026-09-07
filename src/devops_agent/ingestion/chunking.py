@@ -12,7 +12,7 @@ Chaque chunk garde en tête le titre de sa section, pour rester
 compréhensible isolément.
 
 Usage :
-    uv run python src/chunk_structure.py
+    uv run python src/chunking.py
 """
 
 import re

@@ -6,8 +6,8 @@ Différences avec `rag.py` (brique 4) :
   - affiche l'écart de score, indice de la confiance du retrieval.
 
 Usage :
-    uv run python src/rag2.py "ta question"
-    uv run python src/rag2.py            # questions de démonstration
+    uv run python src/pipeline.py "ta question"
+    uv run python src/pipeline.py            # questions de démonstration
 """
 
 import os
@@ -29,8 +29,8 @@ from sentence_transformers import SentenceTransformer
 # Import différé dans chercher() pour éviter une boucle : hybride
 # importe rag2 pour la partie dense.
 
-import config
-import generateur
+import devops_agent.core.config as config
+import devops_agent.generation.provider as provider
 
 # Les modèles et paramètres vivent dans config.py, surchargeables par
 # variables d'environnement. Ces alias gardent le code lisible.
@@ -117,14 +117,14 @@ def chercher_dense(question: str, k: int = TOP_K):
     return [(index["chunks"][i], float(scores[i])) for i in ordre]
 
 
-# Alias conservé : hybride.py appelle rag2.chercher pour la partie dense.
+# Alias conservé : fusion.py appelle pipeline.chercher pour la partie dense.
 chercher = chercher_dense
 
 
 def chercher_hybride(question: str, k: int = TOP_K):
     """Recherche hybride RRF : dense + BM25 fusionnés par rangs."""
-    import hybride
-    return [(c, s) for c, s, _ in hybride.chercher(question, k=k)]
+    import devops_agent.retrieval.fusion as fusion
+    return [(c, s) for c, s, _ in fusion.chercher(question, k=k)]
 
 
 def chercher_rerank(question: str, k: int = TOP_K):
@@ -135,8 +135,8 @@ def chercher_rerank(question: str, k: int = TOP_K):
     ensemble, là où dense et BM25 comparent des représentations calculées
     séparément.
     """
-    import reranker
-    return reranker.chercher(question, k=k)
+    import devops_agent.retrieval.rerank as rerank
+    return rerank.chercher(question, k=k)
 
 
 def repondre(question: str) -> None:
@@ -144,7 +144,7 @@ def repondre(question: str) -> None:
     # corpus ne couvre pas, refuser sans appeler le modèle. Le retrieval
     # remonterait un contexte plausible mais trompeur (une question
     # PostgreSQL fait remonter le backend `pg` de Terraform).
-    import expansion
+    import devops_agent.retrieval.expansion as expansion
     techno = expansion.hors_domaine(question)
     if techno:
         print(f"\n\033[1m QUESTION \033[0m {question}\n")
@@ -173,7 +173,7 @@ def repondre(question: str) -> None:
     )
 
     debut = time.time()
-    rep = generateur.generer(
+    rep = provider.generer(
         SYSTEM, f"CONTEXTE :\n\n{contexte}\n\n---\n\nQUESTION : {question}"
     )
     t_gen = time.time() - debut
@@ -182,7 +182,7 @@ def repondre(question: str) -> None:
     print(
         f"\n\033[2m→ recherche {t_recherche * 1000:.0f}ms · "
         f"contexte {rep.tokens_entree} tokens · "
-        f"génération {t_gen:.1f}s · {generateur.modele_actif()}\033[0m"
+        f"génération {t_gen:.1f}s · {provider.modele_actif()}\033[0m"
     )
     print("\033[2m" + "─" * 70 + "\033[0m")
 
