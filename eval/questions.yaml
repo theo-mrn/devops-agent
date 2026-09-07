@@ -969,48 +969,48 @@
   type: factuel
   categorie: cicd
   question: "Comment déclencher un workflow GitHub Actions sur une pull request ?"
-  fichier_attendu: ["events-that-trigger-workflows", "triggering-a-workflow", "workflows"]
+  fichier_attendu: ["events-that-trigger-workflows", "workflows"]
   doit_contenir: [["pull_request", "on:"]]
   ne_doit_pas_contenir: []
 
-- id: ci_secrets
+- id: ci_variables
   type: factuel
-  categorie: securite
-  question: "Comment utiliser un secret dans un workflow GitHub Actions ?"
-  fichier_attendu: ["secrets", "workflows-and-actions"]
-  doit_contenir: [["secret"]]
+  categorie: cicd
+  question: "Comment définir des variables d'environnement dans un workflow GitHub Actions ?"
+  fichier_attendu: ["variables"]
+  doit_contenir: [["env", "variable"]]
   ne_doit_pas_contenir: []
 
 - id: ci_matrix
   type: factuel
   categorie: cicd
   question: "Comment exécuter un job sur plusieurs versions avec une matrice ?"
-  fichier_attendu: ["running-variations-of-jobs-in-a-workflow", "workflow-syntax", "matrix"]
+  fichier_attendu: ["workflows", "expressions", "contexts"]
   doit_contenir: [["matrix", "matrice", "strategy"]]
   ne_doit_pas_contenir: []
 
-- id: ci_rerun
+- id: ci_artifacts
   type: factuel
   categorie: cicd
-  question: "Comment relancer un job GitHub Actions qui a échoué ?"
-  fichier_attendu: ["re-running-workflows-and-jobs", "manage-workflow-runs"]
-  doit_contenir: [["re-run", "relancer", "rerun"]]
+  question: "Comment partager des fichiers entre deux jobs GitHub Actions ?"
+  fichier_attendu: ["workflow-artifacts"]
+  doit_contenir: [["artifact"]]
   ne_doit_pas_contenir: []
 
 - id: ci_cache
   type: factuel
   categorie: cicd
   question: "Comment mettre en cache des dépendances dans GitHub Actions ?"
-  fichier_attendu: ["caching-dependencies-to-speed-up-workflows", "dependency-caching-reference"]
+  fichier_attendu: ["dependency-caching"]
   doit_contenir: [["cache"]]
   ne_doit_pas_contenir: []
 
 # ─── ABSENT ───────────────────────────────────────────────────────
 
-- id: absent_windows_iis
+- id: absent_vmware
   type: absent
   categorie: linux
-  question: "Comment configurer un site web dans IIS sur Windows Server ?"
+  question: "Comment configurer un cluster vSphere avec VMware HA ?"
   fichier_attendu: []
   doit_contenir: [["ne contient pas", "ne fournit pas", "pas cette information"]]
-  ne_doit_pas_contenir: ["applicationHost.config", "inetmgr"]
+  ne_doit_pas_contenir: ["vcenter", "esxi"]
