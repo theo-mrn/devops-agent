@@ -176,10 +176,18 @@ def kubectl(commande: str) -> str:
 def rag_disponible() -> bool:
     """La recherche documentaire est-elle utilisable ?
 
-    Elle demande ~2 Go de dépendances (PyTorch, sentence-transformers) et
-    un index construit. Un agent qui ne fait que du diagnostic cluster
-    s'en passe : quatre de ses cinq outils n'en ont pas besoin.
+    Deux voies possibles :
+
+      - un index en base (pgvector) : l'agent n'a besoin que de psycopg,
+        et son image reste à 66 Mo ;
+      - un index sur fichier : suppose PyTorch et sentence-transformers,
+        soit ~2,5 Go. Utile en local, pas dans un pod.
     """
+    from devops_agent.retrieval import vectordb
+
+    if vectordb.disponible():
+        return True
+
     try:
         import sentence_transformers  # noqa: F401
     except ImportError:
@@ -191,14 +199,27 @@ def rag_disponible() -> bool:
 
 def chercher_documentation(question: str) -> str:
     """Recherche dans la documentation indexée (le pipeline RAG)."""
+    from devops_agent.retrieval import vectordb
+
+    # Index en base : la voie normale en cluster. La similarité est
+    # calculée par PostgreSQL, l'agent n'encode que la question.
+    if vectordb.disponible():
+        trouves = vectordb.chercher(question, k=3)
+        if not trouves:
+            return "Aucun résultat dans la documentation indexée."
+        return "\n\n---\n\n".join(
+            f"[{c.source}/{c.fichier} — {c.titre}] (pertinence {c.score:.2f})\n"
+            f"{c.texte[:1500]}"
+            for c in trouves
+        )
+
     if not rag_disponible():
         # Dégrader proprement plutôt que planter : le modèle reçoit une
         # explication utilisable et poursuit avec ses autres outils.
         return (
-            "[indisponible] La recherche documentaire demande les dépendances "
-            "optionnelles et un index construit :\n"
-            "    uv sync --extra rag\n"
-            "    devops-agent index\n"
+            "[indisponible] La recherche documentaire demande soit un index "
+            "en base (RAG_DB_DSN), soit les dépendances locales :\n"
+            "    uv sync --extra rag && devops-agent index\n"
             "Poursuis le diagnostic avec les autres outils."
         )
 

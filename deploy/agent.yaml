@@ -75,7 +75,7 @@ spec:
         - name: agent
           # Docker Hub : les images y sont publiques par défaut, donc
           # tirables par le cluster sans imagePullSecret.
-          image: maxwellfaraday/devops-agent:0.6.0
+          image: maxwellfaraday/devops-agent:0.7.0
           imagePullPolicy: IfNotPresent
           args: ["auto"]
           envFrom:

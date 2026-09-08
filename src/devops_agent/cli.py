@@ -45,6 +45,8 @@ def main() -> int:
     p.add_argument("--stats", action="store_true",
                    help="affiche la composition du corpus sans encoder")
     sous.add_parser("fetch", help="télécharge les sources documentaires")
+    sous.add_parser("reindexer",
+                    help="alimente l'index vectoriel de la base (CronJob)")
     sous.add_parser("config", help="affiche la configuration active")
     p = sous.add_parser("audit", help="vérifie les permissions réelles sur le cluster")
     p.add_argument("--sa", metavar="NS:NOM",
@@ -120,6 +122,10 @@ def main() -> int:
         print(f"\n\033[1m CONFIGURATION \033[0m\n")
         print(config.resume())
         print()
+
+    elif args.commande == "reindexer":
+        from devops_agent.ingestion import reindexer
+        return reindexer.main()
 
     elif args.commande == "audit":
         from devops_agent.agent import tools
