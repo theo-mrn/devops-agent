@@ -1,9 +1,39 @@
 # Installation sur un cluster
 
-## En trois commandes
+## Publication de l'image
+
+Par la CI, ce qui est la voie normale :
 
 ```bash
-./deploy/publier.sh                       # construit et publie l'image
+git tag v0.1.0 && git push origin v0.1.0
+```
+
+GitHub Actions construit en `linux/amd64`, publie sur GHCR et attache une
+attestation de provenance. Le `GITHUB_TOKEN` porte déjà `write:packages` :
+aucun jeton à créer.
+
+`deploy/publier.sh` reste disponible pour une publication depuis un poste,
+mais demande d'ajouter la portée `write:packages` au jeton `gh`.
+
+### Rendre l'image publique
+
+Sur GHCR, une image est **privée par défaut**, même dans un dépôt public. Sans
+cela, le cluster échoue au `pull` :
+
+> https://github.com/users/&lt;compte&gt;/packages/container/devops-agent/settings
+> → *Change visibility* → *Public*
+
+Sinon, créer un `imagePullSecret` :
+
+```bash
+kubectl create secret docker-registry ghcr \
+  --docker-server=ghcr.io --docker-username=<compte> \
+  --docker-password=$(gh auth token) -n devops-agent
+```
+
+## Installation
+
+```bash
 ./deploy/installer.sh                     # RBAC, vérification, déploiement
 kubectl logs -f deploy/devops-agent -n devops-agent
 ```
