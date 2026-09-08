@@ -213,6 +213,17 @@ def _formater(noeuds: list[dict], pods: list[dict], version: str) -> str:
             detail = ", ".join(f"{n}× {e}" for e, n in restants.most_common())
             lignes.append(f"  [... et {len(malades) - MAX_ANOMALIES} autres : {detail}]")
 
+    # Pression mémoire : un pod à 90 % de sa limite finira OOMKilled.
+    # Le signaler dans l'aperçu permet à l'agent de le voir avant qu'il
+    # ne devienne un incident.
+    try:
+        from devops_agent.agent import metriques
+        pression = metriques.etat_actuel()
+        if pression.startswith("Pression"):
+            lignes.append("\n" + pression)
+    except Exception:
+        pass   # les métriques sont un bonus, jamais un blocage
+
     # Les pods qui cumulent des redémarrages depuis longtemps sans être
     # instables aujourd'hui : à surveiller, pas à diagnostiquer.
     chroniques = [

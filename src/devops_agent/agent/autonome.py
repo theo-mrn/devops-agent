@@ -25,7 +25,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from devops_agent.agent import verification, webhook
+from devops_agent.agent import metriques, verification, webhook
 from devops_agent.agent.correlation import Groupe, Tampon
 from devops_agent.agent.watcher import Evenement, Surveillance
 from devops_agent.core import config
@@ -70,6 +70,14 @@ QUESTIONS = {
         "Le pod {ns}/{pod} reste en attente de planification. Détermine ce qui "
         "l'empêche : ressources insuffisantes sur les nœuds, taint non toléré, "
         "sélecteur sans correspondance, ou volume non lié."
+    ),
+    "MemoireProcheDeLaLimite": (
+        "Le pod {ns}/{pod} consomme une part critique de sa limite mémoire et "
+        "sera bientôt tué (OOMKilled) si la tendance se poursuit. Compare la "
+        "consommation actuelle à la limite configurée, cherche si la "
+        "consommation croît régulièrement — signe d'une fuite — ou si elle "
+        "reflète simplement une charge normale mal dimensionnée. Propose une "
+        "limite adaptée, ou la correction applicative selon le cas."
     ),
     "SansEndpoint": (
         "Le service {ns}/{pod} n'a aucun endpoint : il ne route vers aucun pod, "
@@ -294,6 +302,9 @@ class Autonome:
               f"corrélation {FENETRE:.0f}s · journal {JOURNAL}\033[0m")
 
         tampon = Tampon()
+        # Les métriques n'ont pas de flux d'événements : on les relève
+        # périodiquement, pendant les temps morts de la surveillance.
+        ressources = metriques.SurveillanceRessources()
 
         def accumuler(ev: Evenement) -> None:
             # On n'appelle pas l'agent tout de suite : une panne se
@@ -305,6 +316,18 @@ class Autonome:
             # Appelé à chaque seconde d'inactivité : sans cela, un groupe
             # dont la fenêtre est écoulée attendrait le prochain
             # événement pour être traité.
+            if ressources.doit_relever():
+                for ns, nom, etat, detail in ressources.relever():
+                    evenement = Evenement(
+                        pod=nom, namespace=ns, etat=etat,
+                        gravite="grave", ressource="métrique",
+                    )
+                    horodatage = time.strftime("%H:%M:%S")
+                    print(f"  \033[2m{horodatage}\033[0m  "
+                          f"\033[33m[métrique] {ns}/{nom}  {detail}\033[0m",
+                          flush=True)
+                    tampon.ajouter(evenement)
+
             for groupe in tampon.prets():
                 self.traiter(groupe)
 
