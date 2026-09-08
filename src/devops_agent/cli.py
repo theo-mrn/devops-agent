@@ -41,7 +41,9 @@ def main() -> int:
                    help="montre les diagnostics qui seraient lancés, sans dépenser")
     p.add_argument("--duree", type=int, help="arrêt automatique après N secondes")
 
-    sous.add_parser("index", help="reconstruit l'index vectoriel")
+    p = sous.add_parser("index", help="reconstruit l'index vectoriel")
+    p.add_argument("--stats", action="store_true",
+                   help="affiche la composition du corpus sans encoder")
     sous.add_parser("fetch", help="télécharge les sources documentaires")
     sous.add_parser("config", help="affiche la configuration active")
     p = sous.add_parser("audit", help="vérifie les permissions réelles sur le cluster")
@@ -105,6 +107,8 @@ def main() -> int:
 
     elif args.commande == "index":
         from devops_agent.ingestion import index
+        if args.stats:
+            sys.argv = ["index", "--stats"]
         index.main()
 
     elif args.commande == "fetch":

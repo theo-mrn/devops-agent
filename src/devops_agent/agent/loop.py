@@ -53,6 +53,10 @@ MÉTHODE
    résultat mène à la suivante.
 3. Consulte la documentation quand tu as besoin d'une procédure ou d'une
    syntaxe, pas pour ce que tu observes directement.
+4. AVANT de conclure à une anomalie, cherche si elle est documentée : cette
+   infrastructure a ses décisions d'architecture et ses incidents passés
+   indexés. Un service sans endpoint peut être une conséquence assumée d'un
+   choix de configuration, pas une panne.
 
 CONTRAINTES
 - Tes outils sont en LECTURE SEULE. Tu ne peux rien modifier, et c'est

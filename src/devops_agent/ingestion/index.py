@@ -72,6 +72,36 @@ def redecouper_long(chunk: dict) -> list[dict]:
     ]
 
 
+def chunks_infrastructure() -> list[dict]:
+    """Manifests et documentation d'un dépôt GitOps.
+
+    C'est ici que le RAG cesse d'être une redite du modèle : ces
+    documents décrivent UNE infrastructure, celle du client, que rien
+    d'autre ne connaît.
+
+    Sans `RAG_INFRA_REPO`, rien n'est indexé — le corpus documentaire
+    public suffit.
+    """
+    import os
+
+    depot = os.environ.get("RAG_INFRA_REPO", "")
+    if not depot:
+        return []
+
+    racine = Path(depot).expanduser()
+    if not racine.exists():
+        print(f"  \033[33m⚠ dépôt introuvable : {racine}\033[0m")
+        return []
+
+    from devops_agent.ingestion import manifests
+
+    ressources = manifests.collecter(racine)
+    documentation = manifests.collecter_documentation(racine)
+    print(f"  infrastructure : {len(ressources)} ressources, "
+          f"{len(documentation)} sections de documentation")
+    return ressources + documentation
+
+
 def construire_chunks() -> list[dict]:
     fichiers = []
     for racine in SOURCES:
@@ -99,6 +129,7 @@ def construire_chunks() -> list[dict]:
                     "fichier": nom or fichier.stem,
                 })
 
+    chunks.extend(chunks_infrastructure())
     return chunks
 
 

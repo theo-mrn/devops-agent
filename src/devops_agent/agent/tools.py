@@ -350,10 +350,15 @@ DEFINITIONS = [
     {
         "name": "chercher_documentation",
         "description": (
-            "Cherche dans la documentation technique indexée (Kubernetes, Terraform, "
-            "Docker, Linux, CI/CD, plus les runbooks internes). À utiliser pour toute "
-            "question de procédure, de syntaxe ou de concept. Recherche sémantique : "
-            "formuler une question complète, pas des mots-clés."
+            "Cherche dans la documentation indexée. Contient trois choses :\n"
+            "1. la documentation publique (Kubernetes, Terraform, Docker, Linux, CI/CD) ;\n"
+            "2. les MANIFESTS de cette infrastructure — l'intention déclarée en Git, "
+            "à comparer avec l'état réel observé par kubectl ;\n"
+            "3. les RUNBOOKS et DÉCISIONS D'ARCHITECTURE internes — le « pourquoi » "
+            "des choix, les incidents passés, les procédures maison.\n"
+            "Consulter en priorité avant de conclure : une anomalie apparente peut "
+            "être un comportement documenté et voulu. Recherche sémantique : poser "
+            "une question complète, pas des mots-clés."
         ),
         "input_schema": {
             "type": "object",
