@@ -202,6 +202,81 @@ def remplacer_source(source: str, chunks: list[dict],
     return supprimes, len(chunks)
 
 
+def remplacer_document(source: str, fichier: str, chunks: list[dict],
+                       vecteurs: list[list[float]]) -> tuple[int, int]:
+    """Remplace UN document, sans toucher au reste de la source.
+
+    `remplacer_source` convient au balayage d'un dépôt entier : on
+    reconstruit tout. Une entreprise qui envoie ses documents un par un
+    a besoin de l'inverse — sinon chaque envoi effacerait le précédent.
+
+    Comme `remplacer_source`, tout se joue dans une transaction : le
+    document reste interrogeable dans son ancienne version jusqu'au
+    commit, jamais absent.
+
+    Renvoie (supprimés, insérés).
+    """
+    import hashlib
+
+    with _connexion() as conn, conn.transaction():
+        supprimes = conn.execute(
+            f"DELETE FROM {TABLE} WHERE source = %s AND fichier = %s",
+            (source, fichier),
+        ).rowcount
+
+        for chunk, vecteur in zip(chunks, vecteurs):
+            empreinte = hashlib.sha256(
+                f"{source}:{fichier}:{chunk['texte']}".encode()
+            ).hexdigest()
+            conn.execute(
+                f"""INSERT INTO {TABLE}
+                        (texte, titre, source, fichier, empreinte, vecteur)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                    ON CONFLICT (empreinte) DO NOTHING""",
+                (chunk["texte"], chunk["titre"], source,
+                 fichier, empreinte, str(vecteur)),
+            )
+
+    return supprimes, len(chunks)
+
+
+def supprimer_document(source: str, fichier: str) -> int:
+    """Retire un document de l'index. Renvoie le nombre de chunks ôtés.
+
+    Une doc interne se périme : sans ce moyen, un document retiré du
+    référentiel resterait cité par l'agent indéfiniment.
+    """
+    with _connexion() as conn, conn.transaction():
+        return conn.execute(
+            f"DELETE FROM {TABLE} WHERE source = %s AND fichier = %s",
+            (source, fichier),
+        ).rowcount
+
+
+def inventaire(source: str | None = None) -> list[dict]:
+    """Liste les documents indexés, pour savoir ce que l'agent connaît.
+
+    Sans cela, l'index est une boîte noire : impossible de vérifier
+    qu'un envoi a bien pris, ni de repérer un document oublié.
+    """
+    condition = "WHERE source = %s" if source else ""
+    parametres = (source,) if source else ()
+    with _connexion() as conn:
+        lignes = conn.execute(
+            f"""SELECT source, fichier, count(*) AS chunks,
+                       max(indexe_le) AS indexe_le
+                  FROM {TABLE} {condition}
+              GROUP BY source, fichier
+              ORDER BY source, fichier""",
+            parametres,
+        ).fetchall()
+    return [
+        {"source": s, "fichier": f, "chunks": n,
+         "indexe_le": d.isoformat() if d else None}
+        for s, f, n, d in lignes
+    ]
+
+
 def statistiques() -> dict[str, int]:
     """Nombre de chunks par source."""
     with _connexion() as conn:

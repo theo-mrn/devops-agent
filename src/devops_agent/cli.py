@@ -45,6 +45,10 @@ def main() -> int:
     p.add_argument("--stats", action="store_true",
                    help="affiche la composition du corpus sans encoder")
     sous.add_parser("fetch", help="télécharge les sources documentaires")
+    p = sous.add_parser("api",
+                        help="sert l'API d'ingestion documentaire")
+    p.add_argument("--port", type=int, default=8080)
+
     sous.add_parser("reindexer",
                     help="alimente l'index vectoriel de la base (CronJob)")
     sous.add_parser("config", help="affiche la configuration active")
@@ -122,6 +126,10 @@ def main() -> int:
         print(f"\n\033[1m CONFIGURATION \033[0m\n")
         print(config.resume())
         print()
+
+    elif args.commande == "api":
+        from devops_agent.api import documents
+        return documents.servir(args.port)
 
     elif args.commande == "reindexer":
         from devops_agent.ingestion import reindexer

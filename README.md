@@ -89,6 +89,47 @@ RAG_TOP_K=3 make eval-fast
 
 `make config` affiche la configuration active.
 
+## Ajouter de la documentation interne
+
+L'agent répond d'autant mieux qu'il connaît le contexte de l'entreprise :
+runbooks, décisions d'architecture, rapports d'incident. Trois voies, du
+plus simple au plus intégré.
+
+**Par l'API** — rien à cloner, rien à écrire en YAML :
+
+```bash
+curl -X POST http://agent-api.devops-agent/documents \
+     -H "Authorization: Bearer $JETON" \
+     -d '{"source": "runbooks",
+          "fichier": "postgres.md",
+          "texte": "# Restaurer une sauvegarde\n..."}'
+```
+
+| Route | Effet |
+|---|---|
+| `POST /documents` | ajoute ou remplace un document |
+| `DELETE /documents` | retire un document de l'index |
+| `GET /documents` | liste ce que l'agent connaît |
+| `GET /sante` | sonde, sans authentification |
+
+Un même `fichier` renvoyé remplace la version précédente : la CI d'une
+entreprise peut pousser à chaque modification sans créer de doublon.
+
+**Par dépôt Git** — un CronJob balaie un dépôt toutes les 6 h et indexe
+manifests et markdown (`deploy/index-db.yaml`).
+
+Les deux écrivent dans la même base, sous des `source` distinctes. Les
+sources alimentées par le CronJob (`infra`, `runbook`) sont refusées par
+l'API : un envoi serait écrasé au passage suivant.
+
+Déploiement :
+
+```bash
+kubectl create secret generic agent-api \
+  --from-literal=jeton=$(openssl rand -hex 32) -n devops-agent
+kubectl apply -f deploy/api.yaml
+```
+
 ## Sûreté
 
 L'agent est en **lecture seule stricte**, garanti par le code et non par le

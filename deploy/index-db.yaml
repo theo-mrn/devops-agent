@@ -48,13 +48,35 @@ spec:
       cpu: 500m
       memory: 1Gi
 ---
-# Le CronJob a besoin de lire le dépôt GitOps. Une clé de déploiement en
-# lecture seule suffit — elle ne donne accès qu'à ce dépôt.
+# Le CronJob a besoin de lire le dépôt GitOps.
 #
-#   ssh-keygen -t ed25519 -f cle -N "" -C "devops-agent-indexeur"
+# Le clone se fait en HTTPS avec un token, et non en SSH : un conteneur
+# non-root sans utilisateur déclaré dans /etc/passwd fait échouer ssh
+# avec « No user exists for uid 10001 ». HTTPS n'a pas cette contrainte.
+#
+# Créer un token à portée restreinte — GitHub : Settings → Developer
+# settings → Personal access tokens → Fine-grained, avec le seul droit
+# « Contents: Read-only » sur ce dépôt — puis :
+#
 #   kubectl create secret generic agent-index-git \
-#     --from-file=ssh-privatekey=cle -n devops-agent
-#   puis déclarer cle.pub comme deploy key en lecture seule sur GitHub
+#     --from-literal=token=github_pat_... -n devops-agent
+---
+# Cache des poids de modèles, partagé entre exécutions.
+#
+# 10 Gi : 3,4 Go de poids, plus la marge des fichiers temporaires que
+# HuggingFace écrit pendant le téléchargement — il écrit un .incomplete
+# avant de renommer, donc il faut deux fois la place.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: agent-index-modeles
+  namespace: devops-agent
+spec:
+  accessModes: [ReadWriteOnce]
+  resources:
+    requests:
+      storage: 10Gi
+---
 apiVersion: batch/v1
 kind: CronJob
 metadata:
@@ -82,18 +104,31 @@ spec:
 
           initContainers:
             # Le clone est isolé dans son propre conteneur : l'indexeur
-            # n'a jamais accès à la clé SSH.
+            # n'a jamais accès au token.
+            #
+            # HTTPS plutôt que SSH : un conteneur non-root sans
+            # utilisateur déclaré dans /etc/passwd fait échouer ssh avec
+            # « No user exists for uid 10001 ».
             - name: cloner
               image: alpine/git:latest
               command: ["/bin/sh", "-c"]
               args:
                 - |
                   set -e
-                  mkdir -p ~/.ssh
-                  cp /cle/ssh-privatekey ~/.ssh/id_ed25519
-                  chmod 600 ~/.ssh/id_ed25519
-                  ssh-keyscan github.com >> ~/.ssh/known_hosts 2>/dev/null
-                  git clone --depth 1 "$DEPOT" /depot
+                  export HOME=/tmp
+
+                  # Le token n'est injecté qu'au moment du clone, et
+                  # masqué dans la sortie.
+                  URL=$(echo "$DEPOT" | sed "s#https://#https://x-access-token:${TOKEN}@#")
+                  git clone --depth 1 "$URL" /depot 2>&1 | sed "s/${TOKEN}/***/g"
+
+                  # L'origine est réécrite sans le token, au cas où le
+                  # dépôt cloné serait inspecté. `safe.directory` est
+                  # requis : git refuse d'opérer sur un dépôt appartenant
+                  # à un autre uid que le sien.
+                  git config --global --add safe.directory /depot
+                  git -C /depot remote set-url origin "$DEPOT"
+
                   echo "cloné : $(find /depot -name '*.yml' | wc -l) manifests"
               env:
                 - name: DEPOT
@@ -101,12 +136,16 @@ spec:
                     configMapKeyRef:
                       name: agent-index-config
                       key: depot
+                - name: TOKEN
+                  valueFrom:
+                    secretKeyRef:
+                      name: agent-index-git
+                      key: token
               volumeMounts:
-                - name: cle-git
-                  mountPath: /cle
-                  readOnly: true
                 - name: depot
                   mountPath: /depot
+                - name: tmp
+                  mountPath: /tmp
 
           containers:
             - name: indexeur
@@ -130,8 +169,10 @@ spec:
                   memory: 1Gi
                   cpu: 500m
                 limits:
-                  # L'encodage charge un modèle de 2,3 Go.
-                  memory: 4Gi
+                  # Le modèle bge-m3 pèse 2,3 Go sur disque, mais son
+                  # chargement en float32 plus les tampons d'encodage
+                  # dépassent 4 Gi — constaté par un OOMKill.
+                  memory: 6Gi
                   cpu: 2000m
               volumeMounts:
                 - name: depot
@@ -141,21 +182,29 @@ spec:
                   mountPath: /home/agent/.cache
 
           volumes:
-            - name: cle-git
-              secret:
-                secretName: agent-index-git
-                defaultMode: 0400
             - name: depot
               emptyDir: {}
+            # Cache des modèles d'embedding, PERSISTANT.
+            #
+            # Les poids (bge-m3 2,3 Go + reranker 1,1 Go) ne sont pas
+            # dans l'image : elle ferait 8 Go. Ils sont téléchargés au
+            # premier passage, puis réutilisés.
+            #
+            # Un emptyDir ne convenait pas : le téléchargement dépassait
+            # sa limite et le pod était évincé — « Usage of EmptyDir
+            # volume "cache" exceeds the limit », qui remonte en exit 137
+            # et se confond aisément avec un manque de mémoire.
             - name: cache
-              emptyDir:
-                sizeLimit: 4Gi
----
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: agent-index-config
-  namespace: devops-agent
-data:
-  # Dépôt GitOps à indexer, en SSH pour utiliser la clé de déploiement.
-  depot: "git@github.com:<compte>/<depot>.git"
+              persistentVolumeClaim:
+                claimName: agent-index-modeles
+            # Nécessaire au clone : le conteneur a un système de
+            # fichiers racine en lecture seule.
+            - name: tmp
+              emptyDir: {}
+# Le ConfigMap `agent-index-config` n'est volontairement PAS ici :
+# un `kubectl apply` de ce fichier écraserait sinon le dépôt réel par un
+# placeholder. Il est créé par `installer-index.sh` :
+#
+#   kubectl create configmap agent-index-config \
+#     --from-literal=depot=https://github.com/compte/depot.git \
+#     -n devops-agent

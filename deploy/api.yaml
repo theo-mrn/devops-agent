@@ -1,0 +1,131 @@
+# API d'ingestion documentaire.
+#
+# Ce qu'elle apporte : une entreprise ajoute sa documentation interne
+# sans cloner de dépôt, sans écrire de YAML et sans accès à la base.
+#
+#   curl -X POST https://agent.exemple.fr/documents \
+#        -H "Authorization: Bearer $JETON" \
+#        -d '{"source":"runbooks","fichier":"postgres.md","texte":"..."}'
+#
+# Le CronJob d'indexation Git reste en place : il devient un client de
+# cette API parmi d'autres, plutôt que l'unique porte d'entrée.
+#
+# ── Avant d'appliquer ────────────────────────────────────────────
+#
+#   kubectl create secret generic agent-api \
+#     --from-literal=jeton=$(openssl rand -hex 32) -n devops-agent
+#
+# Sans ce Secret, le pod refuse de démarrer : une porte d'écriture sur
+# l'index ne s'ouvre pas sans authentification.
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: agent-api
+  namespace: devops-agent
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: agent-api
+  template:
+    metadata:
+      labels:
+        app: agent-api
+    spec:
+      serviceAccountName: devops-agent
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        fsGroup: 10001
+      containers:
+        - name: api
+          # Image -rag : l'encodage exige le modèle. Pour utiliser
+          # l'image légère (71 Mo), fournir RAG_EMBED_URL pointant vers
+          # un service d'embedding — vectordb.encoder gère les deux.
+          image: maxwellfaraday/devops-agent:0.8.0-rag
+          command: ["devops-agent", "api", "--port", "8080"]
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: RAG_DB_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: agent-index-dsn
+                  key: dsn
+            - name: RAG_API_JETON
+              valueFrom:
+                secretKeyRef:
+                  name: agent-api
+                  key: jeton
+            # Le cache des poids, partagé avec le CronJob d'indexation.
+            - name: HF_HOME
+              value: /home/agent/.cache/huggingface
+
+          # /sante ne demande pas de jeton et ne divulgue rien : c'est
+          # ce qui permet aux sondes de fonctionner.
+          readinessProbe:
+            httpGet: {path: /sante, port: http}
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: {path: /sante, port: http}
+            # Le premier chargement du modèle est long ; une sonde trop
+            # impatiente redémarrerait le pod en boucle.
+            initialDelaySeconds: 120
+            periodSeconds: 30
+
+          resources:
+            requests:
+              memory: 2Gi
+              cpu: 250m
+            limits:
+              memory: 4Gi
+              cpu: 2000m
+
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+
+          volumeMounts:
+            - name: cache
+              mountPath: /home/agent/.cache
+            - name: tmp
+              mountPath: /tmp
+
+      volumes:
+        # Le même PVC que le CronJob : les poids sont téléchargés une
+        # fois pour les deux. ReadWriteOnce impose que les deux pods
+        # soient sur le même nœud — acceptable ici, à revoir si le
+        # cluster grossit (voir le commentaire dans index-db.yaml).
+        - name: cache
+          persistentVolumeClaim:
+            claimName: agent-index-modeles
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: agent-api
+  namespace: devops-agent
+spec:
+  selector:
+    app: agent-api
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+# L'API n'est pas exposée hors du cluster par défaut : c'est à
+# l'entreprise de décider comment (Ingress, IngressRoute, tunnel),
+# selon sa politique réseau. Depuis l'intérieur du cluster :
+#
+#   http://agent-api.devops-agent.svc.cluster.local/documents
+#
+# Pour un essai depuis un poste :
+#
+#   kubectl port-forward -n devops-agent svc/agent-api 8080:80
