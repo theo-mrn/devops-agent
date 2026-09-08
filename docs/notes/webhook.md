@@ -66,3 +66,28 @@ ce qui exige une action immédiate.
 
 Écrit avec `urllib`, pas `requests` : une dépendance de moins dans une image
 qu'on veut légère.
+
+
+## Destinations par gravité
+
+Un canal qui bipe toute l'équipe n'a pas à recevoir le bruit de fond, et une
+alerte critique ne doit pas se perdre dans un journal.
+
+```bash
+RAG_WEBHOOK_URL_CRITIQUE=https://n8n/webhook/urgences      # bipe l'astreinte
+RAG_WEBHOOK_URL_GRAVE=https://n8n/webhook/incidents        # canal d'équipe
+RAG_WEBHOOK_URL_SURVEILLANCE=https://n8n/webhook/journal   # archivage seul
+RAG_WEBHOOK_URL=https://n8n/webhook/devops-agent           # repli
+```
+
+Une gravité sans destination propre retombe sur `RAG_WEBHOOK_URL`.
+
+### Interaction avec le seuil
+
+`RAG_WEBHOOK_GRAVITE` ne filtre que la destination **générique**. Une gravité
+qui a sa propre URL est toujours transmise : l'avoir configurée exprime déjà
+l'intention de la recevoir.
+
+Concrètement, avec `RAG_WEBHOOK_GRAVITE=critique` et une URL dédiée pour
+`surveillance`, les deux passent — l'une par sa destination propre, l'autre
+par le seuil.

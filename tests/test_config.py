@@ -50,3 +50,25 @@ class TestConfidentialite:
     def test_env_reel_est_ignore_par_git(self):
         gitignore = config.RACINE / ".gitignore"
         assert ".env" in gitignore.read_text()
+
+
+class TestVersion:
+    def test_version_unique(self):
+        """La version ne doit être écrite qu'à un seul endroit.
+
+        Elle l'était en double — pyproject.toml et __init__.py — et les
+        deux avaient divergé : le paquet annonçait 0.1.0 alors que
+        l'image publiée était en 0.3.1.
+        """
+        import tomllib
+
+        import devops_agent
+
+        declaree = tomllib.loads(
+            (config.RACINE / "pyproject.toml").read_text()
+        )["project"]["version"]
+        assert devops_agent.__version__ in (declaree, "0.0.0+dev")
+
+    def test_version_lue_depuis_les_metadonnees(self):
+        source = (config.RACINE / "src/devops_agent/__init__.py").read_text()
+        assert "importlib.metadata" in source

@@ -129,3 +129,75 @@ class TestAuthentification:
         monkeypatch.setattr(webhook.urllib.request, "urlopen", intercepter)
         webhook.envoyer({"test": True})
         assert capture["entetes"].get("Authorization") == "Bearer jeton-test"
+
+
+class TestDestinationsParGravite:
+    """Un canal qui bipe l'équipe n'a pas à recevoir le bruit de fond."""
+
+    def test_destination_dediee_prioritaire(self, monkeypatch):
+        monkeypatch.setattr(webhook, "URL", "https://defaut/hook")
+        monkeypatch.setattr(webhook, "URLS_PAR_GRAVITE", {
+            "critique": "https://urgences/hook", "grave": "", "surveillance": ""
+        })
+        assert webhook.destination("critique") == "https://urgences/hook"
+
+    def test_repli_sur_la_destination_generique(self, monkeypatch):
+        monkeypatch.setattr(webhook, "URL", "https://defaut/hook")
+        monkeypatch.setattr(webhook, "URLS_PAR_GRAVITE", {
+            "critique": "https://urgences/hook", "grave": "", "surveillance": ""
+        })
+        assert webhook.destination("grave") == "https://defaut/hook"
+
+    def test_aucune_destination(self, monkeypatch):
+        monkeypatch.setattr(webhook, "URL", "")
+        monkeypatch.setattr(webhook, "URLS_PAR_GRAVITE",
+                            {"critique": "", "grave": "", "surveillance": ""})
+        assert webhook.destination("critique") == ""
+        assert webhook.actif() is False
+
+    def test_actif_avec_une_seule_destination_dediee(self, monkeypatch):
+        monkeypatch.setattr(webhook, "URL", "")
+        monkeypatch.setattr(webhook, "URLS_PAR_GRAVITE", {
+            "critique": "https://urgences/hook", "grave": "", "surveillance": ""
+        })
+        assert webhook.actif() is True
+
+    def test_destination_dediee_ignore_le_seuil(self, monkeypatch):
+        """Configurer une URL pour « surveillance » exprime déjà l'intention
+        de recevoir ces événements : le seuil global ne doit pas la filtrer."""
+        monkeypatch.setattr(webhook, "URL", "")
+        monkeypatch.setattr(webhook, "GRAVITE_MIN", "critique")
+        monkeypatch.setattr(webhook, "URLS_PAR_GRAVITE", {
+            "critique": "", "grave": "", "surveillance": "https://journal/hook"
+        })
+        with patch.object(webhook, "envoyer", return_value=True) as envoi:
+            webhook.notifier(groupe("surveillance"), "rapport", 0.0, [])
+        assert envoi.called
+
+    def test_seuil_applique_a_la_destination_generique(self, monkeypatch):
+        monkeypatch.setattr(webhook, "URL", "https://defaut/hook")
+        monkeypatch.setattr(webhook, "GRAVITE_MIN", "critique")
+        monkeypatch.setattr(webhook, "URLS_PAR_GRAVITE",
+                            {"critique": "", "grave": "", "surveillance": ""})
+        with patch.object(webhook, "envoyer", return_value=True) as envoi:
+            webhook.notifier(groupe("surveillance"), "rapport", 0.0, [])
+        assert not envoi.called
+
+    def test_envoi_vers_la_bonne_url(self, monkeypatch):
+        monkeypatch.setattr(webhook, "URL", "https://defaut/hook")
+        monkeypatch.setattr(webhook, "URLS_PAR_GRAVITE", {
+            "critique": "https://urgences/hook", "grave": "", "surveillance": ""
+        })
+        capture = {}
+
+        def intercepter(requete, timeout=None):
+            capture["url"] = requete.full_url
+            reponse = MagicMock()
+            reponse.status = 200
+            reponse.__enter__ = lambda s: reponse
+            reponse.__exit__ = lambda *a: None
+            return reponse
+
+        monkeypatch.setattr(webhook.urllib.request, "urlopen", intercepter)
+        webhook.envoyer({"gravite": "critique", "test": True})
+        assert capture["url"] == "https://urgences/hook"

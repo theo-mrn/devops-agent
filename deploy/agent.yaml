@@ -31,6 +31,11 @@ data:
   # Seuil de transmission : « surveillance » enverrait aussi le bruit
   # de fond (jobs éphémères, replicas temporairement incomplets).
   RAG_WEBHOOK_GRAVITE: "grave"
+  # Destinations par gravité. Une gravité sans URL propre retombe sur
+  # RAG_WEBHOOK_URL, et le seuil ci-dessus ne filtre que celle-là.
+  # RAG_WEBHOOK_URL_CRITIQUE: "http://n8n.n8n.svc.cluster.local:5678/webhook/urgences"
+  # RAG_WEBHOOK_URL_GRAVE: "http://n8n.n8n.svc.cluster.local:5678/webhook/incidents"
+  # RAG_WEBHOOK_URL_SURVEILLANCE: "http://n8n.n8n.svc.cluster.local:5678/webhook/journal"
   RAG_FENETRE_CORRELATION: "8.0"
   # Restreindre la surveillance à certains namespaces :
   # RAG_NAMESPACES: "prod,staging"
@@ -70,7 +75,7 @@ spec:
         - name: agent
           # Docker Hub : les images y sont publiques par défaut, donc
           # tirables par le cluster sans imagePullSecret.
-          image: maxwellfaraday/devops-agent:0.3.1
+          image: maxwellfaraday/devops-agent:0.4.0
           imagePullPolicy: IfNotPresent
           args: ["auto"]
           envFrom:

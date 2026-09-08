@@ -29,6 +29,21 @@ from devops_agent.agent import sanitizer
 
 URL = os.environ.get("RAG_WEBHOOK_URL", "")
 
+# Destinations par gravité. Un canal qui bipe toute l'équipe n'a pas à
+# recevoir le bruit de fond, et inversement une alerte critique ne doit
+# pas se perdre dans un canal de surveillance.
+#
+#   RAG_WEBHOOK_URL_CRITIQUE=https://n8n/webhook/urgences
+#   RAG_WEBHOOK_URL_GRAVE=https://n8n/webhook/incidents
+#   RAG_WEBHOOK_URL_SURVEILLANCE=https://n8n/webhook/journal
+#
+# Une gravité sans destination propre retombe sur RAG_WEBHOOK_URL.
+URLS_PAR_GRAVITE = {
+    "critique": os.environ.get("RAG_WEBHOOK_URL_CRITIQUE", ""),
+    "grave": os.environ.get("RAG_WEBHOOK_URL_GRAVE", ""),
+    "surveillance": os.environ.get("RAG_WEBHOOK_URL_SURVEILLANCE", ""),
+}
+
 # Un en-tête d'authentification optionnel, pour les endpoints protégés :
 #   RAG_WEBHOOK_AUTH="Bearer mon-jeton"
 AUTH = os.environ.get("RAG_WEBHOOK_AUTH", "")
@@ -46,9 +61,19 @@ GRAVITE_MIN = os.environ.get("RAG_WEBHOOK_GRAVITE", "grave")
 _ORDRE = {"surveillance": 1, "grave": 2, "critique": 3}
 
 
+def destination(gravite: str) -> str:
+    """URL à utiliser pour cette gravité.
+
+    Une destination spécifique l'emporte sur la générique : c'est ce qui
+    permet d'envoyer les urgences dans un canal qui bipe et le reste
+    dans un canal calme.
+    """
+    return URLS_PAR_GRAVITE.get(gravite) or URL
+
+
 def actif() -> bool:
-    """Un webhook est-il configuré ?"""
-    return bool(URL)
+    """Au moins une destination est-elle configurée ?"""
+    return bool(URL or any(URLS_PAR_GRAVITE.values()))
 
 
 def _merite_envoi(gravite: str) -> bool:
@@ -85,14 +110,15 @@ def construire_charge(groupe, rapport: str, cout: float,
     }
 
 
-def envoyer(charge: dict) -> bool:
+def envoyer(charge: dict, url: str | None = None) -> bool:
     """Envoie le rapport. Renvoie True si le webhook a accepté.
 
     Un échec est journalisé mais jamais propagé : la surveillance doit
     continuer même si le destinataire est indisponible, et le diagnostic
     reste dans le journal local.
     """
-    if not URL:
+    url = url or destination(charge.get("gravite", ""))
+    if not url:
         return False
 
     corps = json.dumps(charge, ensure_ascii=False).encode("utf-8")
@@ -104,7 +130,7 @@ def envoyer(charge: dict) -> bool:
         entetes["Authorization"] = AUTH
 
     for tentative in range(1, TENTATIVES + 1):
-        requete = urllib.request.Request(URL, data=corps, headers=entetes,
+        requete = urllib.request.Request(url, data=corps, headers=entetes,
                                          method="POST")
         try:
             with urllib.request.urlopen(requete, timeout=TIMEOUT) as reponse:
@@ -132,9 +158,20 @@ def envoyer(charge: dict) -> bool:
 
 def notifier(groupe, rapport: str, cout: float, outils: list[str],
              verifications: list[str] | None = None) -> bool:
-    """Envoie un diagnostic, si un webhook est configuré et la gravité suffisante."""
-    if not actif() or not _merite_envoi(groupe.gravite):
+    """Envoie un diagnostic vers la destination correspondant à sa gravité.
+
+    Le seuil `RAG_WEBHOOK_GRAVITE` ne s'applique qu'à la destination
+    générique : une gravité qui a sa propre URL est toujours transmise,
+    puisque l'avoir configurée exprime déjà l'intention de la recevoir.
+    """
+    url = destination(groupe.gravite)
+    if not url:
         return False
+
+    # Destination dédiée : le seuil global n'a pas à la filtrer.
+    if not URLS_PAR_GRAVITE.get(groupe.gravite) and not _merite_envoi(groupe.gravite):
+        return False
+
     charge = construire_charge(groupe, rapport, cout, outils,
                                verifications or [])
-    return envoyer(charge)
+    return envoyer(charge, url)
