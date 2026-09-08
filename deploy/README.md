@@ -112,3 +112,53 @@ Soit la rendre publique dans les réglages du package, soit créer un
 
 **Une seule réplique.** Deux agents diagnostiqueraient deux fois le même
 incident et doubleraient la facture.
+
+## Première mise en service — ce qui s'est passé
+
+Installation sur un k3s à 3 nœuds, 57 pods :
+
+```
+1. RBAC appliqué
+2. 18 permissions vérifiées — 10 lectures autorisées, 8 écritures refusées
+3. Secret créé depuis .env
+4. Agent déployé — Running en 17 s
+```
+
+L'agent a détecté ses deux anomalies au démarrage, puis diagnostiqué la
+première en autonomie :
+
+```
+4 tours · 6 appels d'outil · 32,5 s
+8 tokens frais + 12 830 en cache + 2 723 générés
+100 % depuis le cache · 0,0498 $
+```
+
+Le cache d'historique fonctionne comme prévu : **la totalité du contexte
+répété est lue à 10 % du prix**.
+
+### Le RBAC a joué son rôle
+
+Le diagnostic mentionne explicitement :
+
+> Accès direct à la ressource `Cluster n8n-postgres` refusé (RBAC), donc
+> impossible de confirmer via le CR le nombre d'instances déclaré.
+
+L'agent a été bloqué sur une ressource non autorisée — les CRD de
+CloudNativePG — et l'a **signalé** au lieu d'inventer. C'est le comportement
+attendu.
+
+### Limite constatée
+
+Les CRD d'opérateurs (CloudNativePG, cert-manager, Argo CD…) ne sont pas dans
+le ClusterRole. Ce n'est pas un défaut de sûreté — ce sont des lectures — mais
+ça limite le diagnostic sur les charges gérées par opérateur.
+
+Les ajouter demande de nommer chaque groupe d'API explicitement, ce qui reste
+compatible avec la lecture seule stricte.
+
+### Bug corrigé dans installer.sh
+
+`kubectl auth can-i` écrit « no » sur la sortie standard **et** sort avec le
+code 1. Le `|| echo "no"` du script ajoutait donc un second « no », et la
+comparaison échouait sur les huit permissions correctement refusées —
+l'installation s'interrompait alors que le RBAC était parfait.

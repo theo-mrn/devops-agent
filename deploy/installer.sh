@@ -48,8 +48,15 @@ erreurs=0
 verifier() {
   local verbe="$1" ressource="$2" attendu="$3"
   local reponse
+
+  # `kubectl auth can-i` répond « no » sur sa sortie standard ET sort
+  # avec le code 1. Un `|| echo no` ajouterait donc un second « no » et
+  # fausserait la comparaison : on neutralise le code de retour sans
+  # toucher à la sortie.
   reponse=$(kubectl auth can-i "$verbe" "$ressource" \
-              --all-namespaces --as "system:serviceaccount:${SA}" 2>/dev/null || echo "no")
+              --all-namespaces --as "system:serviceaccount:${SA}" 2>/dev/null) || true
+  reponse=$(printf "%s" "$reponse" | head -1 | tr -d '[:space:]')
+  [[ -z "$reponse" ]] && reponse="inconnu"
 
   if [[ "$reponse" == "$attendu" ]]; then
     printf "   \033[32m✓\033[0m %-34s %s\n" "$verbe $ressource" "$reponse"
