@@ -67,6 +67,65 @@ rules:
     verbs: ["get", "list"]
 
   # ─────────────────────────────────────────────────────────────
+  # Ressources personnalisées des opérateurs.
+  #
+  # Sans elles, l'agent bute sur ce qu'il diagnostique : un pod géré
+  # par CloudNativePG n'a de sens qu'au regard du Cluster qui le
+  # définit. Constaté en conditions réelles — l'agent avait signalé
+  # « accès à la ressource Cluster refusé, impossible de confirmer le
+  # nombre d'instances déclaré ».
+  #
+  # Ce sont des LECTURES : aucune atteinte au principe de lecture
+  # seule. Les groupes sont nommés explicitement plutôt qu'avec un
+  # joker, pour que l'ajout d'un opérateur reste une décision.
+  # ─────────────────────────────────────────────────────────────
+
+  # CloudNativePG — clusters PostgreSQL, sauvegardes, points de bascule.
+  - apiGroups: ["postgresql.cnpg.io"]
+    resources: ["clusters", "backups", "scheduledbackups", "poolers"]
+    verbs: ["get", "list"]
+
+  # Argo CD — état de synchronisation et santé des applications.
+  - apiGroups: ["argoproj.io"]
+    resources: ["applications", "applicationsets", "appprojects"]
+    verbs: ["get", "list"]
+
+  # Prometheus Operator — règles d'alerte et cibles de collecte.
+  - apiGroups: ["monitoring.coreos.com"]
+    resources:
+      - prometheuses
+      - prometheusrules
+      - servicemonitors
+      - podmonitors
+      - alertmanagers
+    verbs: ["get", "list"]
+
+  # Traefik — routage : un service injoignable vient souvent d'ici.
+  - apiGroups: ["traefik.io", "traefik.containo.us"]
+    resources: ["ingressroutes", "middlewares", "serverstransports", "tlsoptions"]
+    verbs: ["get", "list"]
+
+  # cert-manager — certificats expirés ou non renouvelés.
+  - apiGroups: ["cert-manager.io"]
+    resources: ["certificates", "certificaterequests", "issuers", "clusterissuers"]
+    verbs: ["get", "list"]
+
+  # Trivy Operator — rapports de vulnérabilité et de configuration.
+  - apiGroups: ["aquasecurity.github.io"]
+    resources: ["vulnerabilityreports", "configauditreports", "clustercompliancereports"]
+    verbs: ["get", "list"]
+
+  # Snapshots de volumes — restauration après incident de stockage.
+  - apiGroups: ["snapshot.storage.k8s.io"]
+    resources: ["volumesnapshots", "volumesnapshotcontents", "volumesnapshotclasses"]
+    verbs: ["get", "list"]
+
+  # Helm (k3s) — état des déploiements pilotés par chart.
+  - apiGroups: ["helm.cattle.io"]
+    resources: ["helmcharts", "helmchartconfigs"]
+    verbs: ["get", "list"]
+
+  # ─────────────────────────────────────────────────────────────
   # DÉLIBÉRÉMENT ABSENTS
   #
   #   secrets            — leur contenu est encodé en base64, donc lisible

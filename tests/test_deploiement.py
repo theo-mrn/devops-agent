@@ -204,3 +204,41 @@ class TestRAGOptionnel:
         assert "sentence-transformers" in extra
         # anthropic reste indispensable : c'est le moteur de l'agent.
         assert "anthropic" in base
+
+
+class TestRessourcesPersonnalisees:
+    """Les CRD d'opérateurs doivent rester en lecture seule.
+
+    L'agent butait sur ce qu'il diagnostiquait : un pod géré par
+    CloudNativePG n'a de sens qu'au regard du Cluster qui le définit.
+    Ajouter ces lectures ne doit pas ouvrir la moindre écriture.
+    """
+
+    @pytest.mark.parametrize("groupe", [
+        "postgresql.cnpg.io",
+        "argoproj.io",
+        "monitoring.coreos.com",
+        "traefik.io",
+        "cert-manager.io",
+        "aquasecurity.github.io",
+    ])
+    def test_groupe_present(self, cluster_role, groupe):
+        groupes = {g for regle in cluster_role["rules"]
+                   for g in regle.get("apiGroups", [])}
+        assert groupe in groupes
+
+    def test_crd_en_lecture_seule(self, cluster_role):
+        """Aucune règle d'opérateur ne doit porter de verbe d'écriture."""
+        interdits = {"create", "update", "patch", "delete", "deletecollection", "*"}
+        for regle in cluster_role["rules"]:
+            groupes = regle.get("apiGroups", [])
+            if any("." in g and g not in ("networking.k8s.io", "rbac.authorization.k8s.io")
+                   for g in groupes):
+                assert not set(regle["verbs"]) & interdits, (
+                    f"verbe d'écriture sur {groupes}"
+                )
+
+    def test_pas_de_joker_de_groupe(self, cluster_role):
+        """Ajouter un opérateur doit rester une décision explicite."""
+        for regle in cluster_role["rules"]:
+            assert "*" not in regle.get("apiGroups", [])
