@@ -1,0 +1,112 @@
+{
+  "name": "devops-agent — surveillance (Discord seul)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "devops-agent-surveillance",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "webhook-surveillance",
+      "name": "Webhook surveillance",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "devops-agent-surveillance"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { \"status\": \"received\" } }}",
+        "options": {}
+      },
+      "id": "repondre",
+      "name": "Répondre immédiatement",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1,
+      "position": [
+        220,
+        140
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "\n// Met en forme un rapport de faible gravité pour un canal de surveillance.\n//\n// Pas d'archivage : ces événements sont du bruit de fond — jobs\n// éphémères, replicas temporairement incomplets, dérives mémoire encore\n// sous contrôle. Ils méritent d'être vus, pas conservés.\n//\n// Le message est délibérément compact : un canal de surveillance se\n// parcourt d'un coup d'œil.\n\nconst rapport = $json.body || $json;\n\n// Garde : une charge sans anomalie n'est pas un rapport.\nif (!Array.isArray(rapport.anomalies) || rapport.anomalies.length === 0) {\n  return [];\n}\n\nconst namespace = rapport.namespace || '—';\nconst anomalies = rapport.anomalies;\nconst diagnostic = rapport.diagnostic || '';\nconst cout = rapport.cout_dollars ?? 0;\n\nconst titre = anomalies.length === 1\n  ? `🔵 ${anomalies[0].ressource} ${anomalies[0].nom}`\n  : `🔵 ${anomalies.length} anomalies dans ${namespace}`;\n\nconst liste = anomalies\n  .map(a => `• \\`${a.nom}\\` — ${a.etat}` +\n            (a.redemarrages ? ` (${a.redemarrages} redémarrages)` : ''))\n  .join('\\n');\n\n// Seule la section « Diagnostic » du rapport : sur un canal de\n// surveillance, les constats et le correctif détaillé sont du bruit.\nconst resume = (() => {\n  const m = diagnostic.match(/##\\s*Diagnostic\\s*\\n+([\\s\\S]*?)(?=\\n##|$)/);\n  const texte = (m ? m[1] : diagnostic).trim();\n  return texte.length > 500 ? texte.slice(0, 500) + '…' : texte;\n})();\n\nreturn [{\n  json: {\n    embed: {\n      title: titre,\n      description: resume || '_(pas de diagnostic)_',\n      color: 0x3498db,\n      fields: [\n        { name: 'Namespace', value: namespace, inline: true },\n        { name: 'Coût', value: `${cout} $`, inline: true },\n        { name: 'Anomalies', value: liste.slice(0, 1024) }\n      ],\n      timestamp: new Date().toISOString()\n    }\n  }\n}];\n"
+      },
+      "id": "mise-en-forme",
+      "name": "Mise en forme compacte",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        -60
+      ]
+    },
+    {
+      "parameters": {
+        "authentication": "webhook",
+        "options": {},
+        "embeds": {
+          "values": [
+            {
+              "title": "={{ $json.embed.title }}",
+              "description": "={{ $json.embed.description }}",
+              "color": "={{ $json.embed.color }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.discord",
+      "typeVersion": 2,
+      "position": [
+        460,
+        -60
+      ],
+      "id": "discord-surveillance",
+      "name": "Discord — surveillance",
+      "credentials": {
+        "discordWebhookApi": {
+          "id": "",
+          "name": "Discord — canal surveillance"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Webhook surveillance": {
+      "main": [
+        [
+          {
+            "node": "Répondre immédiatement",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Mise en forme compacte",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Mise en forme compacte": {
+      "main": [
+        [
+          {
+            "node": "Discord — surveillance",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

@@ -4,7 +4,8 @@ Deux flux séparés, un par source d'information :
 
 | fichier | source | ce qu'il apporte |
 |---|---|---|
-| `devops-agent-minio-discord.json` | l'agent | diagnostics d'objets Kubernetes |
+| `devops-agent-minio-discord.json` | l'agent | diagnostics archivés, gravité ≥ grave |
+| `devops-agent-surveillance.json` | l'agent | bruit de fond, Discord seul |
 | `alertmanager-minio-discord.json` | Prometheus | alertes métriques et de tendance |
 
 ## Pourquoi deux flux
@@ -168,3 +169,50 @@ receivers:
       - url: http://n8n.n8n.svc.cluster.local:5678/webhook/alertmanager
         send_resolved: false   # les résolutions sont filtrées côté n8n
 ```
+
+
+---
+
+# Flux de surveillance
+
+`devops-agent-surveillance.json`
+
+```
+agent (gravité surveillance) → n8n → Discord
+```
+
+**Pas d'archivage.** Ces événements sont du bruit de fond — jobs éphémères,
+replicas temporairement incomplets, dérives mémoire encore sous contrôle. Ils
+méritent d'être vus, pas conservés.
+
+## Message compact
+
+Seule la section « Diagnostic » du rapport est reprise : sur un canal de
+surveillance, les constats et le correctif détaillé sont du bruit.
+
+```
+🔵 pod scan-vuln-abc
+Le job de scan a échoué faute de mémoire.
+Namespace trivy-system · Coût 0.012 $
+```
+
+## Installation
+
+1. Créer dans n8n un identifiant Discord pointant vers le salon de
+   surveillance — **distinct** de celui des incidents.
+2. Importer le workflow et lui associer cet identifiant.
+3. Router la gravité `surveillance` vers ce webhook :
+
+```bash
+kubectl set env deployment/devops-agent -n devops-agent \
+  RAG_WEBHOOK_URL_SURVEILLANCE=http://n8n.n8n.svc.cluster.local:5678/webhook/devops-agent-surveillance
+```
+
+Le seuil `RAG_WEBHOOK_GRAVITE=grave` continue de filtrer la destination
+générique ; une gravité dotée de sa propre URL est toujours transmise.
+
+## Le jeton Discord
+
+Il vit dans les **credentials n8n**, jamais dans ce dépôt ni dans un manifest
+Kubernetes. Un jeton de webhook Discord donne le droit de publier dans le
+salon : le committer reviendrait à l'offrir.
