@@ -1,0 +1,13 @@
+.git
+.venv
+.pytest_cache
+.ruff_cache
+__pycache__
+*.pyc
+.env
+data/raw
+data/index
+data/diagnostics.jsonl
+docs
+tests
+scripts

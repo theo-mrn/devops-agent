@@ -1,0 +1,93 @@
+# Accès en lecture seule au cluster.
+#
+# La sûreté de l'agent repose sur deux couches indépendantes :
+#
+#   1. le code — liste blanche de verbes kubectl, couverte par 20 tests ;
+#   2. ce RBAC — le serveur d'API REFUSE toute écriture, quelle que soit
+#      la commande émise.
+#
+# La seconde tient même si la première est contournée. C'est elle qu'une
+# équipe infra lira avant d'autoriser le déploiement.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: devops-agent
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: devops-agent
+  namespace: devops-agent
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: devops-agent-readonly
+rules:
+  # Ressources fondamentales. `pods/log` est requis pour lire les logs,
+  # `watch` pour la surveillance par événements.
+  - apiGroups: [""]
+    resources:
+      - pods
+      - pods/log
+      - events
+      - services
+      - endpoints
+      - namespaces
+      - nodes
+      - persistentvolumeclaims
+      - persistentvolumes
+      - configmaps
+    verbs: ["get", "list", "watch"]
+
+  # Charges de travail.
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets", "daemonsets", "replicasets"]
+    verbs: ["get", "list", "watch"]
+
+  # Tâches planifiées.
+  - apiGroups: ["batch"]
+    resources: ["jobs", "cronjobs"]
+    verbs: ["get", "list", "watch"]
+
+  # Réseau.
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses", "networkpolicies"]
+    verbs: ["get", "list", "watch"]
+
+  # Métriques, pour comparer consommation réelle et limites configurées.
+  - apiGroups: ["metrics.k8s.io"]
+    resources: ["pods", "nodes"]
+    verbs: ["get", "list"]
+
+  # Perturbations volontaires, utiles au diagnostic d'éviction.
+  - apiGroups: ["policy"]
+    resources: ["poddisruptionbudgets"]
+    verbs: ["get", "list"]
+
+  # ─────────────────────────────────────────────────────────────
+  # DÉLIBÉRÉMENT ABSENTS
+  #
+  #   secrets            — leur contenu est encodé en base64, donc lisible
+  #   create/update/patch/delete  — aucun verbe d'écriture
+  #   pods/exec, pods/portforward — aucune exécution dans un conteneur
+  #   */scale            — aucune modification de dimensionnement
+  #
+  # Un `kubectl auth can-i` le confirme :
+  #   kubectl auth can-i delete pods \
+  #     --as=system:serviceaccount:devops-agent:devops-agent   → no
+  # ─────────────────────────────────────────────────────────────
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: devops-agent-readonly
+subjects:
+  - kind: ServiceAccount
+    name: devops-agent
+    namespace: devops-agent
+roleRef:
+  kind: ClusterRole
+  name: devops-agent-readonly
+  apiGroup: rbac.authorization.k8s.io

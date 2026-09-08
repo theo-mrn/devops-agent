@@ -1,0 +1,118 @@
+# Déploiement de l'agent en mode autonome.
+#
+# Il surveille le cluster depuis l'intérieur, avec le ServiceAccount
+# défini dans rbac.yaml — aucun kubeconfig à fournir.
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: devops-agent-api
+  namespace: devops-agent
+type: Opaque
+stringData:
+  # À remplacer avant application, ou créer par :
+  #   kubectl create secret generic devops-agent-api \
+  #     --from-literal=anthropic-api-key=sk-ant-... -n devops-agent
+  anthropic-api-key: "REMPLACER"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: devops-agent-config
+  namespace: devops-agent
+data:
+  RAG_PROVIDER: "anthropic"
+  RAG_LLM_API: "claude-sonnet-5"
+  # Plafonds de dépense : par diagnostic, et sur 24 h glissantes.
+  RAG_BUDGET_MAX: "0.50"
+  RAG_BUDGET_JOUR: "5.0"
+  # Filtres de surveillance.
+  RAG_SEUIL_PAR_JOUR: "2.0"
+  RAG_DEDUP_SECONDES: "1800"
+  RAG_FENETRE_CORRELATION: "8.0"
+  # Restreindre la surveillance à certains namespaces :
+  # RAG_NAMESPACES: "prod,staging"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: devops-agent
+  namespace: devops-agent
+spec:
+  # Une seule instance : deux agents diagnostiqueraient deux fois le
+  # même incident, et doubleraient la facture.
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: devops-agent
+  template:
+    metadata:
+      labels:
+        app: devops-agent
+    spec:
+      serviceAccountName: devops-agent
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        fsGroup: 10001
+      containers:
+        - name: agent
+          image: devops-agent:0.1.0
+          imagePullPolicy: IfNotPresent
+          args: ["auto"]
+          envFrom:
+            - configMapRef:
+                name: devops-agent-config
+          env:
+            - name: ANTHROPIC_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: devops-agent-api
+                  key: anthropic-api-key
+            # Journal des diagnostics, sur le volume persistant.
+            - name: RAG_JOURNAL
+              value: /data/diagnostics.jsonl
+          resources:
+            requests:
+              memory: 512Mi
+              cpu: 100m
+            limits:
+              # L'agent charge un modèle d'embedding pour le RAG :
+              # 2Gi est le minimum confortable.
+              memory: 2Gi
+              cpu: 1000m
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - name: donnees
+              mountPath: /data
+            - name: cache
+              mountPath: /home/agent/.cache
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: donnees
+          persistentVolumeClaim:
+            claimName: devops-agent-data
+        # Le cache des modèles d'embedding : volumineux, régénérable.
+        - name: cache
+          emptyDir:
+            sizeLimit: 4Gi
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: devops-agent-data
+  namespace: devops-agent
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: 1Gi

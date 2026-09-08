@@ -267,10 +267,7 @@ version = "0.1.0"
 source = { editable = "." }
 dependencies = [
     { name = "anthropic" },
-    { name = "ollama" },
     { name = "pyyaml" },
-    { name = "rank-bm25" },
-    { name = "sentence-transformers" },
 ]
 
 [package.optional-dependencies]
@@ -278,26 +275,35 @@ dev = [
     { name = "pytest" },
     { name = "pytest-cov" },
 ]
+rag = [
+    { name = "ollama" },
+    { name = "rank-bm25" },
+    { name = "sentence-transformers" },
+]
 
 [package.dev-dependencies]
 dev = [
     { name = "pytest" },
+    { name = "pyyaml" },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "anthropic", specifier = ">=0.40" },
-    { name = "ollama", specifier = ">=0.4" },
+    { name = "ollama", marker = "extra == 'rag'", specifier = ">=0.4" },
     { name = "pytest", marker = "extra == 'dev'", specifier = ">=8" },
     { name = "pytest-cov", marker = "extra == 'dev'", specifier = ">=5" },
     { name = "pyyaml", specifier = ">=6" },
-    { name = "rank-bm25", specifier = ">=0.2" },
-    { name = "sentence-transformers", specifier = ">=3" },
+    { name = "rank-bm25", marker = "extra == 'rag'", specifier = ">=0.2" },
+    { name = "sentence-transformers", marker = "extra == 'rag'", specifier = ">=3" },
 ]
-provides-extras = ["dev"]
+provides-extras = ["rag", "dev"]
 
 [package.metadata.requires-dev]
-dev = [{ name = "pytest", specifier = ">=9.1.1" }]
+dev = [
+    { name = "pytest", specifier = ">=9.1.1" },
+    { name = "pyyaml", specifier = ">=6.0.3" },
+]
 
 [[package]]
 name = "docstring-parser"

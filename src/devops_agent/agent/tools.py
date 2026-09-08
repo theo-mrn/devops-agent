@@ -22,6 +22,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
+import devops_agent.core.config
 from devops_agent.agent import sanitizer
 
 # Verbes kubectl autorisés. Tout le reste est refusé.
@@ -32,6 +33,30 @@ VERBES_AUTORISES = {
 
 # Ressources dont le contenu ne doit jamais sortir, même en lecture.
 RESSOURCES_INTERDITES = {"secret", "secrets"}
+
+# Chemin du compte de service monté par Kubernetes dans tout pod.
+# Sa présence signale que l'agent tourne DANS le cluster : kubectl s'y
+# authentifie alors seul, sans kubeconfig.
+JETON_IN_CLUSTER = Path("/var/run/secrets/kubernetes.io/serviceaccount/token")
+
+
+def dans_le_cluster() -> bool:
+    """L'agent tourne-t-il à l'intérieur du cluster qu'il surveille ?"""
+    return JETON_IN_CLUSTER.exists()
+
+
+def contexte_kubernetes() -> str:
+    """Décrit comment l'agent accède au cluster, pour l'affichage."""
+    if dans_le_cluster():
+        namespace = Path(
+            "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
+        )
+        ns = namespace.read_text().strip() if namespace.exists() else "?"
+        return f"in-cluster (ServiceAccount, namespace {ns})"
+
+    kubeconfig = os.environ.get("KUBECONFIG", "~/.kube/config")
+    return f"externe (kubeconfig {kubeconfig})"
+
 
 # Restriction optionnelle des namespaces : RAG_NAMESPACES="prod,staging".
 # Vide = tous autorisés.
@@ -222,6 +247,42 @@ def rafraichir_apercu() -> str:
     """
     from devops_agent.agent import overview
     return overview.rafraichir()
+
+
+def auditer_permissions() -> list[tuple[str, bool, bool]]:
+    """Vérifie ce que l'agent peut RÉELLEMENT faire sur le cluster.
+
+    Le code refuse les écritures, mais c'est le serveur d'API qui doit
+    les rendre impossibles. Cette fonction interroge `kubectl auth can-i`
+    pour confirmer que le RBAC est bien en place.
+
+    Renvoie (action, autorisé, devrait_être_autorisé).
+    """
+    lectures = [
+        "get pods", "list pods", "get pods/log", "watch pods",
+        "get services", "get endpoints", "get deployments",
+        "get persistentvolumeclaims", "get nodes", "get events",
+    ]
+    ecritures = [
+        "delete pods", "create pods", "patch deployments",
+        "update deployments", "delete nodes", "create secrets",
+        "get secrets", "create pods/exec",
+    ]
+
+    resultats = []
+    for action, attendu in [(a, True) for a in lectures] + [(a, False) for a in ecritures]:
+        verbe, _, ressource = action.partition(" ")
+        try:
+            r = subprocess.run(
+                ["kubectl", "auth", "can-i", verbe, ressource,
+                 "--all-namespaces"],
+                capture_output=True, text=True, timeout=10,
+            )
+            autorise = r.stdout.strip() == "yes"
+        except (subprocess.TimeoutExpired, FileNotFoundError):
+            continue
+        resultats.append((action, autorise, attendu))
+    return resultats
 
 
 # ── Déclarations pour le modèle ──────────────────────────────────

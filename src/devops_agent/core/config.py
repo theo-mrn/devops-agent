@@ -143,8 +143,18 @@ def resume() -> str:
         f"  embedding  {EMBEDDING}\n"
         f"  reranker   {RERANKER or '(désactivé)'}\n"
         f"  top-k      {TOP_K}  ·  candidats {CANDIDATS_RERANK}  ·  T° {TEMPERATURE}\n"
-        f"  clé API    {'présente' if cle_api_disponible() else 'absente'}"
+        f"  clé API    {'présente' if cle_api_disponible() else 'absente'}\n"
+        f"  cluster    {_acces_cluster()}"
     )
+
+
+def _acces_cluster() -> str:
+    """Mode d'accès au cluster, sans importer les outils au chargement."""
+    try:
+        from devops_agent.agent import tools
+        return tools.contexte_kubernetes()
+    except Exception:
+        return "inconnu"
 
 
 if __name__ == "__main__":

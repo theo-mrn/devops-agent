@@ -44,6 +44,7 @@ def main() -> int:
     sous.add_parser("index", help="reconstruit l'index vectoriel")
     sous.add_parser("fetch", help="télécharge les sources documentaires")
     sous.add_parser("config", help="affiche la configuration active")
+    sous.add_parser("audit", help="vérifie les permissions réelles sur le cluster")
 
     p = sous.add_parser("eval", help="mesure la qualité du pipeline")
     p.add_argument("--fast", action="store_true", help="retrieval seul, sans LLM")
@@ -112,6 +113,32 @@ def main() -> int:
         print(f"\n\033[1m CONFIGURATION \033[0m\n")
         print(config.resume())
         print()
+
+    elif args.commande == "audit":
+        from devops_agent.agent import tools
+
+        print(f"\n\033[1m PERMISSIONS \033[0m {tools.contexte_kubernetes()}\n")
+        resultats = tools.auditer_permissions()
+        if not resultats:
+            print("  cluster injoignable — impossible de vérifier\n")
+            return 1
+
+        problemes = 0
+        for action, autorise, attendu in resultats:
+            if autorise == attendu:
+                marque = "\033[32m✓\033[0m"
+            else:
+                marque = "\033[41m\033[97m ! \033[0m"
+                problemes += 1
+            etat = "autorisé" if autorise else "refusé"
+            print(f"  {marque} {action:<32} {etat}")
+
+        print()
+        if problemes:
+            print(f"  \033[31m{problemes} permission(s) inattendue(s) — "
+                  f"appliquer deploy/rbac.yaml\033[0m\n")
+            return 1
+        print("  \033[32mLes permissions correspondent au RBAC attendu.\033[0m\n")
 
     elif args.commande == "eval":
         from devops_agent.evaluation import runner
