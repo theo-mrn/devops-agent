@@ -1,0 +1,78 @@
+name: CI
+
+# Sur chaque poussée et chaque proposition de fusion : tests, style,
+# et vérification que l'image se construit.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Installer uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Installer les dépendances
+        # Sans l'extra rag : la suite doit passer sans PyTorch, ce qui
+        # vérifie au passage que la séparation tient.
+        run: uv sync --extra dev
+
+      - name: Tests
+        run: uv run pytest tests/ -q
+
+      - name: Vérifier que le RBAC reste en lecture seule
+        # Redondant avec les tests, mais explicite dans le rapport : une
+        # régression ici est un problème de sécurité, pas de code.
+        run: |
+          uv run python - <<'PY'
+          import yaml, sys
+          from pathlib import Path
+
+          role = next(
+              d for d in yaml.safe_load_all(Path("deploy/rbac.yaml").read_text())
+              if d and d.get("kind") == "ClusterRole"
+          )
+          interdits = {"create", "update", "patch", "delete",
+                       "deletecollection", "*", "escalate", "bind"}
+
+          for regle in role["rules"]:
+              if fautifs := set(regle["verbs"]) & interdits:
+                  sys.exit(f"verbe d'écriture {fautifs} sur {regle['resources']}")
+              if "secrets" in regle["resources"]:
+                  sys.exit("accès aux secrets dans le ClusterRole")
+
+          print("ClusterRole conforme : lecture seule, aucun accès aux secrets")
+          PY
+
+      - name: Valider les manifests Kubernetes
+        run: |
+          curl -fsSLo kubectl "https://dl.k8s.io/release/v1.31.0/bin/linux/amd64/kubectl"
+          chmod +x kubectl
+          # --dry-run=client ne demande pas de cluster.
+          ./kubectl apply --dry-run=client -f deploy/rbac.yaml
+          ./kubectl apply --dry-run=client -f deploy/agent.yaml
+
+  image:
+    # L'image n'est construite que si les tests passent.
+    needs: tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Construire (sans publier)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
