@@ -16,17 +16,16 @@ on:
         required: true
 
 env:
-  REGISTRE: ghcr.io
-  IMAGE: ${{ github.repository }}
+  # Docker Hub : les images y sont publiques par défaut, donc tirables
+  # par un cluster sans imagePullSecret. GHCR crée les packages en privé
+  # même depuis un dépôt public, ce qui bloque le déploiement.
+  IMAGE: maxwellfaraday/devops-agent
 
 jobs:
   publier:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write        # requis pour pousser sur GHCR
-      attestations: write    # provenance de l'image
-      id-token: write
 
     steps:
       - uses: actions/checkout@v4
@@ -54,18 +53,17 @@ jobs:
 
       - uses: docker/setup-buildx-action@v3
 
-      - name: Authentification GHCR
+      - name: Authentification Docker Hub
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRE }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Étiquettes de l'image
         id: meta
         uses: docker/metadata-action@v5
         with:
-          images: ${{ env.REGISTRE }}/${{ env.IMAGE }}
+          images: ${{ env.IMAGE }}
           tags: |
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
@@ -86,13 +84,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Attester la provenance
-        uses: actions/attest-build-provenance@v2
-        with:
-          subject-name: ${{ env.REGISTRE }}/${{ env.IMAGE }}
-          subject-digest: ${{ steps.build.outputs.digest }}
-          push-to-registry: true
-
       - name: Résumé
         run: |
           {
@@ -105,7 +96,7 @@ jobs:
             echo "### Déployer"
             echo '```bash'
             echo "kubectl set image deployment/devops-agent \\"
-            echo "  agent=${{ env.REGISTRE }}/${{ env.IMAGE }}:${GITHUB_REF#refs/tags/v} \\"
+            echo "  agent=${{ env.IMAGE }}:${GITHUB_REF#refs/tags/v} \\"
             echo "  -n devops-agent"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"

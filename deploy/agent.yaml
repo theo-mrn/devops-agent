@@ -56,9 +56,9 @@ spec:
         fsGroup: 10001
       containers:
         - name: agent
-          # Image publiée sur GHCR. Remplacer le compte par le vôtre,
-          # ou utiliser deploy/publier.sh qui s'en charge.
-          image: ghcr.io/theo-mrn/devops-agent:0.1.0
+          # Docker Hub : les images y sont publiques par défaut, donc
+          # tirables par le cluster sans imagePullSecret.
+          image: maxwellfaraday/devops-agent:0.1.0
           imagePullPolicy: IfNotPresent
           args: ["auto"]
           envFrom:
