@@ -95,19 +95,28 @@ echo
 # ── 5. Connexion de l'agent ──────────────────────────────────────
 
 gras "5. Connexion de l'agent à l'index"
-kubectl set env deployment/devops-agent -n "$NAMESPACE" \
-  --from=secret/agent-index-app --prefix=RAG_DB_ >/dev/null 2>&1 || true
 
-# CloudNativePG publie l'URI de connexion dans un secret <cluster>-app.
-kubectl patch deployment devops-agent -n "$NAMESPACE" --type=json -p='[{
-  "op": "add",
-  "path": "/spec/template/spec/containers/0/env/-",
-  "value": {
-    "name": "RAG_DB_DSN",
-    "valueFrom": {"secretKeyRef": {"name": "agent-index-app", "key": "uri"}}
-  }
-}]' >/dev/null 2>&1 && vert "   variable RAG_DB_DSN ajoutée" \
-                   || echo "   RAG_DB_DSN déjà présente"
+# CloudNativePG ne publie un secret `<cluster>-app` avec l'URI complète
+# que s'il génère lui-même le mot de passe. Ici, les identifiants ont été
+# fournis à l'installation : on assemble donc le DSN à partir d'eux.
+UTILISATEUR=$(kubectl get secret agent-index-credentials -n "$NAMESPACE" \
+                -o jsonpath='{.data.username}' | base64 -d)
+MOTDEPASSE=$(kubectl get secret agent-index-credentials -n "$NAMESPACE" \
+               -o jsonpath='{.data.password}' | base64 -d)
+DSN="postgresql://${UTILISATEUR}:${MOTDEPASSE}@agent-index-rw.${NAMESPACE}.svc.cluster.local:5432/index"
+
+# Le DSN vit dans son propre Secret : il ne doit pas apparaître en clair
+# dans la définition du Deployment.
+kubectl create secret generic agent-index-dsn \
+  --from-literal=dsn="$DSN" \
+  -n "$NAMESPACE" --dry-run=client -o yaml | kubectl apply -f - >/dev/null
+unset DSN MOTDEPASSE
+
+kubectl set env deployment/devops-agent -n "$NAMESPACE" \
+  RAG_DB_DSN- >/dev/null 2>&1 || true
+kubectl set env deployment/devops-agent -n "$NAMESPACE" \
+  --from=secret/agent-index-dsn >/dev/null
+vert "   variable RAG_DB_DSN branchée sur le secret"
 echo
 
 # ── Étape manuelle ───────────────────────────────────────────────

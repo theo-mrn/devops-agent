@@ -1,11 +1,14 @@
 [project]
 name = "devops-agent"
-version = "0.7.0"
+version = "0.7.1"
 description = "Agent DevOps : RAG et diagnostic d'infrastructure en lecture seule"
 requires-python = ">=3.12"
-# Le nécessaire pour l'agent : appels API et manifests. Léger.
+# Le nécessaire pour l'agent : appels API, manifests, et l'accès à
+# l'index vectoriel. psycopg pèse ~5 Mo, là où sentence-transformers
+# en pèserait 2500 : c'est tout l'intérêt de l'index en base.
 dependencies = [
     "anthropic>=0.40",
+    "psycopg[binary]>=3.2",
     "pyyaml>=6",
 ]
 
@@ -17,10 +20,9 @@ rag = [
     "rank-bm25>=0.2",
     "sentence-transformers>=3",
 ]
-# Index vectoriel en base : l'agent n'a besoin que de psycopg pour
-# interroger pgvector, pas de PyTorch. C'est ce qui garde son image à
-# 66 Mo là où l'indexeur en pèse 2,5 Go.
-db = ["psycopg[binary]>=3.2"]
+# Conservé pour compatibilité : psycopg est désormais une dépendance
+# de base, puisque l'agent interroge l'index en permanence.
+db = []
 dev = ["pytest>=8", "pytest-cov>=5"]
 
 [project.scripts]

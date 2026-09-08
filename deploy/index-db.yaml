@@ -112,7 +112,7 @@ spec:
             - name: indexeur
               # Image complète : contient sentence-transformers, contrairement
               # à celle de l'agent qui reste légère.
-              image: maxwellfaraday/devops-agent:0.7.0-rag
+              image: maxwellfaraday/devops-agent:0.7.1-rag
               command: ["devops-agent", "reindexer"]
               env:
                 - name: RAG_INFRA_REPO
@@ -120,8 +120,11 @@ spec:
                 - name: RAG_DB_DSN
                   valueFrom:
                     secretKeyRef:
-                      name: agent-index-app
-                      key: uri
+                      # Créé par installer-index.sh : CloudNativePG ne
+                      # publie d'URI complète que s'il génère lui-même
+                      # le mot de passe.
+                      name: agent-index-dsn
+                      key: dsn
               resources:
                 requests:
                   memory: 1Gi
