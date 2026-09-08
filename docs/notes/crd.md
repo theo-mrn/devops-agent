@@ -1,60 +1,87 @@
-# Ressources personnalisées dans le RBAC
+# RBAC pour un outil distribuable
 
-## Le manque, constaté en conditions réelles
+## Le problème de l'énumération
 
-Lors du diagnostic de `n8n-postgres-ro`, l'agent avait écrit :
+Première approche : nommer chaque groupe d'API — `postgresql.cnpg.io`,
+`argoproj.io`, `traefik.io`… Huit groupes, choisis d'après les CRD présentes
+sur un cluster donné.
 
-> Accès direct à la ressource `Cluster n8n-postgres` refusé (RBAC), donc
-> impossible de confirmer via le CR le nombre d'instances déclaré, mais
-> l'absence totale de pod replica dans le namespace le confirme
-> indirectement.
+**Ça ne tient pas pour un outil distribué.** Chaque client a ses opérateurs, et
+personne n'éditera un ClusterRole avant d'installer. Un agent qui ne peut pas
+lire la ressource `Cluster` d'un opérateur PostgreSQL diagnostique à l'aveugle.
 
-Il avait raison sur le fond, mais par déduction plutôt que par constat. Un pod
-géré par un opérateur n'a de sens qu'au regard de la ressource qui le définit.
+## La règle retenue
 
-## Ce qui a été ajouté
+```yaml
+- apiGroups: ["*"]
+  resources: ["*"]
+  verbs: ["get", "list", "watch"]
+```
 
-Huit groupes, **en lecture seule**, choisis d'après les CRD réellement
-présentes sur le cluster :
+Une seule règle. L'agent lit tout ce qui existe — présent et futur, quels que
+soient les opérateurs installés — et ne peut **rien** écrire.
 
-| groupe | ce qu'il apporte au diagnostic |
+**Le joker porte sur les ressources, jamais sur les verbes.** C'est ce qui rend
+le compromis acceptable : la sûreté ne dépend pas d'une liste à maintenir.
+
+## Le contrat en deux couches
+
+```
+RBAC          empêche toute ÉCRITURE
+              (serveur d'API, incontournable)
+
+code          empêche la LECTURE de ce qui ne doit pas sortir
+              (RESSOURCES_INTERDITES, couvert par des tests)
+```
+
+Kubernetes ne sait pas exclure une ressource d'un joker : le joker inclut donc
+les Secrets. Leur blocage vit dans `agent/tools.py` :
+
+| bloqué | raison |
 |---|---|
-| `postgresql.cnpg.io` | nombre d'instances, sauvegardes, bascules |
-| `argoproj.io` | état de synchronisation, dérive GitOps |
-| `monitoring.coreos.com` | règles d'alerte, cibles de collecte |
-| `traefik.io` | routage — un service injoignable vient souvent de là |
-| `cert-manager.io` | certificats non renouvelés |
-| `aquasecurity.github.io` | rapports de vulnérabilité |
-| `snapshot.storage.k8s.io` | restauration après incident de stockage |
-| `helm.cattle.io` | état des déploiements par chart |
+| `secrets` | encodés en base64, donc lisibles |
+| `serviceaccounttokens` | jetons d'identité |
+| `certificaterequests` | clés privées de cert-manager |
+| `secretstores`, `clustersecretstores` | identifiants de fournisseurs externes |
+| `vaultauth`, `vaultconnection` | accès Vault |
 
-## Vérification après application
+**Non bloqués, délibérément** : `sealedsecrets` et `externalsecrets`. Leur
+contenu est chiffré ou n'est qu'une référence, et savoir qu'ils existent aide
+au diagnostic.
 
-```
-clusters.postgresql.cnpg.io                    yes     ← lecture
-applications.argoproj.io                       yes
-ingressroutes.traefik.io                       yes
-vulnerabilityreports.aquasecurity.github.io    yes
-
-delete clusters.postgresql.cnpg.io             no      ← écriture
-patch  clusters.postgresql.cnpg.io             no
-create applications.argoproj.io                no
-```
-
-Et le cas qui avait échoué :
+## Vérification sur le cluster
 
 ```
-$ kubectl get cluster n8n-postgres -n n8n -o jsonpath='{.spec.instances}'
-1
+get  pods                             yes     ← lecture
+get  clusters.postgresql.cnpg.io      yes
+get  ingressroutes.traefik.io         yes
+get  helmcharts.helm.cattle.io        yes
+
+delete pods                           no      ← écriture
+create pods/exec                      no
+patch  clusters.postgresql.cnpg.io    no
+create clusterrolebindings            no
 ```
 
-L'agent peut désormais conclure directement plutôt que par déduction.
+Les sous-ressources d'exécution — `pods/exec`, `pods/portforward`,
+`pods/attach` — exigent le verbe `create`, absent du rôle. Elles sont donc
+inaccessibles sans avoir à être nommées.
 
-## Pourquoi pas un joker
+## Pour un déploiement plus strict
 
-`apiGroups: ["*"]` aurait été plus court, mais ajouter un opérateur au cluster
-donnerait alors un accès automatique à ses ressources — sans décision.
+Une organisation qui exige que les Secrets soient inaccessibles **au niveau du
+serveur d'API** peut remplacer le joker par une énumération explicite. Elle
+accepte alors de la maintenir à chaque nouvel opérateur.
 
-Les groupes sont nommés explicitement, et trois tests le garantissent : aucun
-joker de groupe, aucun verbe d'écriture sur une CRD, présence des groupes
-attendus.
+Le compromis inverse — joker plus filtrage applicatif — est celui qui rend
+l'agent installable en une commande.
+
+## Tests qui garantissent le contrat
+
+| test | vérifie |
+|---|---|
+| `test_seuls_des_verbes_de_lecture` | aucun verbe hors `get`/`list`/`watch` |
+| `test_execution_inaccessible` | `create` absent, donc `pods/exec` bloqué |
+| `test_secrets_bloques_par_le_code` | le code refuse ce que le RBAC autorise |
+| `test_ressources_sensibles_bloquees` | CRD portant des identifiants |
+| `test_ressources_chiffrees_lisibles` | un SealedSecret reste lisible |

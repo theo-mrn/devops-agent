@@ -2,12 +2,13 @@
 #
 # La sûreté de l'agent repose sur deux couches indépendantes :
 #
-#   1. le code — liste blanche de verbes kubectl, couverte par 20 tests ;
-#   2. ce RBAC — le serveur d'API REFUSE toute écriture, quelle que soit
-#      la commande émise.
+#   1. ce RBAC — le serveur d'API REFUSE toute écriture, quelle que
+#      soit la commande émise, même si le code était contourné ;
+#   2. le code — liste blanche de verbes kubectl et blocage des
+#      ressources sensibles, couverts par des tests.
 #
-# La seconde tient même si la première est contournée. C'est elle qu'une
-# équipe infra lira avant d'autoriser le déploiement.
+# C'est la première qu'une équipe infra lira avant d'autoriser le
+# déploiement : elle tient en une règle.
 ---
 apiVersion: v1
 kind: Namespace
@@ -25,115 +26,47 @@ kind: ClusterRole
 metadata:
   name: devops-agent-readonly
 rules:
-  # Ressources fondamentales. `pods/log` est requis pour lire les logs,
-  # `watch` pour la surveillance par événements.
-  - apiGroups: [""]
-    resources:
-      - pods
-      - pods/log
-      - events
-      - services
-      - endpoints
-      - namespaces
-      - nodes
-      - persistentvolumeclaims
-      - persistentvolumes
-      - configmaps
-    verbs: ["get", "list", "watch"]
-
-  # Charges de travail.
-  - apiGroups: ["apps"]
-    resources: ["deployments", "statefulsets", "daemonsets", "replicasets"]
-    verbs: ["get", "list", "watch"]
-
-  # Tâches planifiées.
-  - apiGroups: ["batch"]
-    resources: ["jobs", "cronjobs"]
-    verbs: ["get", "list", "watch"]
-
-  # Réseau.
-  - apiGroups: ["networking.k8s.io"]
-    resources: ["ingresses", "networkpolicies"]
-    verbs: ["get", "list", "watch"]
-
-  # Métriques, pour comparer consommation réelle et limites configurées.
-  - apiGroups: ["metrics.k8s.io"]
-    resources: ["pods", "nodes"]
-    verbs: ["get", "list"]
-
-  # Perturbations volontaires, utiles au diagnostic d'éviction.
-  - apiGroups: ["policy"]
-    resources: ["poddisruptionbudgets"]
-    verbs: ["get", "list"]
-
   # ─────────────────────────────────────────────────────────────
-  # Ressources personnalisées des opérateurs.
+  # Lecture seule sur l'ensemble du cluster.
   #
-  # Sans elles, l'agent bute sur ce qu'il diagnostique : un pod géré
-  # par CloudNativePG n'a de sens qu'au regard du Cluster qui le
-  # définit. Constaté en conditions réelles — l'agent avait signalé
-  # « accès à la ressource Cluster refusé, impossible de confirmer le
-  # nombre d'instances déclaré ».
+  # Énumérer les ressources ne tient pas pour un outil distribuable :
+  # chaque cluster a ses opérateurs — CloudNativePG, cert-manager,
+  # Argo CD, Traefik — et personne n'éditera un ClusterRole avant
+  # d'installer.
   #
-  # Ce sont des LECTURES : aucune atteinte au principe de lecture
-  # seule. Les groupes sont nommés explicitement plutôt qu'avec un
-  # joker, pour que l'ajout d'un opérateur reste une décision.
+  # Le joker porte sur les RESSOURCES, jamais sur les VERBES. La
+  # sûreté vient de « get, list, watch » : aucune écriture n'est
+  # possible, quelle que soit la ressource, présente ou future.
+  #
+  # ⚠️ Ce joker inclut les Secrets — Kubernetes ne sait pas exclure
+  # une ressource d'un joker. Leur blocage vit dans le code
+  # (RESSOURCES_INTERDITES, agent/tools.py), couvert par des tests :
+  #
+  #     le RBAC empêche toute ÉCRITURE
+  #     le code empêche la LECTURE de ce qui ne doit pas sortir
+  #
+  # Un déploiement qui exige que les Secrets soient inaccessibles au
+  # niveau du serveur d'API doit remplacer cette règle par une
+  # énumération explicite des ressources — au prix de la maintenir.
   # ─────────────────────────────────────────────────────────────
-
-  # CloudNativePG — clusters PostgreSQL, sauvegardes, points de bascule.
-  - apiGroups: ["postgresql.cnpg.io"]
-    resources: ["clusters", "backups", "scheduledbackups", "poolers"]
-    verbs: ["get", "list"]
-
-  # Argo CD — état de synchronisation et santé des applications.
-  - apiGroups: ["argoproj.io"]
-    resources: ["applications", "applicationsets", "appprojects"]
-    verbs: ["get", "list"]
-
-  # Prometheus Operator — règles d'alerte et cibles de collecte.
-  - apiGroups: ["monitoring.coreos.com"]
-    resources:
-      - prometheuses
-      - prometheusrules
-      - servicemonitors
-      - podmonitors
-      - alertmanagers
-    verbs: ["get", "list"]
-
-  # Traefik — routage : un service injoignable vient souvent d'ici.
-  - apiGroups: ["traefik.io", "traefik.containo.us"]
-    resources: ["ingressroutes", "middlewares", "serverstransports", "tlsoptions"]
-    verbs: ["get", "list"]
-
-  # cert-manager — certificats expirés ou non renouvelés.
-  - apiGroups: ["cert-manager.io"]
-    resources: ["certificates", "certificaterequests", "issuers", "clusterissuers"]
-    verbs: ["get", "list"]
-
-  # Trivy Operator — rapports de vulnérabilité et de configuration.
-  - apiGroups: ["aquasecurity.github.io"]
-    resources: ["vulnerabilityreports", "configauditreports", "clustercompliancereports"]
-    verbs: ["get", "list"]
-
-  # Snapshots de volumes — restauration après incident de stockage.
-  - apiGroups: ["snapshot.storage.k8s.io"]
-    resources: ["volumesnapshots", "volumesnapshotcontents", "volumesnapshotclasses"]
-    verbs: ["get", "list"]
-
-  # Helm (k3s) — état des déploiements pilotés par chart.
-  - apiGroups: ["helm.cattle.io"]
-    resources: ["helmcharts", "helmchartconfigs"]
-    verbs: ["get", "list"]
+  - apiGroups: ["*"]
+    resources: ["*"]
+    verbs: ["get", "list", "watch"]
 
   # ─────────────────────────────────────────────────────────────
   # DÉLIBÉRÉMENT ABSENTS
   #
-  #   secrets            — leur contenu est encodé en base64, donc lisible
-  #   create/update/patch/delete  — aucun verbe d'écriture
-  #   pods/exec, pods/portforward — aucune exécution dans un conteneur
-  #   */scale            — aucune modification de dimensionnement
+  #   create, update, patch, delete, deletecollection
+  #     → aucune modification du cluster
   #
-  # Un `kubectl auth can-i` le confirme :
+  #   escalate, bind, impersonate
+  #     → aucune élévation de privilège
+  #
+  # Les sous-ressources d'exécution (pods/exec, pods/portforward,
+  # pods/attach) ne s'utilisent qu'avec `create` : elles sont donc
+  # inaccessibles.
+  #
+  # Vérifiable à tout moment :
   #   kubectl auth can-i delete pods \
   #     --as=system:serviceaccount:devops-agent:devops-agent   → no
   # ─────────────────────────────────────────────────────────────

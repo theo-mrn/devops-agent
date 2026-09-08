@@ -32,7 +32,29 @@ VERBES_AUTORISES = {
 }
 
 # Ressources dont le contenu ne doit jamais sortir, même en lecture.
-RESSOURCES_INTERDITES = {"secret", "secrets"}
+#
+# Le ClusterRole autorise la lecture de TOUTES les ressources — c'est ce
+# qui rend l'agent distribuable sans éditer le RBAC chez chaque client.
+# La contrepartie est que le filtrage des ressources sensibles vit ici,
+# dans le code, et doit être exhaustif.
+#
+# Les SealedSecrets et ExternalSecrets ne figurent PAS dans cette liste :
+# leur contenu est chiffré ou n'est qu'une référence, et savoir qu'ils
+# existent aide au diagnostic.
+RESSOURCES_INTERDITES = {
+    # Secrets Kubernetes : encodés en base64, donc lisibles en clair.
+    "secret", "secrets",
+    # Jetons de comptes de service.
+    "serviceaccounttoken", "serviceaccounttokens",
+    # Certificats et clés privées de cert-manager.
+    "certificaterequest", "certificaterequests",
+    # Identifiants de fournisseurs de secrets externes.
+    "secretstore", "secretstores", "clustersecretstore", "clustersecretstores",
+    # Vault et équivalents.
+    "vaultauth", "vaultconnection", "vaultstaticsecret",
+    # Identifiants de registre et d'accès cloud.
+    "clustersecret", "clustersecrets",
+}
 
 # Chemin du compte de service monté par Kubernetes dans tout pod.
 # Sa présence signale que l'agent tourne DANS le cluster : kubectl s'y

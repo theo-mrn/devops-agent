@@ -28,7 +28,12 @@ def cluster_role() -> dict:
 
 
 class TestRBACLectureSeule:
-    """Aucun verbe d'écriture ne doit figurer dans le ClusterRole."""
+    """Aucun verbe d'écriture ne doit figurer dans le ClusterRole.
+
+    Le rôle autorise la lecture de TOUTE ressource — c'est ce qui rend
+    l'agent installable sans éditer le RBAC chez chaque client. Toute la
+    sûreté repose donc sur les verbes : ces tests sont la garantie.
+    """
 
     INTERDITS = {"create", "update", "patch", "delete", "deletecollection",
                  "*", "impersonate", "escalate", "bind"}
@@ -40,71 +45,46 @@ class TestRBACLectureSeule:
                 f"verbe d'écriture « {interdits} » sur {regle['resources']}"
             )
 
-    def test_aucun_acces_aux_secrets(self, cluster_role):
-        """Le contenu d'un Secret est encodé en base64, donc lisible."""
+    def test_seuls_des_verbes_de_lecture(self, cluster_role):
+        """Le joker sur les ressources n'est acceptable qu'avec ces verbes."""
+        autorises = {"get", "list", "watch"}
         for regle in cluster_role["rules"]:
-            assert "secrets" not in regle["resources"]
-
-    def test_aucune_execution_dans_un_conteneur(self, cluster_role):
-        """pods/exec permettrait d'agir sur le cluster malgré le reste."""
-        for regle in cluster_role["rules"]:
-            for ressource in regle["resources"]:
-                assert not ressource.endswith(("/exec", "/portforward",
-                                               "/attach", "/scale"))
-
-    def test_aucun_joker_sur_les_ressources(self, cluster_role):
-        for regle in cluster_role["rules"]:
-            assert "*" not in regle["resources"]
-
-
-class TestRBACCouverture:
-    """Le RBAC doit couvrir ce que l'agent surveille réellement."""
-
-    @pytest.mark.parametrize("ressource", [
-        "pods", "pods/log", "events", "services", "endpoints",
-        "nodes", "persistentvolumeclaims",
-        "deployments", "statefulsets", "jobs",
-    ])
-    def test_ressource_surveillee_accessible(self, cluster_role, ressource):
-        toutes = {r for regle in cluster_role["rules"] for r in regle["resources"]}
-        assert ressource in toutes
-
-    def test_watch_autorise_sur_les_ressources_surveillees(self, cluster_role):
-        """Sans `watch`, la surveillance par événements est impossible."""
-        for regle in cluster_role["rules"]:
-            if "pods" in regle["resources"] and "metrics" not in str(regle):
-                assert "watch" in regle["verbs"]
-                return
-        pytest.fail("aucune règle n'autorise watch sur les pods")
-
-    def test_detecteurs_et_rbac_concordent(self, cluster_role):
-        """Chaque détecteur doit avoir la permission correspondante.
-
-        kubectl accepte des abréviations (`pvc`) que le RBAC ne connaît
-        pas : il exige le nom complet de la ressource.
-        """
-        from devops_agent.agent import detecteurs
-
-        ALIAS = {
-            "pvc": "persistentvolumeclaims",
-            "pv": "persistentvolumes",
-            "svc": "services",
-            "deploy": "deployments",
-            "sts": "statefulsets",
-            "ds": "daemonsets",
-            "cm": "configmaps",
-            "ns": "namespaces",
-            "no": "nodes",
-            "po": "pods",
-            "ep": "endpoints",
-        }
-
-        toutes = {r for regle in cluster_role["rules"] for r in regle["resources"]}
-        for ressource in detecteurs.PAR_DEFAUT:
-            nom = ALIAS.get(ressource, ressource)
-            assert nom in toutes, (
-                f"« {ressource} » est surveillé mais « {nom} » est absent du RBAC"
+            assert set(regle["verbs"]) <= autorises, (
+                f"verbe hors lecture sur {regle.get('apiGroups')}"
             )
+
+    def test_execution_inaccessible(self, cluster_role):
+        """pods/exec et pods/portforward exigent `create`, absent du rôle."""
+        verbes = {v for regle in cluster_role["rules"] for v in regle["verbs"]}
+        assert "create" not in verbes
+
+    def test_secrets_bloques_par_le_code(self):
+        """Le RBAC les autorise ; le code doit les refuser.
+
+        C'est le contrat qui rend le joker acceptable : Kubernetes ne sait
+        pas exclure une ressource d'un joker, donc le filtrage vit dans
+        `tools.RESSOURCES_INTERDITES`.
+        """
+        from devops_agent.agent import tools
+
+        for commande in ("get secret db -n prod", "get secrets -A",
+                         "describe secret x -n prod"):
+            assert tools.verifier_commande(commande) is not None, commande
+
+    def test_ressources_sensibles_bloquees(self):
+        """Le joker expose aussi les CRD portant des identifiants."""
+        from devops_agent.agent import tools
+
+        for commande in ("get certificaterequests -A",
+                         "get secretstores -A",
+                         "get clustersecretstores -A"):
+            assert tools.verifier_commande(commande) is not None, commande
+
+    def test_ressources_chiffrees_lisibles(self):
+        """Un SealedSecret est chiffré : le lire ne révèle rien."""
+        from devops_agent.agent import tools
+
+        assert tools.verifier_commande("get sealedsecret x -n prod") is None
 
 
 class TestDetectionEnvironnement:
@@ -206,39 +186,3 @@ class TestRAGOptionnel:
         assert "anthropic" in base
 
 
-class TestRessourcesPersonnalisees:
-    """Les CRD d'opérateurs doivent rester en lecture seule.
-
-    L'agent butait sur ce qu'il diagnostiquait : un pod géré par
-    CloudNativePG n'a de sens qu'au regard du Cluster qui le définit.
-    Ajouter ces lectures ne doit pas ouvrir la moindre écriture.
-    """
-
-    @pytest.mark.parametrize("groupe", [
-        "postgresql.cnpg.io",
-        "argoproj.io",
-        "monitoring.coreos.com",
-        "traefik.io",
-        "cert-manager.io",
-        "aquasecurity.github.io",
-    ])
-    def test_groupe_present(self, cluster_role, groupe):
-        groupes = {g for regle in cluster_role["rules"]
-                   for g in regle.get("apiGroups", [])}
-        assert groupe in groupes
-
-    def test_crd_en_lecture_seule(self, cluster_role):
-        """Aucune règle d'opérateur ne doit porter de verbe d'écriture."""
-        interdits = {"create", "update", "patch", "delete", "deletecollection", "*"}
-        for regle in cluster_role["rules"]:
-            groupes = regle.get("apiGroups", [])
-            if any("." in g and g not in ("networking.k8s.io", "rbac.authorization.k8s.io")
-                   for g in groupes):
-                assert not set(regle["verbs"]) & interdits, (
-                    f"verbe d'écriture sur {groupes}"
-                )
-
-    def test_pas_de_joker_de_groupe(self, cluster_role):
-        """Ajouter un opérateur doit rester une décision explicite."""
-        for regle in cluster_role["rules"]:
-            assert "*" not in regle.get("apiGroups", [])
