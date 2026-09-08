@@ -20,3 +20,7 @@ data/index/
 
 # macOS
 .DS_Store
+
+# Workflows n8n : propres à chaque installation, ils portent des
+# domaines et des identifiants de credentials.
+n8n/

@@ -14,7 +14,9 @@ RACINE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VERSION=$(grep -m1 '^version' "${RACINE}/pyproject.toml" | cut -d'"' -f2)
 # Docker Hub par défaut : les images y sont publiques d'emblée, là où
 # GHCR les crée privées même depuis un dépôt public.
-COMPTE="${COMPTE:-maxwellfaraday}"
+#
+#   COMPTE=mon-compte ./deploy/publier.sh
+COMPTE="${COMPTE:-${DOCKERHUB_USER:-maxwellfaraday}}"
 REGISTRE="${REGISTRE:-docker.io/${COMPTE}}"
 
 IMAGE="${REGISTRE}/devops-agent"
