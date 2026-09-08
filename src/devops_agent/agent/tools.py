@@ -22,6 +22,8 @@ import shutil
 import subprocess
 from pathlib import Path
 
+from devops_agent.agent import sanitizer
+
 # Verbes kubectl autorisés. Tout le reste est refusé.
 VERBES_AUTORISES = {
     "get", "describe", "logs", "top", "events", "version", "api-resources",
@@ -120,10 +122,8 @@ def kubectl(commande: str) -> str:
     except subprocess.TimeoutExpired:
         return f"[erreur] kubectl n'a pas répondu en {TIMEOUT_KUBECTL}s"
 
-    sortie = r.stdout or r.stderr or "(aucune sortie)"
-    if len(sortie) > LIMITE_SORTIE:
-        sortie = sortie[:LIMITE_SORTIE] + f"\n[... tronqué, {len(sortie)} caractères au total]"
-    return sortie
+    # La troncature et le masquage sont appliqués par `executer()`.
+    return r.stdout or r.stderr or "(aucune sortie)"
 
 
 def chercher_documentation(question: str) -> str:
@@ -165,10 +165,7 @@ def lire_fichier(chemin: str) -> str:
     if cible.stat().st_size > 200_000:
         return f"[erreur] fichier trop volumineux ({cible.stat().st_size} octets)"
 
-    contenu = cible.read_text(errors="replace")
-    if len(contenu) > LIMITE_SORTIE:
-        contenu = contenu[:LIMITE_SORTIE] + "\n[... tronqué]"
-    return contenu
+    return cible.read_text(errors="replace")
 
 
 def lister_fichiers(motif: str = "**/*.yaml") -> str:
@@ -356,13 +353,21 @@ IMPLEMENTATIONS = {
 
 
 def executer(nom: str, arguments: dict) -> str:
-    """Exécute l'outil demandé par le modèle."""
+    """Exécute l'outil demandé par le modèle, puis assainit sa sortie.
+
+    L'assainissement est fait ICI et nulle part ailleurs : un point de
+    passage unique garantit qu'aucune sortie d'outil ne part vers l'API
+    sans être filtrée. Le faire dans chaque fonction exposerait au
+    premier oubli.
+    """
     fonction = IMPLEMENTATIONS.get(nom)
     if fonction is None:
         return f"[erreur] outil « {nom} » inconnu"
     try:
-        return fonction(**arguments)
+        sortie = fonction(**arguments)
     except TypeError as e:
         return f"[erreur] arguments invalides pour « {nom} » : {e}"
     except Exception as e:
         return f"[erreur] {type(e).__name__} : {e}"
+
+    return sanitizer.assainir(sortie)

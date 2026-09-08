@@ -25,7 +25,7 @@ import subprocess
 import time
 from collections import Counter
 
-from devops_agent.agent import tools
+from devops_agent.agent import sanitizer, tools
 
 # Durée de vie de l'instantané. Un cluster bouge, mais pas à la seconde.
 TTL = int(os.environ.get("RAG_APERCU_TTL", "60"))
@@ -251,7 +251,9 @@ def apercu(forcer: bool = False) -> str:
 
     noeuds = _collecter_noeuds()
     pods = _collecter_pods()
-    texte = _formater(noeuds, pods, version)
+    # L'aperçu contourne `tools.executer()` : il doit être assaini
+    # explicitement. Un nom de ressource peut porter un identifiant.
+    texte = sanitizer.masquer(_formater(noeuds, pods, version))
 
     _cache["texte"] = texte
     _cache["date"] = maintenant
