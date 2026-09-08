@@ -151,11 +151,36 @@ def kubectl(commande: str) -> str:
     return r.stdout or r.stderr or "(aucune sortie)"
 
 
+def rag_disponible() -> bool:
+    """La recherche documentaire est-elle utilisable ?
+
+    Elle demande ~2 Go de dépendances (PyTorch, sentence-transformers) et
+    un index construit. Un agent qui ne fait que du diagnostic cluster
+    s'en passe : quatre de ses cinq outils n'en ont pas besoin.
+    """
+    try:
+        import sentence_transformers  # noqa: F401
+    except ImportError:
+        return False
+
+    from devops_agent.core import config
+    return config.INDEX.exists()
+
+
 def chercher_documentation(question: str) -> str:
     """Recherche dans la documentation indexée (le pipeline RAG)."""
-    import sys
-    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-    import devops_agent.retrieval.pipeline as pipeline
+    if not rag_disponible():
+        # Dégrader proprement plutôt que planter : le modèle reçoit une
+        # explication utilisable et poursuit avec ses autres outils.
+        return (
+            "[indisponible] La recherche documentaire demande les dépendances "
+            "optionnelles et un index construit :\n"
+            "    uv sync --extra rag\n"
+            "    devops-agent index\n"
+            "Poursuis le diagnostic avec les autres outils."
+        )
+
+    from devops_agent.retrieval import pipeline
 
     resultats = pipeline.chercher_rerank(question, k=3)
     if not resultats:

@@ -18,7 +18,8 @@ Le retrieval reste local dans les deux cas.
 ## Installation
 
 ```bash
-make install          # uv sync
+make install          # agent seul — léger, 320 Mo en image
+uv sync --extra rag   # + recherche documentaire (~2 Go de dépendances)
 make fetch            # télécharge les sources documentaires
 make index            # construit l'index vectoriel
 ```

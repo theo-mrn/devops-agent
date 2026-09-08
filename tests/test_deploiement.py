@@ -162,3 +162,45 @@ class TestManifestDeploiement:
                 assert "RAG_BUDGET_JOUR" in doc["data"]
                 return
         pytest.fail("aucune ConfigMap")
+
+
+class TestRAGOptionnel:
+    """L'agent doit fonctionner sans les dépendances de recherche.
+
+    Elles pèsent ~2 Go et ne servent qu'à un outil sur cinq. Un
+    déploiement qui n'a pas de documentation interne à indexer doit
+    pouvoir s'en passer — et le jour où il en a, `uv sync --extra rag`
+    suffit.
+    """
+
+    def test_message_explicite_sans_dependances(self, monkeypatch):
+        from devops_agent.agent import tools
+        monkeypatch.setattr(tools, "rag_disponible", lambda: False)
+        resultat = tools.chercher_documentation("une question")
+        assert "indisponible" in resultat
+        assert "--extra rag" in resultat
+        # Le modèle doit savoir qu'il peut continuer autrement.
+        assert "autres outils" in resultat
+
+    def test_les_autres_outils_ne_dependent_pas_du_rag(self):
+        """Quatre outils sur cinq doivent rester utilisables."""
+        import inspect
+        from devops_agent.agent import tools
+
+        for nom in ("kubectl", "lire_fichier", "lister_fichiers",
+                    "ressources_pod", "rafraichir_apercu"):
+            source = inspect.getsource(getattr(tools, nom))
+            assert "sentence_transformers" not in source
+            assert "retrieval" not in source
+
+    def test_dependances_rag_bien_optionnelles(self):
+        """pyproject doit les déclarer en extra, pas en dépendance de base."""
+        import tomllib
+        config = tomllib.loads((RACINE / "pyproject.toml").read_text())
+        base = " ".join(config["project"]["dependencies"])
+        extra = " ".join(config["project"]["optional-dependencies"]["rag"])
+
+        assert "sentence-transformers" not in base
+        assert "sentence-transformers" in extra
+        # anthropic reste indispensable : c'est le moteur de l'agent.
+        assert "anthropic" in base
