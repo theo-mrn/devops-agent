@@ -1,6 +1,6 @@
 [project]
 name = "devops-agent"
-version = "0.8.1"
+version = "0.8.2"
 description = "Agent DevOps : RAG et diagnostic d'infrastructure en lecture seule"
 requires-python = ">=3.12"
 # Le nécessaire pour l'agent : appels API, manifests, et l'accès à

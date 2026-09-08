@@ -43,7 +43,7 @@ spec:
           # Image -rag : l'encodage exige le modèle. Pour utiliser
           # l'image légère (71 Mo), fournir RAG_EMBED_URL pointant vers
           # un service d'embedding — vectordb.encoder gère les deux.
-          image: maxwellfaraday/devops-agent:0.8.1-rag
+          image: maxwellfaraday/devops-agent:0.8.2-rag
           command: ["devops-agent", "api", "--port", "8080"]
           ports:
             - name: http

@@ -75,3 +75,29 @@ class TestConfiguration:
         # Sans borne, un envoi unique pourrait épuiser la mémoire du pod.
         assert documents.TAILLE_MAX > 0
         assert documents.TAILLE_MAX <= 64 * 1024 * 1024
+
+
+class TestVueDesSources:
+    """`GET /sources` dit qui alimente quoi.
+
+    Deux sources aux noms voisins (« runbook » du CronJob, « runbooks »
+    envoyée par API) sont indiscernables dans un simple inventaire.
+    Sans cette distinction, une entreprise ne sait pas où elle peut
+    écrire sans être écrasée au prochain passage du CronJob.
+    """
+
+    def test_les_sources_du_cronjob_sont_bien_celles_attendues(self):
+        # Ces deux noms viennent de reindexer.py : s'ils y changent
+        # sans être répercutés ici, l'API laisserait écrire dans une
+        # source que le CronJob écrase.
+        assert documents.SOURCES_RESERVEES == {"infra", "runbook"}
+
+    def test_une_source_applicative_est_modifiable(self):
+        assert "runbooks" not in documents.SOURCES_RESERVEES
+        assert "confluence" not in documents.SOURCES_RESERVEES
+
+    def test_les_noms_voisins_ne_se_confondent_pas(self):
+        # « runbook » est reconstruite, « runbooks » ne l'est pas :
+        # un caractère les sépare, d'où l'intérêt de l'afficher.
+        assert "runbook" in documents.SOURCES_RESERVEES
+        assert "runbooks" not in documents.SOURCES_RESERVEES

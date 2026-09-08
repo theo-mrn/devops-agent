@@ -105,11 +105,23 @@ curl -X POST http://agent-api.devops-agent/documents \
           "texte": "# Restaurer une sauvegarde\n..."}'
 ```
 
+Cette adresse est le nom interne du service : elle vaut depuis un pod du
+cluster — la CI de l'entreprise, un job, un autre service. Depuis un
+poste, ouvrir un tunnel et viser `localhost` :
+
+```bash
+kubectl port-forward -n devops-agent svc/agent-api 8080:80
+export JETON=$(kubectl get secret agent-api -n devops-agent \
+                 -o jsonpath='{.data.jeton}' | base64 -d)
+curl -X POST http://localhost:8080/documents -H "Authorization: Bearer $JETON" ...
+```
+
 | Route | Effet |
 |---|---|
 | `POST /documents` | ajoute ou remplace un document |
 | `DELETE /documents` | retire un document de l'index |
-| `GET /documents` | liste ce que l'agent connaît |
+| `GET /documents` | liste les documents (`?source=` pour filtrer) |
+| `GET /sources` | vue d'ensemble : qui alimente quoi |
 | `GET /sante` | sonde, sans authentification |
 
 Un même `fichier` renvoyé remplace la version précédente : la CI d'une

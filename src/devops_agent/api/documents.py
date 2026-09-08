@@ -55,7 +55,7 @@ def _valide(nom: str) -> bool:
 
 
 class Handler(BaseHTTPRequestHandler):
-    """Routes : POST /documents, DELETE /documents, GET /documents, GET /sante."""
+    """Routes : POST, DELETE et GET /documents, GET /sources, GET /sante."""
 
     def log_message(self, forme, *args):  # noqa: A002
         # Les journaux par défaut écrivent sur stderr sans horodatage
@@ -103,6 +103,41 @@ class Handler(BaseHTTPRequestHandler):
             # Volontairement sans authentification : c'est la sonde de
             # Kubernetes, et elle ne divulgue rien.
             self._repondre(200, {"base": vectordb.disponible()})
+            return
+
+        if chemin == "/sources":
+            if not self._autorise():
+                return
+            try:
+                documents = vectordb.inventaire()
+            except Exception as e:
+                self._repondre(503, {"erreur": f"base indisponible : {e}"})
+                return
+
+            # Regroupe par source, en disant qui l'alimente : sans cela
+            # impossible de savoir si l'on peut y écrire ou si le
+            # CronJob l'écrasera au prochain passage.
+            sources: dict[str, dict] = {}
+            for doc in documents:
+                s = sources.setdefault(doc["source"], {
+                    "source": doc["source"], "documents": 0, "chunks": 0,
+                    "indexe_le": None,
+                })
+                s["documents"] += 1
+                s["chunks"] += doc["chunks"]
+                if doc["indexe_le"] and (s["indexe_le"] is None
+                                         or doc["indexe_le"] > s["indexe_le"]):
+                    s["indexe_le"] = doc["indexe_le"]
+
+            for s in sources.values():
+                reservee = s["source"] in SOURCES_RESERVEES
+                s["alimentee_par"] = "cronjob" if reservee else "api"
+                s["modifiable_par_api"] = not reservee
+
+            self._repondre(200, {
+                "sources": sorted(sources.values(), key=lambda x: x["source"]),
+                "total": len(sources),
+            })
             return
 
         if chemin != "/documents":
