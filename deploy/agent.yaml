@@ -25,7 +25,12 @@ data:
   RAG_BUDGET_JOUR: "5.0"
   # Filtres de surveillance.
   RAG_SEUIL_PAR_JOUR: "2.0"
-  RAG_DEDUP_SECONDES: "1800"
+  # 6 h : une anomalie structurelle n'a pas à être rediagnostiquée
+  # toutes les demi-heures.
+  RAG_DEDUP_SECONDES: "21600"
+  # Seuil de transmission : « surveillance » enverrait aussi le bruit
+  # de fond (jobs éphémères, replicas temporairement incomplets).
+  RAG_WEBHOOK_GRAVITE: "grave"
   RAG_FENETRE_CORRELATION: "8.0"
   # Restreindre la surveillance à certains namespaces :
   # RAG_NAMESPACES: "prod,staging"
@@ -65,7 +70,7 @@ spec:
         - name: agent
           # Docker Hub : les images y sont publiques par défaut, donc
           # tirables par le cluster sans imagePullSecret.
-          image: maxwellfaraday/devops-agent:0.3.0
+          image: maxwellfaraday/devops-agent:0.3.1
           imagePullPolicy: IfNotPresent
           args: ["auto"]
           envFrom:

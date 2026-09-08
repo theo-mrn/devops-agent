@@ -13,6 +13,16 @@ from devops_agent.agent import watcher
 from devops_agent.agent.watcher import Evenement, Surveillance
 
 
+@pytest.fixture(autouse=True)
+def dedup_isolee(tmp_path, monkeypatch):
+    """Isole la déduplication persistée entre les tests.
+
+    Elle vit désormais sur disque pour survivre aux redémarrages du pod :
+    sans isolation, chaque test hériterait des alertes du précédent.
+    """
+    monkeypatch.setattr(watcher, "ETAT_DEDUP", tmp_path / "dedup.json")
+
+
 def pod(nom="web-1", ns="prod", phase="Running", raison=None,
         redemarrages=0, oom_precedent=False):
     """Construit un objet pod tel que le renvoie l'API Kubernetes."""
@@ -179,3 +189,55 @@ class TestNamespacesIgnores:
         s = Surveillance(verbeux=False)
         assert s.traiter(pod(nom="scan", ns="trivy-system",
                              raison="Failed", redemarrages=5)) is None
+
+
+class TestDedupPersistante:
+    """La déduplication doit survivre à un redémarrage du pod.
+
+    Elle vivait en mémoire : chaque redémarrage la perdait et l'agent
+    rediagnostiquait les mêmes anomalies persistantes. Mesuré sur le
+    cluster réel : 4 diagnostics du même service en quelques heures.
+    """
+
+    def test_alerte_ecrite_sur_disque(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(watcher, "ETAT_DEDUP", tmp_path / "dedup.json")
+        s = Surveillance(verbeux=False)
+        s.traiter(pod(raison="CrashLoopBackOff", redemarrages=5))
+        assert (tmp_path / "dedup.json").exists()
+
+    def test_relecture_apres_redemarrage(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(watcher, "ETAT_DEDUP", tmp_path / "dedup.json")
+
+        premier = Surveillance(verbeux=False)
+        assert premier.traiter(pod(raison="CrashLoopBackOff", redemarrages=5)) is not None
+
+        # Un nouveau processus, comme après un redémarrage du pod.
+        second = Surveillance(verbeux=False)
+        assert second.traiter(pod(raison="CrashLoopBackOff", redemarrages=6)) is None, \
+            "l'anomalie a été rediagnostiquée après redémarrage"
+
+    def test_alertes_expirees_purgees(self, tmp_path, monkeypatch):
+        import json
+        import time
+
+        fichier = tmp_path / "dedup.json"
+        monkeypatch.setattr(watcher, "ETAT_DEDUP", fichier)
+        fichier.write_text(json.dumps({
+            "pod:prod/vieux:CrashLoopBackOff": time.time() - watcher.FENETRE_DEDUP - 100,
+            "pod:prod/recent:CrashLoopBackOff": time.time(),
+        }))
+        s = Surveillance(verbeux=False)
+        assert "pod:prod/vieux:CrashLoopBackOff" not in s.derniere_alerte
+        assert "pod:prod/recent:CrashLoopBackOff" in s.derniere_alerte
+
+    def test_fichier_corrompu_ne_bloque_pas(self, tmp_path, monkeypatch):
+        fichier = tmp_path / "dedup.json"
+        monkeypatch.setattr(watcher, "ETAT_DEDUP", fichier)
+        fichier.write_text("ceci n'est pas du JSON")
+        assert Surveillance(verbeux=False).derniere_alerte == {}
+
+
+class TestGraviteDesJobs:
+    def test_job_echoue_est_en_surveillance(self):
+        """Un job de scan qui échoue n'est pas un incident de production."""
+        assert watcher.ETATS_ANORMAUX.get("Failed") == "surveillance"

@@ -38,7 +38,10 @@ TENTATIVES = int(os.environ.get("RAG_WEBHOOK_TENTATIVES", "3"))
 
 # Seuls les diagnostics d'au moins cette gravité sont envoyés.
 # « surveillance » envoie tout, « critique » uniquement l'urgent.
-GRAVITE_MIN = os.environ.get("RAG_WEBHOOK_GRAVITE", "surveillance")
+# Par défaut, seules les anomalies graves et critiques sont transmises.
+# « surveillance » regroupe le bruit de fond — jobs éphémères, replicas
+# temporairement incomplets — qui n'a pas à encombrer un canal Discord.
+GRAVITE_MIN = os.environ.get("RAG_WEBHOOK_GRAVITE", "grave")
 
 _ORDRE = {"surveillance": 1, "grave": 2, "critique": 3}
 

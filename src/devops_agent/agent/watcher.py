@@ -28,6 +28,7 @@ import subprocess
 import sys
 import time
 from dataclasses import dataclass, field
+from pathlib import Path
 
 from devops_agent.agent import detecteurs, overview, tools
 
@@ -46,7 +47,15 @@ IGNORES = {
 SEUIL_REDEMARRAGES = int(os.environ.get("RAG_SEUIL_REDEMARRAGES", "3"))
 
 # Même pod, même problème : on ne rediagnostique pas avant ce délai.
-FENETRE_DEDUP = int(os.environ.get("RAG_DEDUP_SECONDES", "1800"))  # 30 min
+# Porté à 6 h : une anomalie persistante — un service structurellement
+# sans endpoint, un OOMKill déjà signalé — n'a pas à être rediagnostiquée
+# toutes les demi-heures.
+FENETRE_DEDUP = int(os.environ.get("RAG_DEDUP_SECONDES", "21600"))  # 6 h
+
+# La déduplication vivait en mémoire : chaque redémarrage du pod la
+# perdait et rediagnostiquait tout. Elle est désormais persistée à côté
+# du journal.
+ETAT_DEDUP = Path(os.environ.get("RAG_JOURNAL", "data/diagnostics.jsonl")).parent / "dedup.json"
 
 # États qui déclenchent un événement, du plus au moins grave.
 ETATS_ANORMAUX = {
@@ -56,7 +65,9 @@ ETATS_ANORMAUX = {
     "ErrImagePull": "grave",
     "CreateContainerConfigError": "grave",
     "CreateContainerError": "grave",
-    "Failed": "grave",
+    # Un Job qui échoue est fréquent et souvent normal (scan, tâche
+    # ponctuelle réessayée). Classé en surveillance plutôt qu'en grave.
+    "Failed": "surveillance",
     "Evicted": "grave",
     "Pending": "surveillance",
     "Unknown": "surveillance",
@@ -128,11 +139,33 @@ class Surveillance:
         self.verbeux = verbeux
         self.etats: dict[str, tuple[str, int]] = {}   # pod → (état, redémarrages)
         self.depuis: dict[str, float] = {}            # pod → début de l'état courant
-        self.derniere_alerte: dict[str, float] = {}   # clé → date de la dernière alerte
+        self.derniere_alerte: dict[str, float] = self._charger_dedup()
         self.vus = 0          # objets pods reçus, état initial compris
         self.retenus = 0      # anomalies jugées dignes d'un diagnostic
         self.initial = 0      # objets reçus lors de l'inventaire de départ
         self.inventaire = True  # vrai tant qu'on reçoit l'état initial
+
+    # ── Persistance de la déduplication ──────────────────────────
+
+    @staticmethod
+    def _charger_dedup() -> dict[str, float]:
+        """Recharge les alertes déjà émises, pour survivre à un redémarrage."""
+        try:
+            if ETAT_DEDUP.exists():
+                donnees = json.loads(ETAT_DEDUP.read_text())
+                limite = time.time() - FENETRE_DEDUP
+                # Purge à la lecture : inutile de garder ce qui a expiré.
+                return {k: v for k, v in donnees.items() if v > limite}
+        except (json.JSONDecodeError, OSError):
+            pass
+        return {}
+
+    def _sauver_dedup(self) -> None:
+        try:
+            ETAT_DEDUP.parent.mkdir(parents=True, exist_ok=True)
+            ETAT_DEDUP.write_text(json.dumps(self.derniere_alerte))
+        except OSError:
+            pass      # la persistance est un confort, pas une obligation
 
     # ── Filtrage ─────────────────────────────────────────────────
 
@@ -227,6 +260,7 @@ class Surveillance:
             return None
 
         self.derniere_alerte[ev.cle] = ev.date
+        self._sauver_dedup()
         self.retenus += 1
         return ev
 
