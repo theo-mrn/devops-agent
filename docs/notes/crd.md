@@ -67,14 +67,58 @@ Les sous-ressources d'exécution — `pods/exec`, `pods/portforward`,
 `pods/attach` — exigent le verbe `create`, absent du rôle. Elles sont donc
 inaccessibles sans avoir à être nommées.
 
-## Pour un déploiement plus strict
+## Deux variantes livrées
 
-Une organisation qui exige que les Secrets soient inaccessibles **au niveau du
-serveur d'API** peut remplacer le joker par une énumération explicite. Elle
-accepte alors de la maintenir à chaque nouvel opérateur.
+```bash
+kubectl apply -f deploy/rbac.yaml          # joker — installation immédiate
+kubectl apply -f deploy/rbac-strict.yaml   # énumération — secrets bloqués par l'API
+```
 
-Le compromis inverse — joker plus filtrage applicatif — est celui qui rend
-l'agent installable en une commande.
+Les deux créent le **même** ClusterRole : elles sont interchangeables, un
+`kubectl apply` de l'autre suffit à basculer.
+
+| | `rbac.yaml` | `rbac-strict.yaml` |
+|---|---|---|
+| secrets bloqués par | le code | **le serveur d'API** |
+| opérateur inconnu | lisible | invisible |
+| maintenance | aucune | à étendre par opérateur |
+| lignes | 3 (une règle) | ~120 |
+
+### Ce que la variante stricte coûte
+
+Un opérateur absent de la liste devient invisible pour l'agent. Vérifié sur le
+cluster :
+
+```
+get secrets                              no    ← l'objectif
+get certificaterequests.cert-manager.io  no    ← clés privées
+get pods                                 yes
+get clusters.postgresql.cnpg.io          yes
+get sealedsecrets.bitnami.com            no    ← groupe non listé
+```
+
+Le dernier cas illustre le compromis : `bitnami.com` n'est pas dans la liste,
+donc les SealedSecrets deviennent invisibles. Le diagnostic est **dégradé** sur
+ces objets, jamais en panne — l'agent signale simplement qu'il n'y a pas accès.
+
+Étendre la liste demande de connaître les groupes présents :
+
+```bash
+kubectl get crd -o jsonpath='{range .items[*]}{.spec.group}{"\n"}{end}' | sort -u
+```
+
+### Pourquoi le RBAC ne sait pas faire « tout sauf »
+
+Il est **purement additif** : on ne peut qu'accorder, jamais retrancher. L'API
+le confirme si l'on essaie une règle à verbes vides :
+
+```
+The ClusterRole is invalid: rules[1].verbs: Required value:
+verbs must contain at least one value
+```
+
+Il n'existe ni `deny`, ni `except`. La seule façon d'interdire une ressource
+est de ne jamais l'accorder — donc d'énumérer tout le reste.
 
 ## Tests qui garantissent le contrat
 

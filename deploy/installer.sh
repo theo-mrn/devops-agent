@@ -12,6 +12,9 @@
 set -euo pipefail
 
 NAMESPACE="${NAMESPACE:-devops-agent}"
+# Variante de RBAC : rbac.yaml (défaut) ou rbac-strict.yaml, qui bloque
+# les Secrets au niveau du serveur d'API.
+RBAC="${RBAC:-deploy/rbac.yaml}"
 SA="${NAMESPACE}:devops-agent"
 RACINE="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
@@ -34,7 +37,9 @@ echo
 # ── 1. RBAC ──────────────────────────────────────────────────────
 
 gras "1. Application du RBAC"
-kubectl apply -f "${RACINE}/deploy/rbac.yaml"
+echo "   variante : $(basename "$RBAC")"
+kubectl apply -f "${RACINE}/${RBAC#deploy/}" 2>/dev/null \
+  || kubectl apply -f "${RACINE}/$RBAC"
 echo
 
 # ── 2. Contrôle des permissions ──────────────────────────────────

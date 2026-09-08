@@ -31,6 +31,22 @@ kubectl create secret docker-registry ghcr \
   --docker-password=$(gh auth token) -n devops-agent
 ```
 
+## Choisir sa variante de RBAC
+
+```bash
+deploy/rbac.yaml          lecture universelle, verbes stricts (défaut)
+deploy/rbac-strict.yaml   énumération, Secrets bloqués par le serveur d'API
+```
+
+Les deux créent le même ClusterRole et sont interchangeables. Le second convient
+aux organisations dont la politique exige que rien — pas même un code compromis —
+ne puisse lire un Secret ; il faut en contrepartie y ajouter les opérateurs
+maison.
+
+```bash
+RBAC=deploy/rbac-strict.yaml ./deploy/installer.sh
+```
+
 ## Installation
 
 ```bash

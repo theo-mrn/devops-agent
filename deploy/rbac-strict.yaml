@@ -1,0 +1,185 @@
+# Accès en lecture seule — variante STRICTE.
+#
+# Différence avec `rbac.yaml` : les ressources sont énumérées, ce qui
+# rend les Secrets inaccessibles **au niveau du serveur d'API** plutôt
+# que par le code de l'agent.
+#
+#   rbac.yaml         joker + filtrage applicatif — installation immédiate
+#   rbac-strict.yaml  énumération — à étendre pour un opérateur absent
+#
+# À choisir quand la politique de l'organisation exige que rien, pas
+# même un code compromis, ne puisse lire un Secret.
+#
+# ⚠️ Conséquence : un opérateur non listé ci-dessous sera invisible pour
+# l'agent. Le diagnostic sera dégradé sur les charges qu'il gère — jamais
+# en panne. Ajouter son groupe d'API à la fin du fichier suffit.
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: devops-agent
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: devops-agent
+  namespace: devops-agent
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: devops-agent-readonly
+rules:
+  # ── Ressources cœur ──────────────────────────────────────────
+  # `secrets` est délibérément absent : c'est tout l'objet de cette
+  # variante. Le RBAC étant purement additif, il suffit de ne pas
+  # l'accorder — il n'existe aucun mécanisme de refus.
+  - apiGroups: [""]
+    resources:
+      - pods
+      - pods/log
+      - events
+      - services
+      - endpoints
+      - namespaces
+      - nodes
+      - persistentvolumeclaims
+      - persistentvolumes
+      - configmaps
+      - replicationcontrollers
+      - resourcequotas
+      - limitranges
+      - serviceaccounts
+    verbs: ["get", "list", "watch"]
+
+  # ── Charges de travail ───────────────────────────────────────
+  - apiGroups: ["apps"]
+    resources: ["deployments", "statefulsets", "daemonsets", "replicasets"]
+    verbs: ["get", "list", "watch"]
+
+  - apiGroups: ["batch"]
+    resources: ["jobs", "cronjobs"]
+    verbs: ["get", "list", "watch"]
+
+  - apiGroups: ["autoscaling"]
+    resources: ["horizontalpodautoscalers"]
+    verbs: ["get", "list", "watch"]
+
+  # ── Réseau ───────────────────────────────────────────────────
+  - apiGroups: ["networking.k8s.io"]
+    resources: ["ingresses", "networkpolicies", "ingressclasses"]
+    verbs: ["get", "list", "watch"]
+
+  - apiGroups: ["discovery.k8s.io"]
+    resources: ["endpointslices"]
+    verbs: ["get", "list", "watch"]
+
+  # ── Stockage ─────────────────────────────────────────────────
+  - apiGroups: ["storage.k8s.io"]
+    resources: ["storageclasses", "volumeattachments"]
+    verbs: ["get", "list"]
+
+  - apiGroups: ["snapshot.storage.k8s.io"]
+    resources: ["volumesnapshots", "volumesnapshotcontents", "volumesnapshotclasses"]
+    verbs: ["get", "list"]
+
+  # ── Ordonnancement et disponibilité ──────────────────────────
+  - apiGroups: ["policy"]
+    resources: ["poddisruptionbudgets"]
+    verbs: ["get", "list"]
+
+  - apiGroups: ["scheduling.k8s.io"]
+    resources: ["priorityclasses"]
+    verbs: ["get", "list"]
+
+  # ── Métriques ────────────────────────────────────────────────
+  # Comparer la consommation réelle aux limites configurées : c'est ce
+  # qui permet d'alerter AVANT un OOMKill plutôt qu'après.
+  - apiGroups: ["metrics.k8s.io"]
+    resources: ["pods", "nodes"]
+    verbs: ["get", "list"]
+
+  # ── Opérateurs courants ──────────────────────────────────────
+  # À compléter selon les opérateurs installés. Un groupe absent rend
+  # ses ressources invisibles à l'agent, sans autre conséquence.
+  #
+  # Pour connaître les groupes présents sur un cluster :
+  #   kubectl get crd -o jsonpath='{range .items[*]}{.spec.group}{"\n"}{end}' \
+  #     | sort -u
+
+  # CloudNativePG — instances déclarées, sauvegardes, bascules.
+  - apiGroups: ["postgresql.cnpg.io"]
+    resources: ["clusters", "backups", "scheduledbackups", "poolers"]
+    verbs: ["get", "list"]
+
+  # Argo CD — dérive GitOps, état de synchronisation.
+  - apiGroups: ["argoproj.io"]
+    resources: ["applications", "applicationsets", "appprojects", "rollouts"]
+    verbs: ["get", "list"]
+
+  # Prometheus Operator — règles d'alerte et cibles de collecte.
+  - apiGroups: ["monitoring.coreos.com"]
+    resources:
+      - prometheuses
+      - prometheusrules
+      - servicemonitors
+      - podmonitors
+      - alertmanagers
+    verbs: ["get", "list"]
+
+  # Traefik — un service injoignable vient souvent du routage.
+  - apiGroups: ["traefik.io", "traefik.containo.us"]
+    resources: ["ingressroutes", "ingressroutetcps", "middlewares", "serverstransports"]
+    verbs: ["get", "list"]
+
+  # cert-manager — certificats non renouvelés.
+  # `certificaterequests` est exclu : ces objets portent des clés privées.
+  - apiGroups: ["cert-manager.io"]
+    resources: ["certificates", "issuers", "clusterissuers"]
+    verbs: ["get", "list"]
+
+  # Trivy Operator — rapports de vulnérabilité et de configuration.
+  - apiGroups: ["aquasecurity.github.io"]
+    resources: ["vulnerabilityreports", "configauditreports", "clustercompliancereports"]
+    verbs: ["get", "list"]
+
+  # Helm (k3s et RKE2) — état des déploiements par chart.
+  - apiGroups: ["helm.cattle.io"]
+    resources: ["helmcharts", "helmchartconfigs"]
+    verbs: ["get", "list"]
+
+  # Istio — maillage de services.
+  - apiGroups: ["networking.istio.io"]
+    resources: ["virtualservices", "destinationrules", "gateways"]
+    verbs: ["get", "list"]
+
+  # Gateway API — remplace progressivement Ingress.
+  - apiGroups: ["gateway.networking.k8s.io"]
+    resources: ["gateways", "httproutes", "gatewayclasses"]
+    verbs: ["get", "list"]
+
+  # ─────────────────────────────────────────────────────────────
+  # DÉLIBÉRÉMENT ABSENTS
+  #
+  #   secrets                     → inaccessibles au niveau de l'API
+  #   certificaterequests         → portent des clés privées
+  #   create/update/patch/delete  → aucune écriture
+  #   escalate, bind, impersonate → aucune élévation de privilège
+  #
+  # Vérifiable :
+  #   kubectl auth can-i get secrets \
+  #     --as=system:serviceaccount:devops-agent:devops-agent   → no
+  # ─────────────────────────────────────────────────────────────
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: devops-agent-readonly
+subjects:
+  - kind: ServiceAccount
+    name: devops-agent
+    namespace: devops-agent
+roleRef:
+  kind: ClusterRole
+  name: devops-agent-readonly
+  apiGroup: rbac.authorization.k8s.io

@@ -186,3 +186,64 @@ class TestRAGOptionnel:
         assert "anthropic" in base
 
 
+
+
+STRICT = RACINE / "deploy/rbac-strict.yaml"
+
+
+@pytest.fixture(scope="module")
+def cluster_role_strict() -> dict:
+    for doc in documents(STRICT):
+        if doc.get("kind") == "ClusterRole":
+            return doc
+    pytest.fail("aucun ClusterRole dans deploy/rbac-strict.yaml")
+
+
+class TestRBACStrict:
+    """La variante qui bloque les Secrets au niveau du serveur d'API.
+
+    Le RBAC n'a aucun mécanisme de refus — il est purement additif. La
+    seule façon d'interdire une ressource est de ne jamais l'accorder,
+    donc d'énumérer tout le reste.
+    """
+
+    def test_secrets_absents(self, cluster_role_strict):
+        for regle in cluster_role_strict["rules"]:
+            assert "secrets" not in regle["resources"]
+
+    def test_certificaterequests_absents(self, cluster_role_strict):
+        """Ces objets portent des clés privées."""
+        for regle in cluster_role_strict["rules"]:
+            assert "certificaterequests" not in regle["resources"]
+
+    def test_aucun_joker(self, cluster_role_strict):
+        """Un joker réautoriserait les Secrets : le RBAC est additif."""
+        for regle in cluster_role_strict["rules"]:
+            assert "*" not in regle.get("apiGroups", [])
+            assert "*" not in regle["resources"]
+
+    def test_seuls_des_verbes_de_lecture(self, cluster_role_strict):
+        autorises = {"get", "list", "watch"}
+        for regle in cluster_role_strict["rules"]:
+            assert set(regle["verbs"]) <= autorises
+
+    @pytest.mark.parametrize("ressource", [
+        "pods", "pods/log", "services", "endpoints", "nodes",
+        "persistentvolumeclaims", "deployments", "statefulsets", "jobs",
+    ])
+    def test_ressources_surveillees_presentes(self, cluster_role_strict, ressource):
+        """La variante stricte doit couvrir ce que l'agent surveille."""
+        toutes = {r for regle in cluster_role_strict["rules"]
+                  for r in regle["resources"]}
+        assert ressource in toutes
+
+    def test_metriques_accessibles(self, cluster_role_strict):
+        """Sans metrics.k8s.io, la détection de pression mémoire est aveugle."""
+        groupes = {g for regle in cluster_role_strict["rules"]
+                   for g in regle.get("apiGroups", [])}
+        assert "metrics.k8s.io" in groupes
+
+    def test_meme_identite_que_la_variante_par_defaut(self, cluster_role_strict,
+                                                      cluster_role):
+        """Les deux variantes doivent être interchangeables sans rien casser."""
+        assert cluster_role_strict["metadata"]["name"] == cluster_role["metadata"]["name"]
