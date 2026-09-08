@@ -44,7 +44,10 @@ def main() -> int:
     sous.add_parser("index", help="reconstruit l'index vectoriel")
     sous.add_parser("fetch", help="télécharge les sources documentaires")
     sous.add_parser("config", help="affiche la configuration active")
-    sous.add_parser("audit", help="vérifie les permissions réelles sur le cluster")
+    p = sous.add_parser("audit", help="vérifie les permissions réelles sur le cluster")
+    p.add_argument("--sa", metavar="NS:NOM",
+                   help="audite un ServiceAccount plutôt que l'identité courante, "
+                        "ex. devops-agent:devops-agent")
 
     p = sous.add_parser("eval", help="mesure la qualité du pipeline")
     p.add_argument("--fast", action="store_true", help="retrieval seul, sans LLM")
@@ -117,8 +120,10 @@ def main() -> int:
     elif args.commande == "audit":
         from devops_agent.agent import tools
 
-        print(f"\n\033[1m PERMISSIONS \033[0m {tools.contexte_kubernetes()}\n")
-        resultats = tools.auditer_permissions()
+        identite = (f"ServiceAccount {args.sa}" if args.sa
+                    else tools.contexte_kubernetes())
+        print(f"\n\033[1m PERMISSIONS \033[0m {identite}\n")
+        resultats = tools.auditer_permissions(service_account=args.sa)
         if not resultats:
             print("  cluster injoignable — impossible de vérifier\n")
             return 1

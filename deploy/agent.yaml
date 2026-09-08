@@ -2,18 +2,15 @@
 #
 # Il surveille le cluster depuis l'intérieur, avec le ServiceAccount
 # défini dans rbac.yaml — aucun kubeconfig à fournir.
----
-apiVersion: v1
-kind: Secret
-metadata:
-  name: devops-agent-api
-  namespace: devops-agent
-type: Opaque
-stringData:
-  # À remplacer avant application, ou créer par :
-  #   kubectl create secret generic devops-agent-api \
-  #     --from-literal=anthropic-api-key=sk-ant-... -n devops-agent
-  anthropic-api-key: "REMPLACER"
+#
+# Le Secret contenant la clé API n'est DÉLIBÉRÉMENT pas ici : un
+# placeholder appliqué par mégarde écraserait la vraie clé, et une clé
+# committée serait pire. Le créer avant :
+#
+#   kubectl create secret generic devops-agent-api \
+#     --from-literal=anthropic-api-key=sk-ant-... -n devops-agent
+#
+# ou laisser deploy/installer.sh s'en charger.
 ---
 apiVersion: v1
 kind: ConfigMap
@@ -59,7 +56,9 @@ spec:
         fsGroup: 10001
       containers:
         - name: agent
-          image: devops-agent:0.1.0
+          # Image publiée sur GHCR. Remplacer le compte par le vôtre,
+          # ou utiliser deploy/publier.sh qui s'en charge.
+          image: ghcr.io/theo-mrn/devops-agent:0.1.0
           imagePullPolicy: IfNotPresent
           args: ["auto"]
           envFrom:

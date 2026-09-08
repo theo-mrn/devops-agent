@@ -274,12 +274,18 @@ def rafraichir_apercu() -> str:
     return overview.rafraichir()
 
 
-def auditer_permissions() -> list[tuple[str, bool, bool]]:
-    """Vérifie ce que l'agent peut RÉELLEMENT faire sur le cluster.
+def auditer_permissions(
+    service_account: str | None = None,
+) -> list[tuple[str, bool, bool]]:
+    """Vérifie ce qu'un compte peut RÉELLEMENT faire sur le cluster.
 
     Le code refuse les écritures, mais c'est le serveur d'API qui doit
     les rendre impossibles. Cette fonction interroge `kubectl auth can-i`
-    pour confirmer que le RBAC est bien en place.
+    pour le confirmer.
+
+    Sans `service_account`, elle audite l'identité courante — le
+    kubeconfig, souvent administrateur. Avec, elle audite le compte de
+    l'agent : c'est ce qui prouve que le RBAC est bien en place.
 
     Renvoie (action, autorisé, devrait_être_autorisé).
     """
@@ -297,11 +303,15 @@ def auditer_permissions() -> list[tuple[str, bool, bool]]:
     resultats = []
     for action, attendu in [(a, True) for a in lectures] + [(a, False) for a in ecritures]:
         verbe, _, ressource = action.partition(" ")
+        commande = ["kubectl", "auth", "can-i", verbe, ressource,
+                    "--all-namespaces"]
+        if service_account:
+            # `--as` demande l'identité d'un autre compte : c'est ainsi
+            # qu'on vérifie le RBAC sans déployer quoi que ce soit.
+            commande += ["--as", f"system:serviceaccount:{service_account}"]
         try:
             r = subprocess.run(
-                ["kubectl", "auth", "can-i", verbe, ressource,
-                 "--all-namespaces"],
-                capture_output=True, text=True, timeout=10,
+                commande, capture_output=True, text=True, timeout=10,
             )
             autorise = r.stdout.strip() == "yes"
         except (subprocess.TimeoutExpired, FileNotFoundError):
