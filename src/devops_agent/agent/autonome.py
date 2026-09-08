@@ -25,6 +25,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
+from devops_agent.agent import verification
 from devops_agent.agent.correlation import Groupe, Tampon
 from devops_agent.agent.watcher import Evenement, Surveillance
 from devops_agent.core import config
@@ -247,7 +248,24 @@ class Autonome:
         self.diagnostics += 1
         self._consigner(groupe, reponse, cout, agent.trace)
 
-        print(f"\n{reponse}\n")
+        # Vérification mécanique : confronter les affirmations du
+        # rapport à l'état réel du cluster. Aucun appel au modèle, donc
+        # aucun surcoût — et c'est ce qui attrape les erreurs de FAIT,
+        # le risque principal d'un agent de diagnostic.
+        controles = []
+        for e in groupe.evenements:
+            controles += verification.verifier(
+                reponse, e.ressource, e.pod, e.namespace
+            )
+            if e.ressource == "service":
+                selecteur = verification.verifier_selecteur(e.pod, e.namespace)
+                if selecteur:
+                    controles.append(selecteur)
+
+        print(f"\n{reponse}")
+        if controles:
+            print(verification.formater(controles))
+        print()
         print(
             f"\033[2m  {cout:.4f} $ · "
             f"{self._depense_24h():.2f}/{self.budget_jour} $ sur 24 h\033[0m\n"
