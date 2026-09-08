@@ -31,6 +31,15 @@ from dataclasses import dataclass, field
 
 from devops_agent.agent import detecteurs, overview, tools
 
+# Namespaces ignorés par la surveillance. Celui de l'agent en fait
+# partie : sans cela, chaque redémarrage de l'agent le fait diagnostiquer
+# son propre Deployment — un appel payant pour un non-événement.
+IGNORES = {
+    n.strip()
+    for n in os.environ.get("RAG_NAMESPACES_IGNORES", "devops-agent").split(",")
+    if n.strip()
+}
+
 # Un pod doit redémarrer au moins ce nombre de fois avant d'être signalé.
 # Un redémarrage isolé est souvent transitoire (rolling update, sonde
 # trop stricte au démarrage) : réagir tout de suite coûterait pour rien.
@@ -163,6 +172,9 @@ class Surveillance:
 
         detecteur, libelle = detecteurs.DETECTEURS.get(ressource, (None, ressource))
         if detecteur is None:
+            return None
+
+        if ns in IGNORES:
             return None
 
         identite = f"{ressource}:{ns}/{nom}"

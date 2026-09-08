@@ -152,3 +152,30 @@ class TestEvenement:
         rendu = str(ev)
         assert "Running → CrashLoopBackOff" in rendu
         assert "5 redémarrages" in rendu
+
+
+class TestNamespacesIgnores:
+    """L'agent ne doit pas se surveiller lui-même.
+
+    Chaque redémarrage de l'agent fait passer son Deployment par
+    « aucun replica prêt » : sans exclusion, il diagnostique son propre
+    redémarrage, ce qui coûte de l'argent pour un non-événement.
+    """
+
+    def test_namespace_de_l_agent_ignore(self, monkeypatch):
+        monkeypatch.setattr(watcher, "IGNORES", {"devops-agent"})
+        s = Surveillance(verbeux=False)
+        assert s.traiter(pod(nom="agent-1", ns="devops-agent",
+                             raison="CrashLoopBackOff", redemarrages=10)) is None
+
+    def test_autres_namespaces_surveilles(self, monkeypatch):
+        monkeypatch.setattr(watcher, "IGNORES", {"devops-agent"})
+        s = Surveillance(verbeux=False)
+        assert s.traiter(pod(nom="web", ns="prod",
+                             raison="CrashLoopBackOff", redemarrages=10)) is not None
+
+    def test_liste_configurable(self, monkeypatch):
+        monkeypatch.setattr(watcher, "IGNORES", {"devops-agent", "trivy-system"})
+        s = Surveillance(verbeux=False)
+        assert s.traiter(pod(nom="scan", ns="trivy-system",
+                             raison="Failed", redemarrages=5)) is None
