@@ -70,7 +70,7 @@ jobs:
             type=raw,value=latest,enable={{is_default_branch}}
             type=raw,value=${{ inputs.version }},enable=${{ github.event_name == 'workflow_dispatch' }}
 
-      - name: Construire et publier
+      - name: Construire et publier l'agent
         id: build
         uses: docker/build-push-action@v6
         with:
@@ -81,6 +81,30 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Étiquettes de l'indexeur
+        id: meta-rag
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE }}
+          # Suffixe -rag : même version, dépendances d'indexation.
+          flavor: |
+            suffix=-rag,onlatest=true
+          tags: |
+            type=semver,pattern={{version}}
+            type=raw,value=${{ inputs.version }},enable=${{ github.event_name == 'workflow_dispatch' }}
+
+      - name: Construire et publier l'indexeur
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.rag
+          platforms: linux/amd64
+          push: true
+          tags: ${{ steps.meta-rag.outputs.tags }}
+          labels: ${{ steps.meta-rag.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 

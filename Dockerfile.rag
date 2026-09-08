@@ -1,0 +1,47 @@
+# Image de l'indexeur — variante lourde.
+#
+# Elle contient sentence-transformers et PyTorch (~2,5 Go) pour encoder
+# les chunks. Elle ne tourne que quelques minutes par jour, dans le
+# CronJob d'indexation.
+#
+# L'image de l'agent reste à 66 Mo : elle n'a besoin que de psycopg
+# pour interroger pgvector.
+
+FROM python:3.12-slim AS build
+
+RUN apt-get update \
+ && apt-get install -y --no-install-recommends curl ca-certificates \
+ && curl -LsSf https://astral.sh/uv/install.sh | sh \
+ && mv /root/.local/bin/uv /usr/local/bin/uv \
+ && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /app
+COPY pyproject.toml uv.lock ./
+COPY src/ src/
+
+# --extra rag : sentence-transformers pour encoder
+# --extra db  : psycopg pour écrire dans pgvector
+RUN uv sync --frozen --no-dev --extra rag --extra db
+
+# ── Image finale ─────────────────────────────────────────────────
+FROM python:3.12-slim
+
+RUN useradd --create-home --uid 10001 agent
+
+WORKDIR /app
+COPY --from=build /app/.venv /app/.venv
+COPY --from=build /app/src /app/src
+COPY data/interne/ data/interne/
+
+ENV PATH="/app/.venv/bin:$PATH" \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    HF_HOME=/home/agent/.cache/huggingface
+
+USER agent
+
+# Le modèle d'embedding n'est PAS embarqué : il pèse 2,3 Go et se
+# télécharge au premier lancement dans le volume de cache, partagé
+# entre les exécutions du CronJob.
+ENTRYPOINT ["devops-agent"]
+CMD ["reindexer"]

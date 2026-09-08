@@ -26,6 +26,9 @@ spec:
     initdb:
       database: index
       owner: agent
+      # Le Secret doit être de type kubernetes.io/basic-auth ; il est
+      # créé par installer-index.sh, avec un mot de passe généré
+      # localement qui ne transite nulle part.
       secret:
         name: agent-index-credentials
       postInitSQL:
