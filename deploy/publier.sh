@@ -22,6 +22,24 @@ fi
 
 IMAGE="${REGISTRE}/devops-agent"
 
+# ── Vérification de l'accès au registre ──────────────────────────
+# Un « denied: denied » après trois minutes de construction est une
+# perte de temps : on vérifie l'authentification d'abord.
+
+if [[ "$REGISTRE" == ghcr.io/* ]]; then
+  portees=$(gh auth status 2>&1 | grep -i "token scopes" || echo "")
+  if [[ "$portees" != *"write:packages"* ]]; then
+    printf "\033[31mLe jeton GitHub n'a pas la portée write:packages.\033[0m\n\n"
+    echo "  Ajouter la portée :"
+    echo "    gh auth refresh --scopes write:packages,read:packages"
+    echo "    gh auth token | docker login ghcr.io -u ${COMPTE} --password-stdin"
+    echo
+    echo "  Ou publier sur Docker Hub :"
+    echo "    REGISTRE=docker.io/<compte> ./deploy/publier.sh"
+    exit 1
+  fi
+fi
+
 printf "\033[1mConstruction\033[0m %s:%s\n" "$IMAGE" "$VERSION"
 
 # Les nœuds k3s sont en amd64 ; une image construite sur Mac serait en

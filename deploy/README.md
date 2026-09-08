@@ -62,6 +62,17 @@ infra lira avant d'autoriser le déploiement.
 général en `amd64`. `publier.sh` force `linux/amd64` — sans quoi le pod
 resterait en `CrashLoopBackOff` avec `exec format error`.
 
+**Portée du jeton GitHub.** Publier sur GHCR demande `write:packages`, que le
+jeton `gh` n a pas par défaut :
+
+```bash
+gh auth refresh --scopes write:packages,read:packages
+gh auth token | docker login ghcr.io -u <compte> --password-stdin
+```
+
+`publier.sh` le vérifie avant de construire — un `denied` après trois minutes
+de build est une perte de temps.
+
 **Image privée sur GHCR.** Par défaut, une image publiée sur GHCR est privée.
 Soit la rendre publique dans les réglages du package, soit créer un
 `imagePullSecret` — `publier.sh` affiche les deux commandes.
