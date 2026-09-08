@@ -52,15 +52,15 @@ jobs:
           PY
 
       - name: Valider les manifests Kubernetes
+        # `kubectl apply --dry-run=client` interroge malgré tout le
+        # serveur pour résoudre les types de ressources : inutilisable
+        # sans cluster. kubeconform valide contre les schémas publiés,
+        # entièrement hors ligne.
         run: |
-          curl -fsSLo kubectl "https://dl.k8s.io/release/v1.31.0/bin/linux/amd64/kubectl"
-          chmod +x kubectl
-          # --dry-run=client télécharge quand même le schéma OpenAPI
-          # depuis le cluster : sans cluster, il faut désactiver la
-          # validation de schéma. La structure des manifests est de toute
-          # façon couverte par tests/test_deploiement.py.
-          ./kubectl apply --dry-run=client --validate=false -f deploy/rbac.yaml
-          ./kubectl apply --dry-run=client --validate=false -f deploy/agent.yaml
+          curl -fsSL \
+            https://github.com/yannh/kubeconform/releases/download/v0.6.7/kubeconform-linux-amd64.tar.gz \
+            | tar xz kubeconform
+          ./kubeconform -strict -summary deploy/rbac.yaml deploy/agent.yaml
 
   image:
     # L'image n'est construite que si les tests passent.
