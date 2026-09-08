@@ -1,6 +1,37 @@
-# Workflow n8n
+# Workflows n8n
 
-`devops-agent-minio-discord.json` — à importer dans n8n.
+Deux flux séparés, un par source d'information :
+
+| fichier | source | ce qu'il apporte |
+|---|---|---|
+| `devops-agent-minio-discord.json` | l'agent | diagnostics d'objets Kubernetes |
+| `alertmanager-minio-discord.json` | Prometheus | alertes métriques et de tendance |
+
+## Pourquoi deux flux
+
+L'agent et Alertmanager ne voient pas la même chose :
+
+| | l'agent | Alertmanager |
+|---|---|---|
+| pods, services, PVC, nœuds | ✅ | ✅ |
+| métriques (CPU, latence, taux d'erreur) | ❌ | ✅ |
+| règles métier (SLO, seuils applicatifs) | ❌ | ✅ |
+| certificats expirants, disque à 85 % | ❌ | ✅ |
+| **diagnostic de la cause** | ✅ | ❌ |
+| **corrélation d'anomalies liées** | ✅ | ❌ |
+
+L'agent observe l'état des objets ; Prometheus observe les tendances. Une
+latence qui monte ne produit aucune anomalie d'objet.
+
+**k-AI a été retiré de la boucle.** Il investiguait les alertes Alertmanager ;
+l'agent fait ce travail de lui-même, sans attendre qu'une alerte se déclenche.
+Les alertes métriques sont désormais relayées telles quelles.
+
+---
+
+## Flux de l'agent
+
+`devops-agent-minio-discord.json`
 
 ## Différence avec le flux k-AI
 
@@ -95,3 +126,45 @@ RAG_WEBHOOK_GRAVITE=critique   # ou grave / surveillance (défaut)
 ```
 
 `critique` ne transmet que ce qui exige une action immédiate.
+
+
+---
+
+# Flux Alertmanager
+
+`alertmanager-minio-discord.json`
+
+```
+Alertmanager → n8n → MinIO + Discord
+```
+
+Aucune investigation : les alertes métriques sont relayées telles quelles.
+Le diagnostic d'objets Kubernetes est le rôle de l'agent, sur son propre flux.
+
+## Ce que fait le nœud de mise en forme
+
+- **ignore les alertes résolues** — Alertmanager notifie aussi les extinctions,
+  qui n'ont pas à produire de rapport ;
+- **groupe les alertes** arrivées ensemble dans un seul rapport ;
+- **filtre les labels** internes de Prometheus (`job`, `instance`, `endpoint`…)
+  pour ne garder que le contexte utile.
+
+## Archivage séparé
+
+```
+kai-reports/
+├── 2026/09/08/…              diagnostics de l'agent
+└── alertes/2026/09/08/…      alertes Prometheus
+```
+
+Le préfixe `alertes/` distingue les deux sources dans le même bucket.
+
+## Configuration d'Alertmanager
+
+```yaml
+receivers:
+  - name: n8n
+    webhook_configs:
+      - url: http://n8n.n8n.svc.cluster.local:5678/webhook/alertmanager
+        send_resolved: false   # les résolutions sont filtrées côté n8n
+```
