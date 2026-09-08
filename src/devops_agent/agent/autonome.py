@@ -25,7 +25,7 @@ import time
 from datetime import datetime
 from pathlib import Path
 
-from devops_agent.agent import verification
+from devops_agent.agent import verification, webhook
 from devops_agent.agent.correlation import Groupe, Tampon
 from devops_agent.agent.watcher import Evenement, Surveillance
 from devops_agent.core import config
@@ -265,6 +265,18 @@ class Autonome:
         print(f"\n{reponse}")
         if controles:
             print(verification.formater(controles))
+
+        # Envoi au webhook : un rapport qui reste dans les logs du pod
+        # n'est lu par personne. L'échec n'interrompt rien — le
+        # diagnostic est déjà dans le journal local.
+        if webhook.actif():
+            envoye = webhook.notifier(
+                groupe, reponse, cout,
+                [a["outil"] for a in agent.trace],
+                [str(c) for c in controles],
+            )
+            if envoye:
+                print("\033[2m  rapport transmis au webhook\033[0m")
         print()
         print(
             f"\033[2m  {cout:.4f} $ · "

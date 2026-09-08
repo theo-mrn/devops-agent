@@ -29,6 +29,13 @@ data:
   RAG_FENETRE_CORRELATION: "8.0"
   # Restreindre la surveillance à certains namespaces :
   # RAG_NAMESPACES: "prod,staging"
+
+  # Envoi des rapports vers un webhook. Sans cela, ils restent dans les
+  # logs du pod et dans /data/diagnostics.jsonl.
+  # RAG_WEBHOOK_URL: "http://n8n.n8n.svc.cluster.local:5678/webhook/diagnostics"
+  # RAG_WEBHOOK_GRAVITE: "surveillance"   # ou grave / critique
+  # Nom du cluster, repris dans chaque rapport :
+  # RAG_CLUSTER_NOM: "prod-eu-west"
 ---
 apiVersion: apps/v1
 kind: Deployment
