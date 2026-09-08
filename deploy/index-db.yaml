@@ -31,7 +31,9 @@ spec:
       # localement qui ne transite nulle part.
       secret:
         name: agent-index-credentials
-      postInitSQL:
+      # postInitSQL s'exécute sur la base `postgres`, pas sur celle de
+      # l'application : c'est `postInitApplicationSQL` qu'il faut ici.
+      postInitApplicationSQL:
         - CREATE EXTENSION IF NOT EXISTS vector;
 
   storage:
