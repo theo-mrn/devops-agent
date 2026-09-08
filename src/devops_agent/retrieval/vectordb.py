@@ -23,6 +23,7 @@ poursuit avec ses autres outils.
 
 import json
 import os
+import sys
 import urllib.request
 from dataclasses import dataclass
 
@@ -108,6 +109,11 @@ def initialiser() -> None:
 
 # ── Encodage de la question ──────────────────────────────────────
 
+# Chargé une seule fois : le modèle met ~30 s à s'initialiser, ce qui
+# est inacceptable à chaque requête.
+_ENCODEUR = None
+
+
 def encoder(texte: str) -> list[float] | None:
     """Transforme un texte en vecteur.
 
@@ -127,11 +133,22 @@ def encoder(texte: str) -> list[float] | None:
         except Exception:
             return None
 
+    # Le modèle seul, sans passer par pipeline.charger() : celui-ci
+    # ouvre d'abord corpus.pkl, absent de l'image (il est produit par
+    # l'indexeur). L'API n'a besoin que de l'encodeur.
+    global _ENCODEUR
     try:
-        from devops_agent.retrieval import pipeline
-        _, encodeur = pipeline.charger()
-        return encodeur.encode(texte, normalize_embeddings=True).tolist()
-    except Exception:
+        if _ENCODEUR is None:
+            from sentence_transformers import SentenceTransformer
+
+            from devops_agent.core import config
+            _ENCODEUR = SentenceTransformer(config.EMBEDDING, device="cpu")
+        return _ENCODEUR.encode(texte, normalize_embeddings=True).tolist()
+    except Exception as e:
+        # Sans trace, un échec d'encodage remonte en « indisponible »
+        # sans qu'on sache pourquoi — modèle manquant, mémoire, réseau.
+        print(f"encodage impossible : {type(e).__name__} : {e}",
+              file=sys.stderr)
         return None
 
 
