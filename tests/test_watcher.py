@@ -241,3 +241,80 @@ class TestGraviteDesJobs:
     def test_job_echoue_est_en_surveillance(self):
         """Un job de scan qui échoue n'est pas un incident de production."""
         assert watcher.ETATS_ANORMAUX.get("Failed") == "surveillance"
+
+
+class FauxWatch:
+    """Imite un `kubectl --watch` : émet des objets puis ferme le flux,
+    comme le fait l'API server en coupant la connexion."""
+
+    def __init__(self, objets, code=0, erreur=""):
+        import json as _json
+        self.stdout = iter(_json.dumps(o) + "\n" for o in objets)
+        self.stderr = type("E", (), {"read": staticmethod(lambda: erreur)})()
+        self.returncode = code
+
+    def wait(self):
+        return self.returncode
+
+    def terminate(self):
+        pass
+
+
+class TestReconnexion:
+    """Un watch coupé doit être relancé, pas abandonné en silence.
+
+    Régression constatée en production : après une coupure de l'API server,
+    le thread de surveillance s'arrêtait sans bruit et l'agent a passé 17
+    jours à afficher « en attente d'événement » sans rien voir.
+    """
+
+    @pytest.fixture
+    def kubectl_factice(self, monkeypatch):
+        monkeypatch.setattr(watcher.shutil, "which", lambda _: "/usr/bin/kubectl")
+        appels = []
+
+        def installer(*sessions):
+            restantes = list(sessions)
+
+            def popen(cmd, **_):
+                appels.append(cmd)
+                return restantes.pop(0) if restantes else FauxWatch([])
+
+            monkeypatch.setattr(watcher.subprocess, "Popen", popen)
+            return appels
+
+        return installer
+
+    def test_le_watch_coupe_est_relance(self, kubectl_factice):
+        """La panne survenue APRES la coupure doit quand même être vue."""
+        appels = kubectl_factice(
+            FauxWatch([pod(nom="job-1")]),
+            FauxWatch([pod(nom="job-1", phase="Pending", raison="ImagePullBackOff")]),
+        )
+        vus = []
+        s = Surveillance(verbeux=False)
+        s.suivre(sur_evenement=vus.append, duree_max=5, ressources=["pods"])
+
+        assert len(appels) >= 2, "le watch n'a pas été relancé après la coupure"
+        assert any(e.etat == "ImagePullBackOff" for e in vus)
+
+    def test_la_reconnexion_ne_rejoue_pas_les_objets_sains(self, kubectl_factice):
+        """Une reconnexion renvoie tout l'état du cluster : un objet
+        inchangé ne doit pas produire d'alerte."""
+        kubectl_factice(
+            FauxWatch([pod(nom="web-1")]),
+            FauxWatch([pod(nom="web-1")]),
+        )
+        vus = []
+        s = Surveillance(verbeux=False)
+        s.suivre(sur_evenement=vus.append, duree_max=4, ressources=["pods"])
+        assert vus == []
+
+    def test_echecs_en_boucle_arretent_l_agent(self, kubectl_factice, monkeypatch):
+        """Un watch qui meurt en boucle doit faire échouer l'agent, pour que
+        Kubernetes redémarre le pod — plutôt qu'un agent vivant et aveugle."""
+        monkeypatch.setattr(watcher, "ECHECS_WATCH_MAX", 1)
+        kubectl_factice(FauxWatch([], code=1, erreur="Unauthorized"))
+        s = Surveillance(verbeux=False)
+        with pytest.raises(RuntimeError, match="surveillance interrompue"):
+            s.suivre(duree_max=10, ressources=["pods"])

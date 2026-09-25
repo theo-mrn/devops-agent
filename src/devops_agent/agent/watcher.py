@@ -51,6 +51,9 @@ SEUIL_REDEMARRAGES = int(os.environ.get("RAG_SEUIL_REDEMARRAGES", "3"))
 # sans endpoint, un OOMKill déjà signalé — n'a pas à être rediagnostiquée
 # toutes les demi-heures.
 FENETRE_DEDUP = int(os.environ.get("RAG_DEDUP_SECONDES", "21600"))  # 6 h
+# Nombre de morts immédiates (< 1 min) d'un même watch avant d'abandonner et
+# de laisser Kubernetes redémarrer le pod.
+ECHECS_WATCH_MAX = int(os.environ.get("RAG_ECHECS_WATCH_MAX", "10"))
 
 # La déduplication vivait en mémoire : chaque redémarrage du pod la
 # perdait et rediagnostiquait tout. Elle est désormais persistée à côté
@@ -314,6 +317,11 @@ class Surveillance:
         # s'arrêter proprement même si le cluster est muet.
         lignes: queue.Queue = queue.Queue()
         processus: list[subprocess.Popen] = []
+        arret = threading.Event()
+        # Levé quand un watch renonce après trop d'échecs : la boucle
+        # principale s'arrête alors avec une erreur, pour que Kubernetes
+        # redémarre le pod — plutôt qu'un agent vivant mais aveugle.
+        watch_mort = threading.Event()
 
         def surveiller(ressource: str) -> None:
             # Les nœuds ne vivent pas dans un namespace.
@@ -321,23 +329,59 @@ class Surveillance:
             commande = f"get {ressource}{cible}"
             if tools.verifier_commande(commande) is not None:
                 return
-            proc = subprocess.Popen(
-                ["kubectl", *commande.split(), "--watch", "-o", "json"],
-                stdout=subprocess.PIPE, stderr=subprocess.DEVNULL,
-                text=True, bufsize=1,
-            )
-            processus.append(proc)
-            tampon, profondeur = "", 0
-            for ligne in proc.stdout:
-                tampon += ligne
-                profondeur += ligne.count("{") - ligne.count("}")
-                if profondeur > 0 or not tampon.strip():
-                    continue
-                try:
-                    lignes.put((ressource, json.loads(tampon)))
-                except json.JSONDecodeError:
-                    pass
-                tampon = ""
+            # Un `kubectl --watch` ne dure pas indéfiniment : l'API server
+            # ferme la connexion périodiquement, et à chaque redémarrage du
+            # control plane. Sans relance, le thread s'arrêtait en silence
+            # et l'agent restait aveugle tout en affichant « en attente
+            # d'événement » — constaté en production : 17 jours sans un
+            # seul événement reçu.
+            #
+            # La reconnexion rejoue l'état complet du cluster, mais sans
+            # fausse alerte : `self.etats` conserve l'état de chaque objet,
+            # et un objet inchangé est ignoré par `traiter`.
+            echecs_rapides = 0
+            while not arret.is_set():
+                demarrage = time.time()
+                proc = subprocess.Popen(
+                    ["kubectl", *commande.split(), "--watch", "-o", "json"],
+                    stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                    text=True, bufsize=1,
+                )
+                processus.append(proc)
+                tampon, profondeur = "", 0
+                for ligne in proc.stdout:
+                    tampon += ligne
+                    profondeur += ligne.count("{") - ligne.count("}")
+                    if profondeur > 0 or not tampon.strip():
+                        continue
+                    try:
+                        lignes.put((ressource, json.loads(tampon)))
+                    except json.JSONDecodeError:
+                        pass
+                    tampon = ""
+                proc.wait()
+                if arret.is_set():
+                    return
+                erreur = (proc.stderr.read() or "").strip().splitlines()
+                detail = erreur[-1] if erreur else f"code {proc.returncode}"
+                # Un watch qui tient plus d'une minute est une coupure
+                # normale ; une série de morts immédiates signale un vrai
+                # problème (droits, API injoignable).
+                if time.time() - demarrage > 60:
+                    echecs_rapides = 0
+                else:
+                    echecs_rapides += 1
+                if echecs_rapides >= ECHECS_WATCH_MAX:
+                    print(f"  watch {ressource} : {echecs_rapides} échecs "
+                          f"consécutifs ({detail}) — abandon",
+                          file=sys.stderr, flush=True)
+                    watch_mort.set()
+                    return
+                delai = min(2 ** echecs_rapides, 60)
+                print(f"  watch {ressource} interrompu ({detail}) — "
+                      f"reconnexion dans {delai} s",
+                      file=sys.stderr, flush=True)
+                arret.wait(delai)
 
         for ressource in ressources:
             threading.Thread(target=surveiller, args=(ressource,),
@@ -351,6 +395,11 @@ class Surveillance:
                 try:
                     ressource, objet = lignes.get(timeout=1.0)
                 except queue.Empty:
+                    if watch_mort.is_set():
+                        raise RuntimeError(
+                            "surveillance interrompue : un watch kubectl "
+                            "échoue en boucle, voir les messages ci-dessus"
+                        )
                     if sur_attente:
                         sur_attente()
                     if duree_max and time.time() - debut > duree_max:
@@ -386,6 +435,10 @@ class Surveillance:
         except KeyboardInterrupt:
             pass
         finally:
+            # Prévenir les threads AVANT de tuer leurs processus : sinon ils
+            # verraient la fin du flux comme une coupure et relanceraient
+            # un kubectl après l'arrêt.
+            arret.set()
             for proc in processus:
                 proc.terminate()
             if self.verbeux and _interactif():
